@@ -6,9 +6,9 @@
     Open Pack
   </button>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+  <div class="mt-8">
     @for (card of cards; track card) {
-      <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+      <div class=" m-2 inline-block w-60 h-80 p-6 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
         <h3 class="text-xl font-bold text-gray-800 mb-2">{{ card.name }}</h3>
         <p class="text-gray-600 leading-relaxed">{{ card.rarity }}</p>
       </div>
