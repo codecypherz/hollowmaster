@@ -1,0 +1,21 @@
+<div class="p-8">
+  <button 
+    (click)="openPack()"
+    class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-200"
+  >
+    Open Pack
+  </button>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+    @for (card of cards; track card.title) {
+      <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+        <h3 class="text-xl font-bold text-gray-800 mb-2">{{ card.title }}</h3>
+        <p class="text-gray-600 leading-relaxed">{{ card.description }}</p>
+      </div>
+    } @empty {
+      <div class="col-span-full py-12 text-center border-2 border-dashed border-gray-300 rounded-xl">
+        <p class="text-gray-400">Click the button to open the pack.</p>
+      </div>
+    }
+  </div>
+</div>
