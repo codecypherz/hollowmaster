@@ -64,12 +64,13 @@
                   <span class="cf-stars">{{ starString(card.rarity) }}</span>
                 </div>
                 <div class="cf-stats">
-                  <span class="stat-atk">{{ toHex(card.stats.attack) }}</span>
-                  <span class="stat-type">{{ card.stats.type }}</span>
-                  <span class="stat-pd">{{ toHex(card.stats.physDef) }}</span>
-                  <span class="stat-md">{{ toHex(card.stats.magDef) }}</span>
+                  <div class="stat-bar">
+                    <div class="stat-fill atk-fill" [style.width.%]="card.stats.attack"></div>
+                  </div>
+                  <div class="stat-bar">
+                    <div class="stat-fill def-fill" [style.width.%]="card.stats.defense"></div>
+                  </div>
                 </div>
-                <div class="select-frame" aria-hidden="true"></div>
               </div>
               <div class="arr arr-e"  [class.arr-on]="hasArrow(card, 'E')"></div>
               <div class="arr arr-sw" [class.arr-on]="hasArrow(card, 'SW')"></div>
@@ -106,9 +107,12 @@
                   <span class="cf-stars">{{ starString(cell.card.rarity) }}</span>
                 </div>
                 <div class="cf-stats">
-                  <span class="stat-atk">{{ toHex(cell.card.stats.attack) }}</span>
-                  <span class="stat-type">{{ cell.card.stats.type }}</span>
-                  <span class="stat-def">{{ toHex(cell.card.stats.physDef) }}{{ toHex(cell.card.stats.magDef) }}</span>
+                  <div class="stat-bar">
+                    <div class="stat-fill atk-fill" [style.width.%]="cell.card.stats.attack"></div>
+                  </div>
+                  <div class="stat-bar">
+                    <div class="stat-fill def-fill" [style.width.%]="cell.card.stats.defense"></div>
+                  </div>
                 </div>
               </div>
               <div class="arr arr-e"  [class.arr-on]="hasArrow(cell.card, 'E')"></div>

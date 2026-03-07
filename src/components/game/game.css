@@ -27,6 +27,7 @@
   --cell-bg:        #0e1025;
   --cell-border:    #2e3268;
   --arr:            12px; /* arrow margin in card 3×3 grid */
+  --card-size:      clamp(58px, 25vmin, 160px);
 
   position: relative;
   width: 100%;
@@ -192,7 +193,7 @@
   z-index: 10;
   display: flex;
   flex-direction: row;
-  align-items: stretch;
+  align-items: center;
   justify-content: center;
   gap: 1rem;
   padding: 0.25rem 1rem;
@@ -210,14 +211,14 @@
   gap: 6px;
   justify-content: center;
   flex-shrink: 0;
-  align-self: stretch;
-  width: clamp(80px, 10vh, 130px);
+  align-self: center;
+  width: var(--card-size);
 }
 
 .hand-slot {
-  flex: 1;
-  max-height: 20%;
-  width: 100%;
+  width: var(--card-size);
+  height: var(--card-size);
+  flex-shrink: 0;
 }
 
 .slot-empty {
@@ -292,17 +293,15 @@
   grid-area: face;
   display: flex;
   flex-direction: column;
+  gap: 1px;
   overflow: hidden;
-  border: 1px solid var(--soul-dim);
-  border-radius: 2px;
-  background: #06091c;
+  background: #02020a;
   position: relative;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 .cf-name {
   padding: 2px 4px 3px;
-  background: rgba(4, 4, 10, 0.92);
+  background: rgba(4, 4, 10, 0.95);
   font-family: 'Cinzel', serif;
   font-size: 0.5rem;
   letter-spacing: 0.07em;
@@ -313,6 +312,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   flex-shrink: 0;
+  border: 1px solid rgba(74, 106, 170, 0.45);
+  border-radius: 1px;
 }
 
 .cf-img {
@@ -322,6 +323,8 @@
   background-position: center top;
   background-color: #070a1a;
   min-height: 0;
+  border: 1px solid rgba(74, 106, 170, 0.45);
+  border-radius: 1px;
 }
 
 .cf-stars {
@@ -337,31 +340,35 @@
 
 .cf-stats {
   display: flex;
-  justify-content: center;
-  gap: 3px;
-  padding: 2px 4px;
-  background: rgba(4, 4, 10, 0.92);
-  font-family: 'Cinzel', serif;
-  font-size: 0.58rem;
-  letter-spacing: 0.05em;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 4px;
+  background: rgba(4, 4, 10, 0.95);
   flex-shrink: 0;
+  border: 1px solid rgba(74, 106, 170, 0.45);
+  border-radius: 1px;
 }
 
-.stat-atk  { color: #f0a030; }
-.stat-type { color: var(--text-bright); }
-.stat-pd   { color: #60aacc; }
-.stat-md   { color: #9070cc; }
-.stat-def  { color: #6090bb; }
-
-/* Selection glow frame (inside card-face) */
-.select-frame {
-  position: absolute;
-  inset: 0;
-  border: 2px solid var(--soul);
+.stat-bar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.07);
   border-radius: 1px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
+  overflow: hidden;
+}
+
+.stat-fill {
+  height: 100%;
+  border-radius: 1px;
+}
+
+.atk-fill {
+  background: #f0a030;
+  box-shadow: 0 0 4px rgba(240, 160, 48, 0.6);
+}
+
+.def-fill {
+  background: #60aacc;
+  box-shadow: 0 0 4px rgba(96, 170, 204, 0.6);
 }
 
 /* ─── Hand card (player, face-up) ───────────────────────────────────────── */
@@ -370,33 +377,29 @@
   width: 100%;
   height: 100%;
   padding: 0;
-  background: transparent;
-  border: none;
+  background: #06091c;
+  border: 1px solid var(--soul-dim);
+  border-radius: 2px;
   cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
-.hand-card:hover .card-face {
+.hand-card:hover {
   border-color: var(--soul);
   box-shadow: 0 4px 20px rgba(100, 140, 255, 0.3);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
 }
 
-.hand-card.card-selected .card-face {
+.hand-card.card-selected {
   border-color: var(--soul);
-  box-shadow:
-    0 0 20px rgba(100, 140, 255, 0.5),
-    inset 0 0 20px rgba(100, 140, 255, 0.08);
-  transform: translateY(-6px) scale(1.03);
-}
-
-.hand-card.card-selected .select-frame {
-  opacity: 1;
+  transform: translateY(-4px);
   animation: selectPulse 1.4s ease-in-out infinite;
 }
 
 @keyframes selectPulse {
   0%, 100% { box-shadow: 0 0 10px rgba(100, 140, 255, 0.5); }
-  50%       { box-shadow: 0 0 20px rgba(100, 140, 255, 0.85); }
+  50%       { box-shadow: 0 0 22px rgba(100, 140, 255, 0.9); }
 }
 
 .hand-card.card-unselectable {
@@ -404,7 +407,7 @@
   opacity: 0.7;
 }
 
-.hand-card.card-unselectable:hover .card-face {
+.hand-card.card-unselectable:hover {
   transform: none;
   border-color: var(--soul-dim);
   box-shadow: none;
@@ -453,7 +456,7 @@
 
 .board {
   display: grid;
-  grid-template: repeat(4, 1fr) / repeat(4, 1fr);
+  grid-template: repeat(4, var(--card-size)) / repeat(4, var(--card-size));
   gap: 6px;
   padding: 12px;
   background: rgba(4, 5, 16, 0.7);
@@ -462,11 +465,9 @@
     0 0 40px rgba(0, 0, 0, 0.6),
     inset 0 0 30px rgba(0, 0, 0, 0.4);
   position: relative;
-  aspect-ratio: 1;
-  height: 100%;
-  max-height: calc(100dvh - 110px);
   box-sizing: border-box;
   align-self: center;
+  flex-shrink: 0;
 }
 
 /* Board border ornament corners */
@@ -520,15 +521,27 @@
   50%       { box-shadow: inset 0 0 18px rgba(100, 140, 255, 0.12); }
 }
 
-/* Owner colors on the card face inside board cells */
-.cell-player .card-face {
+/* Owner colors on board cells */
+.cell-player {
   border-color: var(--soul-dim);
   box-shadow: 0 0 8px rgba(100, 140, 255, 0.25), inset 0 0 12px rgba(100, 140, 255, 0.05);
 }
 
-.cell-opponent .card-face {
+.cell-player .cf-name,
+.cell-player .cf-img,
+.cell-player .cf-stats {
+  border-color: rgba(74, 106, 170, 0.55);
+}
+
+.cell-opponent {
   border-color: var(--crimson-dim);
   box-shadow: 0 0 8px rgba(192, 49, 42, 0.25), inset 0 0 12px rgba(192, 49, 42, 0.05);
+}
+
+.cell-opponent .cf-name,
+.cell-opponent .cf-img,
+.cell-opponent .cf-stats {
+  border-color: rgba(122, 26, 20, 0.55);
 }
 
 /* Flip animation when card is captured */

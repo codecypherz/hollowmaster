@@ -139,7 +139,7 @@ function resolveBattles(
     const target = board[nr][nc];
     if (!target || target.owner === attacker) continue;
 
-    if (placed.card.stats.attack >= defenseOf(target)) {
+    if (roll(placed.card.stats.attack) - roll(target.card.stats.defense) > 0) {
       board[nr][nc] = { ...target, owner: attacker };
       flipped.push({ row: nr, col: nc });
       const combo = resolveBattles(board, nr, nc, attacker);
@@ -150,12 +150,8 @@ function resolveBattles(
   return { board, flipped };
 }
 
-function defenseOf(p: PlacedCard): number {
-  const { type, physDef, magDef } = p.card.stats;
-  if (type === 'P') return physDef;
-  if (type === 'M') return magDef;
-  if (type === 'X') return Math.max(physDef, magDef);
-  return Math.min(physDef, magDef); // A — assault on the weaker defense
+function roll(base: number): number {
+  return base * (0.8 + Math.random() * 0.4); // ±20%
 }
 
 function calcScores(board: (PlacedCard | null)[][]): { player: number; opponent: number } {
