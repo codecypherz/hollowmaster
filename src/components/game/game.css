@@ -211,12 +211,13 @@
   justify-content: center;
   flex-shrink: 0;
   align-self: stretch;
+  width: clamp(80px, 10vh, 130px);
 }
 
 .hand-slot {
   flex: 1;
-  aspect-ratio: 3 / 4;
   max-height: 20%;
+  width: 100%;
 }
 
 .slot-empty {
