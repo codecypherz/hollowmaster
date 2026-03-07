@@ -47,44 +47,34 @@
         <div class="hand-slot" [class.slot-empty]="!card">
           @if (card) {
             <button
-              class="card hand-card"
+              class="hand-card"
               [class.card-selected]="s.selectedCardIndex === i"
               [class.card-unselectable]="s.phase !== 'player-turn'"
               (click)="onCardSelect(i)"
               [attr.aria-label]="card.name + ' — click to select'"
               [attr.aria-pressed]="s.selectedCardIndex === i"
             >
-              <!-- Image -->
-              <div class="hc-image" [style.background-image]="cardImageStyle(card)"></div>
-
-              <!-- Arrow grid overlay -->
-              <div class="arrow-grid" aria-hidden="true">
-                @for (dir of arrowGrid; track $index) {
-                  @if (dir) {
-                    <div
-                      class="arrow-cell"
-                      [attr.data-dir]="dir"
-                      [class.arrow-active]="hasArrow(card, dir)"
-                    ></div>
-                  } @else {
-                    <div class="arrow-center"></div>
-                  }
-                }
+              <div class="arr arr-nw" [class.arr-on]="hasArrow(card, 'NW')"></div>
+              <div class="arr arr-n"  [class.arr-on]="hasArrow(card, 'N')"></div>
+              <div class="arr arr-ne" [class.arr-on]="hasArrow(card, 'NE')"></div>
+              <div class="arr arr-w"  [class.arr-on]="hasArrow(card, 'W')"></div>
+              <div class="card-face">
+                <div class="cf-name">{{ card.name }}</div>
+                <div class="cf-img" [style.background-image]="cardImageStyle(card)">
+                  <span class="cf-stars">{{ starString(card.rarity) }}</span>
+                </div>
+                <div class="cf-stats">
+                  <span class="stat-atk">{{ toHex(card.stats.attack) }}</span>
+                  <span class="stat-type">{{ card.stats.type }}</span>
+                  <span class="stat-pd">{{ toHex(card.stats.physDef) }}</span>
+                  <span class="stat-md">{{ toHex(card.stats.magDef) }}</span>
+                </div>
+                <div class="select-frame" aria-hidden="true"></div>
               </div>
-
-              <!-- Stats strip -->
-              <div class="hc-stats">
-                <span class="stat-atk">{{ toHex(card.stats.attack) }}</span>
-                <span class="stat-type">{{ card.stats.type }}</span>
-                <span class="stat-pd">{{ toHex(card.stats.physDef) }}</span>
-                <span class="stat-md">{{ toHex(card.stats.magDef) }}</span>
-              </div>
-
-              <!-- Name -->
-              <div class="hc-name">{{ card.name }}</div>
-
-              <!-- Selection glow frame -->
-              <div class="select-frame" aria-hidden="true"></div>
+              <div class="arr arr-e"  [class.arr-on]="hasArrow(card, 'E')"></div>
+              <div class="arr arr-sw" [class.arr-on]="hasArrow(card, 'SW')"></div>
+              <div class="arr arr-s"  [class.arr-on]="hasArrow(card, 'S')"></div>
+              <div class="arr arr-se" [class.arr-on]="hasArrow(card, 'SE')"></div>
             </button>
           }
         </div>
@@ -106,30 +96,25 @@
             [attr.aria-label]="cell ? cell.card.name : 'Empty cell'"
           >
             @if (cell) {
-              <!-- Card image -->
-              <div class="bc-image" [style.background-image]="cardImageStyle(cell.card)"></div>
-
-              <!-- Arrow grid overlay -->
-              <div class="arrow-grid" aria-hidden="true">
-                @for (dir of arrowGrid; track $index) {
-                  @if (dir) {
-                    <div
-                      class="arrow-cell"
-                      [attr.data-dir]="dir"
-                      [class.arrow-active]="hasArrow(cell.card, dir)"
-                    ></div>
-                  } @else {
-                    <div class="arrow-center"></div>
-                  }
-                }
+              <div class="arr arr-nw" [class.arr-on]="hasArrow(cell.card, 'NW')"></div>
+              <div class="arr arr-n"  [class.arr-on]="hasArrow(cell.card, 'N')"></div>
+              <div class="arr arr-ne" [class.arr-on]="hasArrow(cell.card, 'NE')"></div>
+              <div class="arr arr-w"  [class.arr-on]="hasArrow(cell.card, 'W')"></div>
+              <div class="card-face">
+                <div class="cf-name">{{ cell.card.name }}</div>
+                <div class="cf-img" [style.background-image]="cardImageStyle(cell.card)">
+                  <span class="cf-stars">{{ starString(cell.card.rarity) }}</span>
+                </div>
+                <div class="cf-stats">
+                  <span class="stat-atk">{{ toHex(cell.card.stats.attack) }}</span>
+                  <span class="stat-type">{{ cell.card.stats.type }}</span>
+                  <span class="stat-def">{{ toHex(cell.card.stats.physDef) }}{{ toHex(cell.card.stats.magDef) }}</span>
+                </div>
               </div>
-
-              <!-- Stats strip -->
-              <div class="bc-stats">
-                <span class="stat-atk">{{ toHex(cell.card.stats.attack) }}</span>
-                <span class="stat-type">{{ cell.card.stats.type }}</span>
-                <span class="stat-def">{{ toHex(cell.card.stats.physDef) }}{{ toHex(cell.card.stats.magDef) }}</span>
-              </div>
+              <div class="arr arr-e"  [class.arr-on]="hasArrow(cell.card, 'E')"></div>
+              <div class="arr arr-sw" [class.arr-on]="hasArrow(cell.card, 'SW')"></div>
+              <div class="arr arr-s"  [class.arr-on]="hasArrow(cell.card, 'S')"></div>
+              <div class="arr arr-se" [class.arr-on]="hasArrow(cell.card, 'SE')"></div>
             } @else {
               <div class="cell-rune" aria-hidden="true"></div>
             }

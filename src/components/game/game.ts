@@ -1,10 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { GameService } from '../../services/game.service';
 import { Card } from '../../model/card';
-import { PlacedCard } from '../../model/game';
-
-// 3×3 grid layout: NW N NE / W · E / SW S SE  (null = center)
-const ARROW_GRID = ['NW', 'N', 'NE', 'W', null, 'E', 'SW', 'S', 'SE'] as const;
 
 @Component({
   selector: 'app-game',
@@ -16,7 +12,6 @@ export class Game {
   private gs = inject(GameService);
 
   readonly state = computed(() => this.gs.state()!);
-  readonly arrowGrid = ARROW_GRID;
   readonly particles = Array.from({ length: 14 }, (_, i) => i);
 
   onCardSelect(index: number): void {
@@ -73,7 +68,7 @@ export class Game {
     return `url('${card.image}')`;
   }
 
-  trackByIndex(index: number): number {
-    return index;
+  starString(rarity: number): string {
+    return '★'.repeat(Math.max(1, Math.min(rarity, 7)));
   }
 }

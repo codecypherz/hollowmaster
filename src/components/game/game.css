@@ -5,7 +5,7 @@
 :host {
   display: block;
   width: 100%;
-  min-height: 100vh;
+  height: 100dvh;
 }
 
 .game-wrap {
@@ -26,10 +26,11 @@
   --text-bright:    #8a9acc;
   --cell-bg:        #0e1025;
   --cell-border:    #2e3268;
+  --arr:            12px; /* arrow margin in card 3×3 grid */
 
   position: relative;
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
   background: var(--void);
   display: flex;
   flex-direction: column;
@@ -38,7 +39,7 @@
   font-family: 'Cinzel', serif;
 }
 
-/* ─── Background (reused from home) ────────────────────────────────────── */
+/* ─── Background ────────────────────────────────────────────────────────── */
 
 .void-bg {
   position: absolute;
@@ -120,12 +121,12 @@
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 900px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem 0.5rem;
+  padding: 0.75rem 1.5rem 0.5rem;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .score-side {
@@ -184,18 +185,21 @@
   50%       { opacity: 1;   }
 }
 
-/* ─── Arena (hand + board + hand) ───────────────────────────────────────── */
+/* ─── Arena ──────────────────────────────────────────────────────────────── */
 
 .arena {
   position: relative;
   z-index: 10;
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 1.5rem;
-  padding: 0.5rem 2rem;
+  gap: 1rem;
+  padding: 0.25rem 1rem;
   flex: 1;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ─── Hands ──────────────────────────────────────────────────────────────── */
@@ -203,13 +207,16 @@
 .hand {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: stretch;
 }
 
 .hand-slot {
-  width: 76px;
-  height: 100px;
+  flex: 1;
+  aspect-ratio: 3 / 4;
+  max-height: 20%;
 }
 
 .slot-empty {
@@ -218,11 +225,195 @@
   border-radius: 4px;
 }
 
+/* ─── Shared card 3×3 grid (hand-card button & board-cell with card) ────── */
+/*
+  Grid layout:
+    nw  n  ne
+    w  face  e
+    sw  s  se
+  Center "face" = the visual card. Surrounding cells = directional arrows.
+*/
+
+.hand-card,
+.board-cell {
+  display: grid;
+  grid-template-areas:
+    'nw n  ne'
+    'w  face e'
+    'sw s  se';
+  grid-template-rows: var(--arr) 1fr var(--arr);
+  grid-template-columns: var(--arr) 1fr var(--arr);
+}
+
+/* ─── Arrow cells ────────────────────────────────────────────────────────── */
+
+.arr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arr::after {
+  content: '';
+  display: block;
+  background: rgba(74, 106, 170, 0.2);
+}
+
+.arr.arr-on::after {
+  background: var(--soul);
+  box-shadow: 0 0 4px 1px var(--soul-glow);
+}
+
+.arr-nw { grid-area: nw; }
+.arr-n  { grid-area: n;  }
+.arr-ne { grid-area: ne; }
+.arr-w  { grid-area: w;  }
+.arr-e  { grid-area: e;  }
+.arr-sw { grid-area: sw; }
+.arr-s  { grid-area: s;  }
+.arr-se { grid-area: se; }
+
+/* Cardinal arrows */
+.arr-n::after  { clip-path: polygon(50% 0%, 100% 100%, 0% 100%); width: 7px; height: 6px; }
+.arr-s::after  { clip-path: polygon(0% 0%, 100% 0%, 50% 100%);   width: 7px; height: 6px; }
+.arr-e::after  { clip-path: polygon(0% 0%, 100% 50%, 0% 100%);   width: 6px; height: 7px; }
+.arr-w::after  { clip-path: polygon(100% 0%, 0% 50%, 100% 100%); width: 6px; height: 7px; }
+
+/* Diagonal arrows */
+.arr-ne::after { clip-path: polygon(0% 0%, 100% 0%, 100% 100%);  width: 7px; height: 7px; }
+.arr-se::after { clip-path: polygon(100% 0%, 100% 100%, 0% 100%); width: 7px; height: 7px; }
+.arr-sw::after { clip-path: polygon(0% 0%, 100% 100%, 0% 100%);  width: 7px; height: 7px; }
+.arr-nw::after { clip-path: polygon(0% 0%, 100% 0%, 0% 100%);    width: 7px; height: 7px; }
+
+/* ─── Card face (shared) ─────────────────────────────────────────────────── */
+
+.card-face {
+  grid-area: face;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--soul-dim);
+  border-radius: 2px;
+  background: #06091c;
+  position: relative;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.cf-name {
+  padding: 2px 4px 3px;
+  background: rgba(4, 4, 10, 0.92);
+  font-family: 'Cinzel', serif;
+  font-size: 0.5rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--soul);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.cf-img {
+  flex: 1;
+  position: relative;
+  background-size: cover;
+  background-position: center top;
+  background-color: #070a1a;
+  min-height: 0;
+}
+
+.cf-stars {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 0.5rem;
+  color: var(--gold);
+  text-shadow: 0 0 6px rgba(200, 136, 42, 0.9), 0 1px 2px rgba(0, 0, 0, 0.9);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.cf-stats {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  padding: 2px 4px;
+  background: rgba(4, 4, 10, 0.92);
+  font-family: 'Cinzel', serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.stat-atk  { color: #f0a030; }
+.stat-type { color: var(--text-bright); }
+.stat-pd   { color: #60aacc; }
+.stat-md   { color: #9070cc; }
+.stat-def  { color: #6090bb; }
+
+/* Selection glow frame (inside card-face) */
+.select-frame {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--soul);
+  border-radius: 1px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+/* ─── Hand card (player, face-up) ───────────────────────────────────────── */
+
+.hand-card {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.hand-card:hover .card-face {
+  border-color: var(--soul);
+  box-shadow: 0 4px 20px rgba(100, 140, 255, 0.3);
+  transform: translateY(-3px);
+}
+
+.hand-card.card-selected .card-face {
+  border-color: var(--soul);
+  box-shadow:
+    0 0 20px rgba(100, 140, 255, 0.5),
+    inset 0 0 20px rgba(100, 140, 255, 0.08);
+  transform: translateY(-6px) scale(1.03);
+}
+
+.hand-card.card-selected .select-frame {
+  opacity: 1;
+  animation: selectPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes selectPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(100, 140, 255, 0.5); }
+  50%       { box-shadow: 0 0 20px rgba(100, 140, 255, 0.85); }
+}
+
+.hand-card.card-unselectable {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.hand-card.card-unselectable:hover .card-face {
+  transform: none;
+  border-color: var(--soul-dim);
+  box-shadow: none;
+}
+
 /* ─── Face-down card (opponent) ─────────────────────────────────────────── */
 
 .card.face-down {
-  width: 76px;
-  height: 100px;
+  width: 100%;
+  height: 100%;
   position: relative;
   background: #080c1e;
   border: 1px solid var(--crimson-dim);
@@ -257,165 +448,24 @@
   box-shadow: 0 0 8px rgba(192, 49, 42, 0.3);
 }
 
-/* ─── Hand card (player, face-up) ───────────────────────────────────────── */
-
-.hand-card {
-  position: relative;
-  width: 76px;
-  height: 100px;
-  padding: 0;
-  border: 1px solid var(--soul-dim);
-  border-radius: 4px;
-  background: #06091c;
-  overflow: hidden;
-  cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-.hand-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--soul);
-  box-shadow: 0 6px 24px rgba(100, 140, 255, 0.3);
-}
-
-.hand-card.card-selected {
-  border-color: var(--soul);
-  box-shadow:
-    0 0 20px rgba(100, 140, 255, 0.5),
-    inset 0 0 20px rgba(100, 140, 255, 0.08);
-  transform: translateY(-8px) scale(1.04);
-}
-
-.hand-card.card-unselectable {
-  cursor: default;
-  opacity: 0.7;
-}
-
-.hand-card.card-unselectable:hover {
-  transform: none;
-  border-color: var(--soul-dim);
-  box-shadow: none;
-}
-
-.hc-image {
-  flex: 1;
-  background-size: cover;
-  background-position: center top;
-  background-color: #070a1a;
-}
-
-.hc-stats {
-  display: flex;
-  justify-content: center;
-  gap: 3px;
-  padding: 2px 4px;
-  background: rgba(4, 4, 10, 0.85);
-  font-family: 'Cinzel', serif;
-  font-size: 0.65rem;
-  letter-spacing: 0.05em;
-}
-
-.stat-atk  { color: #f0a030; }
-.stat-type { color: var(--text-bright); }
-.stat-pd   { color: #60aacc; }
-.stat-md   { color: #9070cc; }
-
-.hc-name {
-  padding: 2px 4px 3px;
-  background: rgba(4, 4, 10, 0.9);
-  font-family: 'Cinzel', serif;
-  font-size: 0.52rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-bright);
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Selection frame pulse */
-.select-frame {
-  position: absolute;
-  inset: 0;
-  border: 2px solid var(--soul);
-  border-radius: 3px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
-
-.card-selected .select-frame {
-  opacity: 1;
-  animation: selectPulse 1.4s ease-in-out infinite;
-}
-
-@keyframes selectPulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(100, 140, 255, 0.5); }
-  50%       { box-shadow: 0 0 20px rgba(100, 140, 255, 0.85); }
-}
-
-/* ─── Arrow grid (shared between board cards and hand cards) ────────────── */
-
-.arrow-grid {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  grid-template: 14px 1fr 14px / 14px 1fr 14px;
-  pointer-events: none;
-  z-index: 3;
-}
-
-.arrow-center {
-  /* transparent center — card image shows through */
-}
-
-.arrow-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.arrow-cell::after {
-  content: '';
-  display: block;
-  width: 6px;
-  height: 6px;
-  background: rgba(74, 106, 170, 0.25);
-}
-
-.arrow-cell.arrow-active::after {
-  background: var(--soul);
-  box-shadow: 0 0 5px 1px var(--soul-glow);
-}
-
-/* Cardinal triangles */
-.arrow-cell[data-dir='N']::after  { clip-path: polygon(50% 0%, 100% 100%, 0% 100%); width: 7px; height: 6px; }
-.arrow-cell[data-dir='S']::after  { clip-path: polygon(0% 0%, 100% 0%, 50% 100%);   width: 7px; height: 6px; }
-.arrow-cell[data-dir='E']::after  { clip-path: polygon(0% 0%, 100% 50%, 0% 100%);   width: 6px; height: 7px; }
-.arrow-cell[data-dir='W']::after  { clip-path: polygon(100% 0%, 0% 50%, 100% 100%); width: 6px; height: 7px; }
-
-/* Diagonal triangles */
-.arrow-cell[data-dir='NE']::after { clip-path: polygon(0% 0%, 100% 0%, 100% 100%); width: 7px; height: 7px; }
-.arrow-cell[data-dir='SE']::after { clip-path: polygon(100% 0%, 100% 100%, 0% 100%); width: 7px; height: 7px; }
-.arrow-cell[data-dir='SW']::after { clip-path: polygon(0% 0%, 100% 100%, 0% 100%); width: 7px; height: 7px; }
-.arrow-cell[data-dir='NW']::after { clip-path: polygon(0% 0%, 100% 0%, 0% 100%); width: 7px; height: 7px; }
-
 /* ─── Board ──────────────────────────────────────────────────────────────── */
 
 .board {
   display: grid;
-  grid-template: repeat(4, 80px) / repeat(4, 72px);
+  grid-template: repeat(4, 1fr) / repeat(4, 1fr);
   gap: 6px;
-  padding: 14px;
+  padding: 12px;
   background: rgba(4, 5, 16, 0.7);
   border: 1px solid var(--gold-dim);
   box-shadow:
     0 0 40px rgba(0, 0, 0, 0.6),
     inset 0 0 30px rgba(0, 0, 0, 0.4);
   position: relative;
+  aspect-ratio: 1;
+  height: 100%;
+  max-height: calc(100dvh - 110px);
+  box-sizing: border-box;
+  align-self: center;
 }
 
 /* Board border ornament corners */
@@ -443,12 +493,10 @@
 
 .board-cell {
   position: relative;
-  width: 72px;
-  height: 80px;
   background: var(--cell-bg);
   border: 1px solid var(--cell-border);
-  overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
 .cell-empty {
@@ -471,13 +519,13 @@
   50%       { box-shadow: inset 0 0 18px rgba(100, 140, 255, 0.12); }
 }
 
-/* Owner colors */
-.cell-player {
+/* Owner colors on the card face inside board cells */
+.cell-player .card-face {
   border-color: var(--soul-dim);
   box-shadow: 0 0 8px rgba(100, 140, 255, 0.25), inset 0 0 12px rgba(100, 140, 255, 0.05);
 }
 
-.cell-opponent {
+.cell-opponent .card-face {
   border-color: var(--crimson-dim);
   box-shadow: 0 0 8px rgba(192, 49, 42, 0.25), inset 0 0 12px rgba(192, 49, 42, 0.05);
 }
@@ -493,10 +541,10 @@
   100% { filter: brightness(1) saturate(1); }
 }
 
-/* Empty cell rune decoration */
+/* Empty cell rune decoration — spans entire cell grid */
 .cell-rune {
-  position: absolute;
-  inset: 0;
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
   opacity: 0.2;
   background:
     radial-gradient(circle at 50% 50%, rgba(100, 140, 255, 0.3) 0%, transparent 60%);
@@ -525,44 +573,13 @@
   background: rgba(100, 140, 255, 0.5);
 }
 
-/* Board card image */
-.bc-image {
-  position: absolute;
-  inset: 0;
-  bottom: 18px;
-  background-size: cover;
-  background-position: center top;
-  background-color: #070a1a;
-}
-
-/* Board card stats strip */
-.bc-stats {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 0 4px;
-  background: rgba(4, 4, 10, 0.9);
-  font-family: 'Cinzel', serif;
-  font-size: 0.58rem;
-  letter-spacing: 0.05em;
-}
-
-.bc-stats .stat-atk  { color: #f0a030; }
-.bc-stats .stat-type { color: var(--text-bright); }
-.bc-stats .stat-def  { color: #6090bb; }
-
 /* ─── Footer ─────────────────────────────────────────────────────────────── */
 
 .game-footer {
   position: relative;
   z-index: 10;
-  padding: 0.75rem 0 1.25rem;
+  padding: 0.5rem 0 0.75rem;
+  flex-shrink: 0;
 }
 
 .hk-btn {
@@ -659,9 +676,9 @@
 
 .result-eyebrow {
   font-family: 'IM Fell English SC', serif;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   letter-spacing: 0.15em;
-  color: var(--text-dim);
+  color: var(--text-bright);
   font-style: italic;
 }
 
@@ -693,10 +710,10 @@
 .rs-item.right { align-items: center; }
 
 .rs-label {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--text-bright);
 }
 
 .rs-val {
@@ -708,10 +725,10 @@
 }
 
 .rs-sep {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--soul);
   padding-top: 0.5rem;
 }
 
