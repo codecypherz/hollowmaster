@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, output } from '@angular/core';
 
 @Component({
   selector: 'app-home',
@@ -8,4 +8,5 @@ import { Component } from '@angular/core';
 })
 export class Home {
   particles = Array.from({ length: 22 }, (_, i) => i);
+  readonly startGame = output<void>();
 }

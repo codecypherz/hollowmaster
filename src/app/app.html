@@ -1,2 +1,5 @@
-<app-home></app-home>
-<router-outlet />
+@if (!gameService.isActive()) {
+  <app-home (startGame)="onStartGame()" />
+} @else {
+  <app-game />
+}

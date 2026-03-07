@@ -1,0 +1,201 @@
+@let s = state();
+
+<div class="game-wrap">
+
+  <!-- Background -->
+  <div class="void-bg" aria-hidden="true"></div>
+  <div class="mist-layer" aria-hidden="true"></div>
+  <div class="particles" aria-hidden="true">
+    @for (p of particles; track p) {
+      <span class="particle" [style.--i]="p"></span>
+    }
+  </div>
+
+  <!-- Corner frames -->
+  <div class="corner corner-tl" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-tr" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-bl" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-br" aria-hidden="true"><span></span><span></span></div>
+
+  <!-- ─── Score bar ─── -->
+  <header class="score-bar">
+    <div class="score-side">
+      <span class="score-name">The Knight</span>
+      <span class="score-val player-score">{{ s.player.score }}</span>
+    </div>
+
+    <div class="status-center">
+      @if (s.phase !== 'game-over') {
+        <span class="status-text" [class.opponent-phase]="s.phase === 'opponent-turn'">
+          {{ statusText() }}
+        </span>
+      }
+    </div>
+
+    <div class="score-side right">
+      <span class="score-val opponent-score">{{ s.opponent.score }}</span>
+      <span class="score-name">Pale Court</span>
+    </div>
+  </header>
+
+  <!-- ─── Main arena ─── -->
+  <div class="arena">
+
+    <!-- Opponent hand (face-down) -->
+    <div class="hand opponent-hand" aria-label="Opponent hand">
+      @for (card of s.opponent.hand; track $index) {
+        <div class="hand-slot" [class.slot-empty]="!card">
+          @if (card) {
+            <div class="card face-down">
+              <div class="card-back-pattern"></div>
+              <div class="card-back-seal"></div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Board -->
+    <div class="board" aria-label="Game board">
+      @for (row of s.board; track $index; let ri = $index) {
+        @for (cell of row; track $index; let ci = $index) {
+          <div
+            class="board-cell"
+            [class.cell-empty]="!cell"
+            [class.cell-placeable]="isPlaceable(ri, ci)"
+            [class.cell-player]="cell?.owner === 'player'"
+            [class.cell-opponent]="cell?.owner === 'opponent'"
+            [class.cell-flipped]="isFlipped(ri, ci)"
+            (click)="onCellClick(ri, ci)"
+            [attr.aria-label]="cell ? cell.card.name : 'Empty cell'"
+          >
+            @if (cell) {
+              <!-- Card image -->
+              <div class="bc-image" [style.background-image]="cardImageStyle(cell.card)"></div>
+
+              <!-- Arrow grid overlay -->
+              <div class="arrow-grid" aria-hidden="true">
+                @for (dir of arrowGrid; track $index) {
+                  @if (dir) {
+                    <div
+                      class="arrow-cell"
+                      [attr.data-dir]="dir"
+                      [class.arrow-active]="hasArrow(cell.card, dir)"
+                    ></div>
+                  } @else {
+                    <div class="arrow-center"></div>
+                  }
+                }
+              </div>
+
+              <!-- Stats strip -->
+              <div class="bc-stats">
+                <span class="stat-atk">{{ toHex(cell.card.stats.attack) }}</span>
+                <span class="stat-type">{{ cell.card.stats.type }}</span>
+                <span class="stat-def">{{ toHex(cell.card.stats.physDef) }}{{ toHex(cell.card.stats.magDef) }}</span>
+              </div>
+            } @else {
+              <div class="cell-rune" aria-hidden="true"></div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Player hand -->
+    <div class="hand player-hand" aria-label="Your hand">
+      @for (card of s.player.hand; track $index; let i = $index) {
+        <div class="hand-slot" [class.slot-empty]="!card">
+          @if (card) {
+            <button
+              class="card hand-card"
+              [class.card-selected]="s.selectedCardIndex === i"
+              [class.card-unselectable]="s.phase !== 'player-turn'"
+              (click)="onCardSelect(i)"
+              [attr.aria-label]="card.name + ' — click to select'"
+              [attr.aria-pressed]="s.selectedCardIndex === i"
+            >
+              <!-- Image -->
+              <div class="hc-image" [style.background-image]="cardImageStyle(card)"></div>
+
+              <!-- Arrow grid overlay -->
+              <div class="arrow-grid" aria-hidden="true">
+                @for (dir of arrowGrid; track $index) {
+                  @if (dir) {
+                    <div
+                      class="arrow-cell"
+                      [attr.data-dir]="dir"
+                      [class.arrow-active]="hasArrow(card, dir)"
+                    ></div>
+                  } @else {
+                    <div class="arrow-center"></div>
+                  }
+                }
+              </div>
+
+              <!-- Stats strip -->
+              <div class="hc-stats">
+                <span class="stat-atk">{{ toHex(card.stats.attack) }}</span>
+                <span class="stat-type">{{ card.stats.type }}</span>
+                <span class="stat-pd">{{ toHex(card.stats.physDef) }}</span>
+                <span class="stat-md">{{ toHex(card.stats.magDef) }}</span>
+              </div>
+
+              <!-- Name -->
+              <div class="hc-name">{{ card.name }}</div>
+
+              <!-- Selection glow frame -->
+              <div class="select-frame" aria-hidden="true"></div>
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+  </div><!-- /arena -->
+
+  <!-- Exit -->
+  <footer class="game-footer">
+    <button class="hk-btn" (click)="exitGame()">Retreat</button>
+  </footer>
+
+  <!-- ─── Game Over Overlay ─── -->
+  @if (s.phase === 'game-over') {
+    <div class="overlay" role="dialog" aria-modal="true" aria-label="Game result">
+      <div class="overlay-inner">
+
+        <div class="ornament">
+          <span class="orn-line"></span><span class="orn-gem"></span><span class="orn-line"></span>
+        </div>
+
+        <p class="result-eyebrow">The battle concludes</p>
+        <h2 class="result-title" [class.result-win]="s.winner === 'player'" [class.result-lose]="s.winner === 'opponent'">
+          {{ resultText() }}
+        </h2>
+
+        <div class="result-scores">
+          <div class="rs-item">
+            <span class="rs-label">The Knight</span>
+            <span class="rs-val">{{ s.player.score }}</span>
+          </div>
+          <span class="rs-sep">vs</span>
+          <div class="rs-item right">
+            <span class="rs-val">{{ s.opponent.score }}</span>
+            <span class="rs-label">Pale Court</span>
+          </div>
+        </div>
+
+        <div class="ornament">
+          <span class="orn-line"></span><span class="orn-gem"></span><span class="orn-line"></span>
+        </div>
+
+        <div class="overlay-actions">
+          <button class="hk-btn primary" (click)="playAgain()">Play Again</button>
+          <button class="hk-btn" (click)="exitGame()">Return</button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>
