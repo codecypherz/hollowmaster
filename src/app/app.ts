@@ -1,13 +1,11 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { OpenPack } from "../components/open-pack/open-pack";
+import { Home } from "../components/home/home";
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, OpenPack],
+  imports: [RouterOutlet, Home],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App {
-  protected readonly title = signal('hollowmaster');
-}
+export class App {}

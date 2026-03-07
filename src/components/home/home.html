@@ -1,0 +1,75 @@
+<div class="home-wrap">
+
+  <!-- Layered void background -->
+  <div class="void-bg" aria-hidden="true"></div>
+  <div class="mist-layer" aria-hidden="true"></div>
+
+  <!-- Floating soul particles -->
+  <div class="particles" aria-hidden="true">
+    @for (p of particles; track p) {
+      <span class="particle" [style.--i]="p"></span>
+    }
+  </div>
+
+  <!-- Corner frame decorations -->
+  <div class="corner corner-tl" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-tr" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-bl" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-br" aria-hidden="true"><span></span><span></span></div>
+
+  <!-- Main content -->
+  <main class="content">
+
+    <!-- Top ornamental divider -->
+    <div class="ornament fade-in" style="--delay: 0.2s">
+      <span class="orn-line"></span>
+      <span class="orn-node"></span>
+      <span class="orn-line short"></span>
+      <span class="orn-gem"></span>
+      <span class="orn-line short"></span>
+      <span class="orn-node"></span>
+      <span class="orn-line"></span>
+    </div>
+
+    <!-- Hero header -->
+    <header class="header-block">
+      <!-- Soul aura rings behind the title -->
+      <div class="soul-aura" aria-hidden="true">
+        <div class="soul-ring r1"></div>
+        <div class="soul-ring r2"></div>
+        <div class="soul-ring r3"></div>
+      </div>
+
+      <p class="eyebrow fade-in" style="--delay: 0.5s">From the depths of Hallownest</p>
+
+      <h1 class="title">
+        <span class="title-hollow fade-in" style="--delay: 0.8s">HOLLOW</span>
+        <span class="title-master fade-in" style="--delay: 1.1s">MASTER</span>
+      </h1>
+
+      <p class="tagline fade-in" style="--delay: 1.3s">A card game of ancient power and forgotten kings</p>
+    </header>
+
+    <!-- Bottom ornamental divider -->
+    <div class="ornament fade-in" style="--delay: 1.5s">
+      <span class="orn-line"></span>
+      <span class="orn-node"></span>
+      <span class="orn-line short"></span>
+      <span class="orn-gem"></span>
+      <span class="orn-line short"></span>
+      <span class="orn-node"></span>
+      <span class="orn-line"></span>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="main-nav fade-in" style="--delay: 1.7s">
+      <button class="hk-btn primary">
+        <span class="btn-inner-glow"></span>
+        Open Pack
+      </button>
+      <button class="hk-btn">Collection</button>
+      <button class="hk-btn">Lore</button>
+    </nav>
+
+  </main>
+</div>
