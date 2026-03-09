@@ -41,3 +41,18 @@ public/images/            # Card artwork (webp/png)
 - The `Card` model lives in `src/model/card.ts` alongside `CARD_DB`, the static array of all cards. New cards are added there.
 - Card images are served from `public/images/` and referenced as `/images/<filename>` in the `Card` constructor.
 - Angular control flow syntax (`@for`, `@if`, `@empty`) is used in templates — not `*ngFor`/`*ngIf` directives.
+
+## Look and Feel requirements
+Always follow these constraints when making changes to the UI.
+- The theme needs to be Hollow Knight
+
+### Card Look and Feel
+All cards must satisfy these constraints
+- Cards must have an aspect ratio of 2.5 : 3.5 to make them similar to trading cards.
+- Cards must have 3 sections
+  - Name
+  - Image
+  - Stats
+- Cards must have direction chevrons (according to it's model)
+  - The chevrons must be within the card border but outside of the 3 sections
+- Card rarity is rendered as stars in the top-left corner of the image
