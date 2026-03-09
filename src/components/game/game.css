@@ -28,7 +28,7 @@
   --cell-border:    #3a3e80;
   --card-h:         clamp(65px, calc((100dvh - 7rem) / 5 - 6px), 220px); /* fits 5 cards vertically */
   --card-w:         calc(var(--card-h) / 1.4); /* 2.5:3.5 trading-card ratio */
-  --arr:            clamp(14px, calc(var(--card-w) * 0.14), 24px);
+  --arr:            clamp(13px, calc(var(--card-w) * 0.126), 22px);
 
   position: relative;
   width: 100%;
@@ -216,6 +216,32 @@
   width: var(--card-w);
 }
 
+/* Player hand: 2-column grid, left col 3 cards, right col 2 cards */
+.player-hand {
+  display: grid;
+  grid-template-columns: repeat(2, var(--card-w));
+  grid-template-rows: repeat(3, var(--card-h));
+  grid-auto-flow: column;
+  gap: 6px;
+  width: calc(2 * var(--card-w) + 6px);
+}
+
+/* Opponent hand: 5 cards overlapping vertically to match board height */
+.opponent-hand {
+  position: relative;
+  width: var(--card-w);
+  height: calc(4 * var(--card-h) + 42px);
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.opponent-hand .hand-slot {
+  position: absolute;
+  width: var(--card-w);
+  height: var(--card-h);
+  top: calc(var(--i, 0) * (3 * var(--card-h) + 42px) / 4);
+}
+
 .hand-slot {
   width: var(--card-w);
   height: var(--card-h);
@@ -292,8 +318,8 @@
 
 .card-face {
   grid-area: face;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 1fr 2.5fr 1.5fr;
   gap: 1px;
   overflow: hidden;
   background: #02020a;
@@ -312,13 +338,14 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex-shrink: 0;
   border: 1px solid rgba(74, 106, 170, 0.45);
   border-radius: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cf-img {
-  flex: 1;
   position: relative;
   background-size: cover;
   background-position: center top;
@@ -326,6 +353,7 @@
   min-height: 0;
   border: 1px solid rgba(74, 106, 170, 0.45);
   border-radius: 1px;
+  overflow: hidden;
 }
 
 .cf-stars {
@@ -345,9 +373,10 @@
   gap: clamp(2px, calc(var(--card-w) * 0.025), 5px);
   padding: clamp(3px, calc(var(--card-w) * 0.04), 7px) clamp(3px, calc(var(--card-w) * 0.04), 6px);
   background: rgba(4, 4, 10, 0.95);
-  flex-shrink: 0;
   border: 1px solid rgba(74, 106, 170, 0.45);
   border-radius: 1px;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .stat-row {
@@ -506,6 +535,45 @@
   border-width: 0 1px 1px 0;
 }
 
+/* ─── Board logo background ──────────────────────────────────────────────── */
+
+.board-logo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+  gap: 0;
+  user-select: none;
+}
+
+.board-logo-hollow {
+  font-family: 'Cinzel Decorative', serif;
+  font-weight: 900;
+  font-size: clamp(1rem, calc(var(--card-w) * 1.6), 3.2rem);
+  color: var(--soul);
+  text-shadow: 0 0 24px var(--soul-glow);
+  opacity: 0.5;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.board-logo-master {
+  font-family: 'Cinzel Decorative', serif;
+  font-weight: 700;
+  font-size: clamp(1.2rem, calc(var(--card-w) * 1.9), 3.8rem);
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(224, 144, 48, 0.6);
+  opacity: 0.5;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
 /* ─── Board cells ────────────────────────────────────────────────────────── */
 
 .board-cell {
@@ -514,6 +582,7 @@
   border: 1px solid var(--cell-border);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   overflow: hidden;
+  z-index: 1;
 }
 
 .cell-empty {

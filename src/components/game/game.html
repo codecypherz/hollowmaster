@@ -90,6 +90,13 @@
 
     <!-- Board -->
     <div class="board" aria-label="Game board">
+
+      <!-- Logo watermark -->
+      <div class="board-logo" aria-hidden="true">
+        <span class="board-logo-hollow">HOLLOW</span>
+        <span class="board-logo-master">MASTER</span>
+      </div>
+
       @for (row of s.board; track $index; let ri = $index) {
         @for (cell of row; track $index; let ci = $index) {
           <div
@@ -141,8 +148,8 @@
 
     <!-- Opponent hand (face-down) -->
     <div class="hand opponent-hand" aria-label="Opponent hand">
-      @for (card of s.opponent.hand; track $index) {
-        <div class="hand-slot" [class.slot-empty]="!card">
+      @for (card of s.opponent.hand; track $index; let i = $index) {
+        <div class="hand-slot" [class.slot-empty]="!card" [style.--i]="i">
           @if (card) {
             <div class="card face-down">
               <div class="card-back-pattern"></div>
