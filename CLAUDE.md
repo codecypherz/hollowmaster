@@ -47,6 +47,8 @@ public/images/            # Card artwork (webp/png)
 - The theme needs to be Hollow Knight
 - The in-game UI needs to fit on the screen without clipping.
 - The in-game UI needs to take up as much space as possible.
+- The in-game UI player cards and opponent cards must always be visible. Do not let them be clipped.
+- The in-game UI board and all cards must always be visible.
 
 ### Card Look and Feel
 All cards must satisfy these constraints

@@ -11,24 +11,24 @@
 .game-wrap {
   --void:           #04040a;
   --deep:           #08081a;
-  --soul:           #b8ccff;
-  --soul-dim:       #4a6aaa;
-  --soul-glow:      rgba(100, 140, 255, 0.35);
-  --soul-glow-sm:   rgba(100, 140, 255, 0.2);
-  --gold:           #c8882a;
-  --gold-light:     #e8aa4a;
-  --gold-dim:       #6a4a14;
-  --crimson:        #c0312a;
-  --crimson-dim:    #7a1a14;
-  --crimson-glow:   rgba(192, 49, 42, 0.4);
-  --text-dim:       #3a4a72;
-  --text-muted:     #5a6a9a;
-  --text-bright:    #8a9acc;
+  --soul:           #c4dcff;
+  --soul-dim:       #6080cc;
+  --soul-glow:      rgba(130, 170, 255, 0.45);
+  --soul-glow-sm:   rgba(130, 170, 255, 0.28);
+  --gold:           #e09030;
+  --gold-light:     #f8c040;
+  --gold-dim:       #8a5818;
+  --crimson:        #e03838;
+  --crimson-dim:    #9a2020;
+  --crimson-glow:   rgba(224, 56, 56, 0.5);
+  --text-dim:       #4a5888;
+  --text-muted:     #7888b8;
+  --text-bright:    #a8bce8;
   --cell-bg:        #0e1025;
-  --cell-border:    #2e3268;
-  --arr:            12px; /* arrow margin in card 3×3 grid */
-  --card-w:         clamp(58px, 25vmin, 160px);
-  --card-h:         calc(var(--card-w) * 1.4); /* 2.5:3.5 trading-card ratio */
+  --cell-border:    #3a3e80;
+  --card-h:         clamp(65px, calc((100dvh - 7rem) / 5 - 6px), 220px); /* fits 5 cards vertically */
+  --card-w:         calc(var(--card-h) / 1.4); /* 2.5:3.5 trading-card ratio */
+  --arr:            clamp(14px, calc(var(--card-w) * 0.14), 24px);
 
   position: relative;
   width: 100%;
@@ -126,7 +126,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1.5rem 0.5rem;
+  padding: 1.75rem 2.0rem 0.5rem;
   gap: 1rem;
   flex-shrink: 0;
 }
@@ -276,17 +276,17 @@
 .arr-s  { grid-area: s;  }
 .arr-se { grid-area: se; }
 
-/* Cardinal arrows */
-.arr-n::after  { clip-path: polygon(50% 0%, 100% 100%, 0% 100%); width: 7px; height: 6px; }
-.arr-s::after  { clip-path: polygon(0% 0%, 100% 0%, 50% 100%);   width: 7px; height: 6px; }
-.arr-e::after  { clip-path: polygon(0% 0%, 100% 50%, 0% 100%);   width: 6px; height: 7px; }
-.arr-w::after  { clip-path: polygon(100% 0%, 0% 50%, 100% 100%); width: 6px; height: 7px; }
+/* Cardinal arrows — shapes fill ~65% of the --arr cell */
+.arr-n::after  { clip-path: polygon(50% 0%, 100% 100%, 0% 100%); width: calc(var(--arr) * 0.72); height: calc(var(--arr) * 0.6); }
+.arr-s::after  { clip-path: polygon(0% 0%, 100% 0%, 50% 100%);   width: calc(var(--arr) * 0.72); height: calc(var(--arr) * 0.6); }
+.arr-e::after  { clip-path: polygon(0% 0%, 100% 50%, 0% 100%);   width: calc(var(--arr) * 0.6);  height: calc(var(--arr) * 0.72); }
+.arr-w::after  { clip-path: polygon(100% 0%, 0% 50%, 100% 100%); width: calc(var(--arr) * 0.6);  height: calc(var(--arr) * 0.72); }
 
 /* Diagonal arrows */
-.arr-ne::after { clip-path: polygon(0% 0%, 100% 0%, 100% 100%);  width: 7px; height: 7px; }
-.arr-se::after { clip-path: polygon(100% 0%, 100% 100%, 0% 100%); width: 7px; height: 7px; }
-.arr-sw::after { clip-path: polygon(0% 0%, 100% 100%, 0% 100%);  width: 7px; height: 7px; }
-.arr-nw::after { clip-path: polygon(0% 0%, 100% 0%, 0% 100%);    width: 7px; height: 7px; }
+.arr-ne::after { clip-path: polygon(0% 0%, 100% 0%, 100% 100%);  width: calc(var(--arr) * 0.7); height: calc(var(--arr) * 0.7); }
+.arr-se::after { clip-path: polygon(100% 0%, 100% 100%, 0% 100%); width: calc(var(--arr) * 0.7); height: calc(var(--arr) * 0.7); }
+.arr-sw::after { clip-path: polygon(0% 0%, 100% 100%, 0% 100%);  width: calc(var(--arr) * 0.7); height: calc(var(--arr) * 0.7); }
+.arr-nw::after { clip-path: polygon(0% 0%, 100% 0%, 0% 100%);    width: calc(var(--arr) * 0.7); height: calc(var(--arr) * 0.7); }
 
 /* ─── Card face (shared) ─────────────────────────────────────────────────── */
 
@@ -301,10 +301,10 @@
 }
 
 .cf-name {
-  padding: 2px 4px 3px;
+  padding: clamp(2px, calc(var(--card-w) * 0.03), 5px) 4px;
   background: rgba(4, 4, 10, 0.95);
   font-family: 'Cinzel', serif;
-  font-size: 0.5rem;
+  font-size: clamp(0.6rem, calc(var(--card-w) * 0.1), 1.1rem);
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--soul);
@@ -332,9 +332,9 @@
   position: absolute;
   top: 2px;
   left: 3px;
-  font-size: 0.5rem;
+  font-size: clamp(0.7rem, calc(var(--card-w) * 0.11), 1.2rem);
   color: var(--gold);
-  text-shadow: 0 0 6px rgba(200, 136, 42, 0.9), 0 1px 2px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 0 8px rgba(224, 144, 48, 0.95), 0 1px 2px rgba(0, 0, 0, 0.9);
   letter-spacing: -1px;
   line-height: 1;
 }
@@ -342,8 +342,8 @@
 .cf-stats {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 3px 4px;
+  gap: clamp(2px, calc(var(--card-w) * 0.025), 5px);
+  padding: clamp(3px, calc(var(--card-w) * 0.04), 7px) clamp(3px, calc(var(--card-w) * 0.04), 6px);
   background: rgba(4, 4, 10, 0.95);
   flex-shrink: 0;
   border: 1px solid rgba(74, 106, 170, 0.45);
@@ -353,33 +353,21 @@
 .stat-row {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: clamp(3px, calc(var(--card-w) * 0.03), 5px);
 }
 
 .stat-icon {
   flex-shrink: 0;
-  width: 8px;
-  height: 10px;
-}
-
-.atk-icon { color: #f0a030; }
-.def-icon { color: #60aacc; }
-
-.stat-num {
-  font-size: 0.38rem;
-  font-family: 'Cinzel', serif;
-  line-height: 1;
-  flex-shrink: 0;
-  min-width: 14px;
-  text-align: right;
-  color: var(--text-bright);
+  width: clamp(12px, calc(var(--card-w) * 0.16), 22px);
+  height: clamp(12px, calc(var(--card-w) * 0.16), 22px);
+  object-fit: contain;
 }
 
 .stat-bar {
   flex: 1;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 1px;
+  height: clamp(6px, calc(var(--card-w) * 0.065), 10px);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
   overflow: hidden;
 }
 
