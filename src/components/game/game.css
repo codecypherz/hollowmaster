@@ -503,7 +503,7 @@
   grid-template: repeat(4, var(--card-h)) / repeat(4, var(--card-w));
   gap: 6px;
   padding: 12px;
-  background: rgba(4, 5, 16, 0.7);
+  background: transparent;
   border: 1px solid var(--gold-dim);
   box-shadow:
     0 0 40px rgba(0, 0, 0, 0.6),
@@ -548,6 +548,7 @@
   z-index: 0;
   gap: 0;
   user-select: none;
+  opacity: 0.5;
 }
 
 .board-logo-hollow {
@@ -556,7 +557,6 @@
   font-size: clamp(1rem, calc(var(--card-w) * 1.6), 3.2rem);
   color: var(--soul);
   text-shadow: 0 0 24px var(--soul-glow);
-  opacity: 0.5;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   line-height: 1.1;
@@ -568,7 +568,6 @@
   font-size: clamp(1.2rem, calc(var(--card-w) * 1.9), 3.8rem);
   color: var(--gold);
   text-shadow: 0 0 20px rgba(224, 144, 48, 0.6);
-  opacity: 0.5;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   line-height: 1.1;
@@ -587,6 +586,7 @@
 
 .cell-empty {
   cursor: default;
+  background: transparent;
 }
 
 .cell-placeable {
