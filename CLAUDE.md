@@ -56,3 +56,9 @@ All cards must satisfy these constraints
 - Cards must have direction chevrons (according to it's model)
   - The chevrons must be within the card border but outside of the 3 sections
 - Card rarity is rendered as stars in the top-left corner of the image
+- Opponent cards must maintain the same aspect ratio
+- Opponent cards must be the same size as player cards.
+
+### Board Look and Feel
+- The board tiles must always be the same size as the player and opponent cards
+- The board tiles must maintain the same aspect ratio
