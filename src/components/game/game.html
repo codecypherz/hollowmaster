@@ -64,11 +64,28 @@
                   <span class="cf-stars">{{ starString(card.rarity) }}</span>
                 </div>
                 <div class="cf-stats">
-                  <div class="stat-bar">
-                    <div class="stat-fill atk-fill" [style.width.%]="card.stats.attack"></div>
+                  <div class="stat-row">
+                    <!-- Nail (attack) -->
+                    <svg class="stat-icon atk-icon" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <polygon points="5,0 6.5,5 5,13 3.5,5"/>
+                      <rect x="1.5" y="11" width="7" height="1.5" rx="0.5"/>
+                      <rect x="4" y="12.5" width="2" height="3.5" rx="0.5"/>
+                    </svg>
+                    <span class="stat-num">{{ card.stats.attack }}</span>
+                    <div class="stat-bar">
+                      <div class="stat-fill atk-fill" [style.width.%]="card.stats.attack"></div>
+                    </div>
                   </div>
-                  <div class="stat-bar">
-                    <div class="stat-fill def-fill" [style.width.%]="card.stats.defense"></div>
+                  <div class="stat-row">
+                    <!-- Dreamshield (defense) -->
+                    <svg class="stat-icon def-icon" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+                      <circle cx="6" cy="6" r="1.8" fill="currentColor"/>
+                    </svg>
+                    <span class="stat-num">{{ card.stats.defense }}</span>
+                    <div class="stat-bar">
+                      <div class="stat-fill def-fill" [style.width.%]="card.stats.defense"></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -107,11 +124,28 @@
                   <span class="cf-stars">{{ starString(cell.card.rarity) }}</span>
                 </div>
                 <div class="cf-stats">
-                  <div class="stat-bar">
-                    <div class="stat-fill atk-fill" [style.width.%]="cell.card.stats.attack"></div>
+                  <div class="stat-row">
+                    <!-- Nail (attack) -->
+                    <svg class="stat-icon atk-icon" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <polygon points="5,0 6.5,5 5,13 3.5,5"/>
+                      <rect x="1.5" y="11" width="7" height="1.5" rx="0.5"/>
+                      <rect x="4" y="12.5" width="2" height="3.5" rx="0.5"/>
+                    </svg>
+                    <span class="stat-num">{{ cell.card.stats.attack }}</span>
+                    <div class="stat-bar">
+                      <div class="stat-fill atk-fill" [style.width.%]="cell.card.stats.attack"></div>
+                    </div>
                   </div>
-                  <div class="stat-bar">
-                    <div class="stat-fill def-fill" [style.width.%]="cell.card.stats.defense"></div>
+                  <div class="stat-row">
+                    <!-- Dreamshield (defense) -->
+                    <svg class="stat-icon def-icon" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+                      <circle cx="6" cy="6" r="1.8" fill="currentColor"/>
+                    </svg>
+                    <span class="stat-num">{{ cell.card.stats.defense }}</span>
+                    <div class="stat-bar">
+                      <div class="stat-fill def-fill" [style.width.%]="cell.card.stats.defense"></div>
+                    </div>
                   </div>
                 </div>
               </div>

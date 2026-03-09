@@ -27,7 +27,8 @@
   --cell-bg:        #0e1025;
   --cell-border:    #2e3268;
   --arr:            12px; /* arrow margin in card 3×3 grid */
-  --card-size:      clamp(58px, 25vmin, 160px);
+  --card-w:         clamp(58px, 25vmin, 160px);
+  --card-h:         calc(var(--card-w) * 1.4); /* 2.5:3.5 trading-card ratio */
 
   position: relative;
   width: 100%;
@@ -212,12 +213,12 @@
   justify-content: center;
   flex-shrink: 0;
   align-self: center;
-  width: var(--card-size);
+  width: var(--card-w);
 }
 
 .hand-slot {
-  width: var(--card-size);
-  height: var(--card-size);
+  width: var(--card-w);
+  height: var(--card-h);
   flex-shrink: 0;
 }
 
@@ -349,7 +350,33 @@
   border-radius: 1px;
 }
 
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stat-icon {
+  flex-shrink: 0;
+  width: 8px;
+  height: 10px;
+}
+
+.atk-icon { color: #f0a030; }
+.def-icon { color: #60aacc; }
+
+.stat-num {
+  font-size: 0.38rem;
+  font-family: 'Cinzel', serif;
+  line-height: 1;
+  flex-shrink: 0;
+  min-width: 14px;
+  text-align: right;
+  color: var(--text-bright);
+}
+
 .stat-bar {
+  flex: 1;
   height: 3px;
   background: rgba(255, 255, 255, 0.07);
   border-radius: 1px;
@@ -456,7 +483,7 @@
 
 .board {
   display: grid;
-  grid-template: repeat(4, var(--card-size)) / repeat(4, var(--card-size));
+  grid-template: repeat(4, var(--card-h)) / repeat(4, var(--card-w));
   gap: 6px;
   padding: 12px;
   background: rgba(4, 5, 16, 0.7);
