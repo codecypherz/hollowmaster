@@ -43,8 +43,10 @@ public/images/            # Card artwork (webp/png)
 - Angular control flow syntax (`@for`, `@if`, `@empty`) is used in templates — not `*ngFor`/`*ngIf` directives.
 
 ## Look and Feel requirements
-Always follow these constraints when making changes to the UI.
+**Always** follow these constraints when making changes to the UI. **Always** check these constraints after making changes to the UI.
 - The theme needs to be Hollow Knight
+- The in-game UI needs to fit on the screen without clipping.
+- The in-game UI needs to take up as much space as possible.
 
 ### Card Look and Feel
 All cards must satisfy these constraints
@@ -56,6 +58,7 @@ All cards must satisfy these constraints
 - Cards must have direction chevrons (according to it's model)
   - The chevrons must be within the card border but outside of the 3 sections
 - Card rarity is rendered as stars in the top-left corner of the image
+- Card stats should never show the number for attack and defense, it should only render as a progress bar from 0 to 100.
 - Opponent cards must maintain the same aspect ratio
 - Opponent cards must be the same size as player cards.
 
