@@ -5,9 +5,12 @@
    ──────────────────────────────────────────────────────────────────────────── */
 
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  min-height: 100vh;
+  /* Takes the column the nav shell leaves rather than a flat 100vh, which
+     would push the splash a nav's height past the viewport. */
+  flex: 1;
 }
 
 .home-wrap {
@@ -18,8 +21,8 @@
   --corner-inset: 28px;
 
   position: relative;
+  flex: 1;
   width: 100%;
-  min-height: 100vh;
   background: var(--color-void);
   display: flex;
   align-items: center;

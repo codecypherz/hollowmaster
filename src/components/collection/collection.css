@@ -1,0 +1,94 @@
+/* ─── Cards screen ────────────────────────────────────────────────────────────
+   A themed skeleton: the atmosphere, ornament, and frame all come from the
+   global primitives, so the collection and deck builder can be dropped into
+   `.content` later without rebuilding the page around it. What is local here
+   is only this screen's layout and its type scale.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  /* Takes the whole column below the nav shell, and hands that height on to
+     .page-wrap, so the atmosphere and the corner frame reach the viewport
+     edges rather than stopping at the content's natural height. */
+  flex: 1;
+}
+
+.page-wrap {
+  /* Primitive parameters for this screen: a sparse field, tighter frame. */
+  --particle-gap: 7%;
+  --particle-stagger: 0.45s;
+  --corner-size: 48px;
+  --corner-inset: 20px;
+
+  position: relative;
+  flex: 1;
+  width: 100%;
+  background: var(--color-void);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--font-ui);
+}
+
+.content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5rem;
+  padding: 4rem 2rem;
+  max-width: 720px;
+  width: 100%;
+}
+
+.ornament {
+  max-width: 420px;
+}
+
+.header-block {
+  text-align: center;
+}
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.4em;
+  color: var(--color-text-dim);
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 7vw, 4rem);
+  font-weight: 900;
+  color: var(--color-soul);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+  text-shadow: 0 0 25px var(--color-soul-glow-sm);
+}
+
+.purpose {
+  font-family: var(--font-flavor);
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.08em;
+  font-style: italic;
+}
+
+/* The forthcoming-content marker: gold, so it reads as structure rather than
+   as something the player can act on. */
+.coming-soon {
+  font-family: var(--font-ui);
+  font-size: 0.65rem;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--color-gold-dim);
+  border: 1px solid var(--color-gold-dim);
+  padding: 0.8rem 2.2rem;
+}

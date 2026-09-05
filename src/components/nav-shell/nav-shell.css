@@ -1,0 +1,63 @@
+/* ─── Navigation shell ────────────────────────────────────────────────────────
+   Chrome only: every colour, family, and duration comes from the token set,
+   and the destinations themselves are the shared `.hk-btn` primitive rather
+   than a parallel button defined here. What is local is the bar's layout and
+   the treatment that marks the current destination.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  display: block;
+  position: relative;
+  z-index: 20;
+  background: var(--color-void);
+}
+
+.nav-shell {
+  --btn-font-size: 0.62rem;
+  --btn-padding: 0.55rem 1.6rem;
+
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.9rem var(--spacing-frame);
+  border-bottom: 1px solid var(--color-gold-dim);
+  font-family: var(--font-ui);
+}
+
+/* The hairlines that flank the links, fading out towards the frame edges —
+   the same gold ramp the ornament dividers use. */
+.nav-rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold-dim), transparent);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.nav-links a {
+  display: inline-block;
+  text-decoration: none;
+}
+
+/* Current destination: the soul accent, so "where I am" reads differently from
+   "what I can hover", which stays gold. */
+.nav-links a.is-active {
+  color: var(--color-soul);
+  border-color: var(--color-soul-dim);
+  background: var(--color-soul-faint);
+  box-shadow: var(--elev-glow-soul);
+}
+
+.nav-links a.is-active:hover {
+  color: var(--color-soul-bright);
+  border-color: var(--color-soul);
+}

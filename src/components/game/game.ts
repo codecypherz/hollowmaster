@@ -1,4 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { GameService } from '../../services/game.service';
 import { CardComponent } from '../card/card';
 
@@ -10,6 +11,7 @@ import { CardComponent } from '../card/card';
 })
 export class Game {
   private gs = inject(GameService);
+  private router = inject(Router);
 
   readonly state = computed(() => this.gs.state()!);
   readonly particles = Array.from({ length: 14 }, (_, i) => i);
@@ -26,7 +28,10 @@ export class Game {
   }
 
   exitGame(): void {
+    // Clear the state before navigating, so the in-game route's guard cannot
+    // see a stale active game and send the player straight back in.
     this.gs.exitGame();
+    this.router.navigate(['/battle']);
   }
 
   playAgain(): void {

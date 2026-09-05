@@ -1,0 +1,40 @@
+@if (visible()) {
+  <nav class="nav-shell" aria-label="Primary">
+    <span class="nav-rule" aria-hidden="true"></span>
+
+    <ul class="nav-links">
+      <li>
+        <a
+          class="hk-btn"
+          routerLink="/battle"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          ariaCurrentWhenActive="page"
+          >Battle</a
+        >
+      </li>
+      <li>
+        <a
+          class="hk-btn"
+          routerLink="/shop"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          ariaCurrentWhenActive="page"
+          >Shop</a
+        >
+      </li>
+      <li>
+        <a
+          class="hk-btn"
+          routerLink="/cards"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          ariaCurrentWhenActive="page"
+          >Cards</a
+        >
+      </li>
+    </ul>
+
+    <span class="nav-rule" aria-hidden="true"></span>
+  </nav>
+}

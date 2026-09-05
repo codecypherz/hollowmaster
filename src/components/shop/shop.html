@@ -1,0 +1,48 @@
+<div class="page-wrap">
+  <!-- Layered void background -->
+  <div class="void-bg" aria-hidden="true"></div>
+  <div class="mist-layer" aria-hidden="true"></div>
+
+  <!-- Floating soul particles -->
+  <div class="particles" aria-hidden="true">
+    @for (p of particles; track p) {
+      <span class="particle" [style.--i]="p"></span>
+    }
+  </div>
+
+  <!-- Corner frame decorations -->
+  <div class="corner corner-tl" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-tr" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-bl" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-br" aria-hidden="true"><span></span><span></span></div>
+
+  <main class="content">
+    <div class="ornament">
+      <span class="orn-line"></span>
+      <span class="orn-node"></span>
+      <span class="orn-line short"></span>
+      <span class="orn-gem"></span>
+      <span class="orn-line short"></span>
+      <span class="orn-node"></span>
+      <span class="orn-line"></span>
+    </div>
+
+    <header class="header-block">
+      <p class="eyebrow">Wares of the wandering merchant</p>
+      <h1 class="page-title">Shop</h1>
+      <p class="purpose">This is where you will buy packs of cards.</p>
+    </header>
+
+    <p class="coming-soon">Coming soon</p>
+
+    <div class="ornament">
+      <span class="orn-line"></span>
+      <span class="orn-node"></span>
+      <span class="orn-line short"></span>
+      <span class="orn-gem"></span>
+      <span class="orn-line short"></span>
+      <span class="orn-node"></span>
+      <span class="orn-line"></span>
+    </div>
+  </main>
+</div>
