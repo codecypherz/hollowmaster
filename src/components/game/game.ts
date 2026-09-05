@@ -1,10 +1,10 @@
 import { Component, computed, inject } from '@angular/core';
 import { GameService } from '../../services/game.service';
-import { Card } from '../../model/card';
+import { CardComponent } from '../card/card';
 
 @Component({
   selector: 'app-game',
-  imports: [],
+  imports: [CardComponent],
   templateUrl: './game.html',
   styleUrl: './game.css',
 })
@@ -42,18 +42,10 @@ export class Game {
     return this.state().lastFlipped.some((f) => f.row === row && f.col === col);
   }
 
-  hasArrow(card: Card, dir: string): boolean {
-    return card.stats.arrows.includes(dir as any);
-  }
-
-  toHex(n: number): string {
-    return n.toString(16).toUpperCase();
-  }
-
   statusText(): string {
     const s = this.state();
     if (s.phase === 'player-turn') return 'Your Turn';
-    if (s.phase === 'opponent-turn') return "The Pale Court Ponders...";
+    if (s.phase === 'opponent-turn') return 'The Pale Court Ponders...';
     return '';
   }
 
@@ -62,13 +54,5 @@ export class Game {
     if (w === 'player') return 'Soul Restored — Victory';
     if (w === 'opponent') return 'Shade Lingers — Defeat';
     return 'The Void Holds — Draw';
-  }
-
-  cardImageStyle(card: Card): string {
-    return `url('${card.image}')`;
-  }
-
-  starString(rarity: number): string {
-    return '★'.repeat(Math.max(1, Math.min(rarity, 7)));
   }
 }

@@ -1,3 +1,17 @@
-/* You can add global styles to this file, and also import other style files */
+/* ─── Hollow Master — global stylesheet ───────────────────────────────────────
+   Import order matters:
+     1. fonts      — CSS requires @import to precede all other rules
+     2. tailwind   — must be processed before @theme is read
+     3. tokens     — the @theme block; the single source of truth
+     4. primitives — shared rules, which consume the tokens above
+   ──────────────────────────────────────────────────────────────────────────── */
 
-@import "tailwindcss";
+@import './styles/fonts.css';
+
+/* Scan only application source. Left to auto-detect, Tailwind also reads the
+   repo's markdown — where prose quoting a class name (documenting the classes
+   this change removed, for instance) would generate that class for real. */
+@import 'tailwindcss' source(none);
+@source './**/*.{html,ts}';
+@import './styles/tokens.css';
+@import './styles/primitives.css';

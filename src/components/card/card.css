@@ -1,0 +1,443 @@
+/* ─── Card ────────────────────────────────────────────────────────────────────
+   The single card renderer.
+
+   Sizing contract: the card fills the width it is given and derives its height
+   from the fixed 2.5:3.5 ratio. It never reads a height from the caller — an
+   explicit conflicting height would silently break the ratio, so the ratio is
+   declared here and wins.
+
+   `container-type: inline-size` makes the card its own query container, so
+   everything inside scales from the card's own width in `cqw` units. That
+   reproduces the game screen's old `calc(var(--card-w) * n)` chain exactly
+   (12.6cqw === card-w * 0.126) while making the card work at any size on any
+   surface, with no measurement plumbed in from outside.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  --arr: clamp(13px, 12.6cqw, 22px);
+
+  display: block;
+  width: 100%;
+  aspect-ratio: 2.5 / 3.5;
+  container-type: inline-size;
+}
+
+:host(.is-empty) {
+  display: none;
+}
+
+/* ─── Frame: the 3×3 chevron ring around the face ─────────────────────────── */
+
+.frame {
+  display: grid;
+  grid-template-areas:
+    'nw n  ne'
+    'w  face e'
+    'sw s  se';
+  grid-template-rows: var(--arr) 1fr var(--arr);
+  grid-template-columns: var(--arr) 1fr var(--arr);
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-soul-dim);
+  border-radius: 2px;
+  box-sizing: border-box;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  transition:
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease,
+    transform var(--dur-instant) ease;
+}
+
+button.frame {
+  cursor: pointer;
+  appearance: none;
+}
+
+/* ─── Chevrons ────────────────────────────────────────────────────────────── */
+
+.arr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arr::after {
+  content: '';
+  display: block;
+  background: rgba(74, 106, 170, 0.2);
+}
+
+.arr-on::after {
+  background: var(--color-soul);
+  box-shadow: 0 0 4px 1px var(--color-soul-glow);
+}
+
+.arr-nw {
+  grid-area: nw;
+}
+.arr-n {
+  grid-area: n;
+}
+.arr-ne {
+  grid-area: ne;
+}
+.arr-w {
+  grid-area: w;
+}
+.arr-e {
+  grid-area: e;
+}
+.arr-sw {
+  grid-area: sw;
+}
+.arr-s {
+  grid-area: s;
+}
+.arr-se {
+  grid-area: se;
+}
+
+/* Cardinal chevrons — shapes fill ~65% of their cell */
+.arr-n::after {
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  width: calc(var(--arr) * 0.72);
+  height: calc(var(--arr) * 0.6);
+}
+.arr-s::after {
+  clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+  width: calc(var(--arr) * 0.72);
+  height: calc(var(--arr) * 0.6);
+}
+.arr-e::after {
+  clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+  width: calc(var(--arr) * 0.6);
+  height: calc(var(--arr) * 0.72);
+}
+.arr-w::after {
+  clip-path: polygon(100% 0%, 0% 50%, 100% 100%);
+  width: calc(var(--arr) * 0.6);
+  height: calc(var(--arr) * 0.72);
+}
+
+/* Diagonal chevrons */
+.arr-ne::after {
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%);
+  width: calc(var(--arr) * 0.7);
+  height: calc(var(--arr) * 0.7);
+}
+.arr-se::after {
+  clip-path: polygon(100% 0%, 100% 100%, 0% 100%);
+  width: calc(var(--arr) * 0.7);
+  height: calc(var(--arr) * 0.7);
+}
+.arr-sw::after {
+  clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
+  width: calc(var(--arr) * 0.7);
+  height: calc(var(--arr) * 0.7);
+}
+.arr-nw::after {
+  clip-path: polygon(0% 0%, 100% 0%, 0% 100%);
+  width: calc(var(--arr) * 0.7);
+  height: calc(var(--arr) * 0.7);
+}
+
+/* ─── Face: the three sections ────────────────────────────────────────────── */
+
+.face {
+  grid-area: face;
+  display: grid;
+  grid-template-rows: 1fr 2.5fr 1.5fr;
+  gap: 1px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-card-face);
+  position: relative;
+}
+
+/* Section 1 — name */
+.cf-name {
+  position: relative;
+  padding: clamp(2px, 3cqw, 5px) 4px;
+  background: rgba(4, 4, 10, 0.95);
+  font-family: var(--font-ui);
+  font-size: clamp(0.6rem, 10cqw, 1.1rem);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-soul);
+  text-align: center;
+  border: 1px solid var(--color-section-border);
+  border-radius: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cf-name-text {
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ownership marker — filled for the player, hollow for the opponent, so
+   ownership is not carried by colour alone. */
+.owner-pip {
+  position: absolute;
+  left: 3cqw;
+  top: 50%;
+  width: clamp(3px, 3.5cqw, 6px);
+  height: clamp(3px, 3.5cqw, 6px);
+  transform: translateY(-50%) rotate(45deg);
+  display: none;
+}
+
+:host(.owner-player) .owner-pip {
+  display: block;
+  background: var(--color-soul);
+}
+
+:host(.owner-opponent) .owner-pip {
+  display: block;
+  background: transparent;
+  border: 1px solid var(--color-crimson);
+}
+
+/* Section 2 — image */
+.cf-img {
+  position: relative;
+  display: block;
+  background-size: cover;
+  background-position: center top;
+  background-color: var(--color-card-art);
+  min-height: 0;
+  border: 1px solid var(--color-section-border);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.cf-stars {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: clamp(0.7rem, 11cqw, 1.2rem);
+  color: var(--color-gold);
+  text-shadow:
+    0 0 8px rgba(224, 144, 48, 0.95),
+    0 1px 2px rgba(0, 0, 0, 0.9);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+/* Section 3 — stats, always bars and never numerals */
+.cf-stats {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 2.5cqw, 5px);
+  padding: clamp(3px, 4cqw, 7px) clamp(3px, 4cqw, 6px);
+  background: rgba(4, 4, 10, 0.95);
+  border: 1px solid var(--color-section-border);
+  border-radius: 1px;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(3px, 3cqw, 5px);
+}
+
+.stat-icon {
+  flex-shrink: 0;
+  width: clamp(12px, 16cqw, 22px);
+  height: clamp(12px, 16cqw, 22px);
+  object-fit: contain;
+}
+
+.stat-bar {
+  flex: 1;
+  display: block;
+  height: clamp(6px, 6.5cqw, 10px);
+  background: var(--color-stat-track);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.stat-fill {
+  display: block;
+  height: 100%;
+  border-radius: 1px;
+}
+
+.atk-fill {
+  background: var(--color-attack);
+  box-shadow: 0 0 4px rgba(240, 160, 48, 0.6);
+}
+
+.def-fill {
+  background: var(--color-defense);
+  box-shadow: 0 0 4px rgba(96, 170, 204, 0.6);
+}
+
+/* ─── Ownership treatments ────────────────────────────────────────────────── */
+
+:host(.owner-player) .frame {
+  border-color: var(--color-soul-dim);
+  box-shadow:
+    0 0 8px rgba(100, 140, 255, 0.25),
+    inset 0 0 12px rgba(100, 140, 255, 0.05);
+}
+
+:host(.owner-opponent) .frame {
+  border-color: var(--color-crimson-dim);
+  box-shadow:
+    0 0 8px rgba(192, 49, 42, 0.25),
+    inset 0 0 12px rgba(192, 49, 42, 0.05);
+}
+
+:host(.owner-opponent) .cf-name,
+:host(.owner-opponent) .cf-img,
+:host(.owner-opponent) .cf-stats {
+  border-color: var(--color-section-border-crimson);
+}
+
+/* ─── Interaction ─────────────────────────────────────────────────────────── */
+
+:host(.is-selectable) .frame:hover {
+  border-color: var(--color-soul);
+  box-shadow: var(--elev-card-hover);
+  transform: translateY(-2px);
+}
+
+.frame:focus-visible {
+  outline: 2px solid var(--color-soul);
+  outline-offset: 2px;
+  border-color: var(--color-soul);
+}
+
+/* Selected — lifted as well as lit, so the state is not colour alone. */
+:host(.is-selected) .frame {
+  border-color: var(--color-soul);
+  transform: translateY(-4px);
+  animation: selectPulse var(--dur-pulse) ease-in-out infinite;
+}
+
+@keyframes selectPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(100, 140, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(100, 140, 255, 0.9);
+  }
+}
+
+/* A hand card that cannot be chosen right now — subdued and inert. Display-only
+   cards (board tiles, opened-pack cards, card backs) are not dimmed: they are
+   not "unavailable", they are simply not interactive. */
+:host(.is-inert) .frame {
+  opacity: 0.7;
+  cursor: default;
+}
+
+:host(.is-inert) .frame:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--color-soul-dim);
+}
+
+/* Capture */
+:host(.is-flipped) .frame {
+  animation: cardFlip var(--dur-slow) ease-out;
+}
+
+@keyframes cardFlip {
+  0% {
+    filter: brightness(2) saturate(0);
+  }
+  50% {
+    filter: brightness(1.8) hue-rotate(180deg);
+  }
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
+
+/* ─── Face-down ───────────────────────────────────────────────────────────── */
+
+.frame.back {
+  display: block;
+  position: relative;
+  background: var(--color-card-back);
+  border: 1px solid var(--color-crimson-dim);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow:
+    0 0 12px rgba(192, 49, 42, 0.2),
+    inset 0 0 20px rgba(0, 0, 0, 0.5);
+  opacity: 1;
+}
+
+.back-pattern {
+  position: absolute;
+  inset: 4px;
+  border: 1px solid var(--color-crimson-seal);
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 6px,
+    rgba(192, 49, 42, 0.04) 6px,
+    rgba(192, 49, 42, 0.04) 7px
+  );
+}
+
+.back-seal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--color-crimson-dim);
+  box-shadow: 0 0 8px rgba(192, 49, 42, 0.3);
+}
+
+/* ─── Accessible-only text ────────────────────────────────────────────────── */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .frame,
+  :host(.is-selected) .frame,
+  :host(.is-flipped) .frame {
+    animation: none;
+    transition: none;
+  }
+
+  /* Selection stays legible without the pulse. */
+  :host(.is-selected) .frame {
+    box-shadow: 0 0 18px rgba(100, 140, 255, 0.8);
+  }
+}

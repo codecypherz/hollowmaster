@@ -1,18 +1,10 @@
-import { Component, inject } from '@angular/core';
-import { Home } from '../components/home/home';
-import { Game } from '../components/game/game';
-import { GameService } from '../services/game.service';
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
-  imports: [Home, Game],
+  imports: [RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
-export class App {
-  readonly gameService = inject(GameService);
-
-  onStartGame(): void {
-    this.gameService.startGame();
-  }
-}
+export class App {}

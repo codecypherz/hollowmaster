@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600&family=IM+Fell+English+SC&display=swap');
-
 /* ─── Variables ─────────────────────────────────────────────────────────── */
 
 :host {
@@ -9,113 +7,31 @@
 }
 
 .game-wrap {
-  --void:           #04040a;
-  --deep:           #08081a;
-  --soul:           #c4dcff;
-  --soul-dim:       #6080cc;
-  --soul-glow:      rgba(130, 170, 255, 0.45);
-  --soul-glow-sm:   rgba(130, 170, 255, 0.28);
-  --gold:           #e09030;
-  --gold-light:     #f8c040;
-  --gold-dim:       #8a5818;
-  --crimson:        #e03838;
-  --crimson-dim:    #9a2020;
-  --crimson-glow:   rgba(224, 56, 56, 0.5);
-  --text-dim:       #4a5888;
-  --text-muted:     #7888b8;
-  --text-bright:    #a8bce8;
-  --cell-bg:        #0e1025;
-  --cell-border:    #3a3e80;
-  --card-h:         clamp(65px, calc((100dvh - 7rem) / 5 - 6px), 220px); /* fits 5 cards vertically */
-  --card-w:         calc(var(--card-h) / 1.4); /* 2.5:3.5 trading-card ratio */
-  --arr:            clamp(13px, calc(var(--card-w) * 0.126), 22px);
+  /* Primitive parameters for this screen: 14 particles, tighter frame. */
+  --particle-gap: 7%;
+  --particle-stagger: 0.45s;
+  --corner-size: 48px;
+  --corner-inset: 20px;
+  --btn-font-size: 0.65rem;
+  --btn-padding: 0.65rem 1.8rem;
+
+  /* The tuned sizing chain — five cards must stack within 100dvh.
+     Everything on this screen is a function of these three. */
+  --card-h: clamp(65px, calc((100dvh - 7rem) / 5 - 6px), 220px); /* fits 5 cards vertically */
+  --card-w: calc(var(--card-h) / 1.4); /* 2.5:3.5 trading-card ratio */
 
   position: relative;
   width: 100%;
   height: 100%;
-  background: var(--void);
+  background: var(--color-void);
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
-  font-family: 'Cinzel', serif;
+  font-family: var(--font-ui);
 }
 
 /* ─── Background ────────────────────────────────────────────────────────── */
-
-.void-bg {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 70% 50% at 50% 25%, #0f1535 0%, transparent 65%),
-    radial-gradient(ellipse 40% 60% at 15% 85%, #0a0e28 0%, transparent 55%),
-    radial-gradient(ellipse 50% 45% at 85% 15%, #0a0e25 0%, transparent 55%),
-    #04040a;
-  z-index: 0;
-}
-
-.mist-layer {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 90% 25% at 50% 100%, rgba(12, 20, 55, 0.9) 0%, transparent 70%),
-    radial-gradient(ellipse 70% 20% at 50% 0%, rgba(8, 14, 40, 0.6) 0%, transparent 65%);
-  z-index: 1;
-  animation: mistDrift 14s ease-in-out infinite alternate;
-}
-
-@keyframes mistDrift {
-  from { opacity: 0.5; transform: scaleX(1);    }
-  to   { opacity: 1;   transform: scaleX(1.06); }
-}
-
-.particles {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.particle {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  background: var(--soul);
-  box-shadow: 0 0 5px 2px var(--soul-glow);
-  bottom: -8px;
-  left: calc(var(--i) * 7% + 1%);
-  opacity: 0;
-  animation: floatUp calc(7s + var(--i) * 0.5s) calc(var(--i) * 0.45s) ease-in-out infinite;
-}
-
-@keyframes floatUp {
-  0%   { opacity: 0;   transform: translateY(0);       }
-  12%  { opacity: 0.9; }
-  85%  { opacity: 0.3; }
-  100% { opacity: 0;   transform: translateY(-102vh);  }
-}
-
-.corner {
-  position: absolute;
-  width: 48px;
-  height: 48px;
-  z-index: 5;
-  pointer-events: none;
-}
-
-.corner span {
-  position: absolute;
-  background: var(--gold-dim);
-}
-
-.corner span:first-child { width: 100%; height: 1px; top: 0; left: 0; }
-.corner span:last-child  { width: 1px; height: 100%; top: 0; left: 0; }
-
-.corner-tl { top: 20px; left: 20px; }
-.corner-tr { top: 20px; right: 20px; transform: scaleX(-1); }
-.corner-bl { bottom: 20px; left: 20px;  transform: scaleY(-1); }
-.corner-br { bottom: 20px; right: 20px; transform: scale(-1); }
 
 /* ─── Score bar ─────────────────────────────────────────────────────────── */
 
@@ -126,7 +42,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.75rem 2.0rem 0.5rem;
+  padding: 1.75rem 2rem 0.5rem;
   gap: 1rem;
   flex-shrink: 0;
 }
@@ -145,24 +61,24 @@
   font-size: 0.7rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--text-bright);
+  color: var(--color-text-bright);
 }
 
 .score-val {
-  font-family: 'Cinzel Decorative', serif;
+  font-family: var(--font-display);
   font-size: 1.6rem;
   font-weight: 700;
   line-height: 1;
 }
 
 .player-score {
-  color: var(--soul);
-  text-shadow: 0 0 14px var(--soul-glow);
+  color: var(--color-soul);
+  text-shadow: 0 0 14px var(--color-soul-glow);
 }
 
 .opponent-score {
-  color: var(--crimson);
-  text-shadow: 0 0 14px var(--crimson-glow);
+  color: var(--color-crimson);
+  text-shadow: 0 0 14px var(--color-crimson-glow);
 }
 
 .status-center {
@@ -174,17 +90,22 @@
   font-size: 0.7rem;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: var(--soul);
-  animation: statusPulse 2.5s ease-in-out infinite;
+  color: var(--color-soul);
+  animation: statusPulse var(--dur-breathe) ease-in-out infinite;
 }
 
 .status-text.opponent-phase {
-  color: var(--crimson);
+  color: var(--color-crimson);
 }
 
 @keyframes statusPulse {
-  0%, 100% { opacity: 0.6; }
-  50%       { opacity: 1;   }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* ─── Arena ──────────────────────────────────────────────────────────────── */
@@ -254,248 +175,6 @@
   border-radius: 4px;
 }
 
-/* ─── Shared card 3×3 grid (hand-card button & board-cell with card) ────── */
-/*
-  Grid layout:
-    nw  n  ne
-    w  face  e
-    sw  s  se
-  Center "face" = the visual card. Surrounding cells = directional arrows.
-*/
-
-.hand-card,
-.board-cell {
-  display: grid;
-  grid-template-areas:
-    'nw n  ne'
-    'w  face e'
-    'sw s  se';
-  grid-template-rows: var(--arr) 1fr var(--arr);
-  grid-template-columns: var(--arr) 1fr var(--arr);
-}
-
-/* ─── Arrow cells ────────────────────────────────────────────────────────── */
-
-.arr {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.arr::after {
-  content: '';
-  display: block;
-  background: rgba(74, 106, 170, 0.2);
-}
-
-.arr.arr-on::after {
-  background: var(--soul);
-  box-shadow: 0 0 4px 1px var(--soul-glow);
-}
-
-.arr-nw { grid-area: nw; }
-.arr-n  { grid-area: n;  }
-.arr-ne { grid-area: ne; }
-.arr-w  { grid-area: w;  }
-.arr-e  { grid-area: e;  }
-.arr-sw { grid-area: sw; }
-.arr-s  { grid-area: s;  }
-.arr-se { grid-area: se; }
-
-/* Cardinal arrows — shapes fill ~65% of the --arr cell */
-.arr-n::after  { clip-path: polygon(50% 0%, 100% 100%, 0% 100%); width: calc(var(--arr) * 0.72); height: calc(var(--arr) * 0.6); }
-.arr-s::after  { clip-path: polygon(0% 0%, 100% 0%, 50% 100%);   width: calc(var(--arr) * 0.72); height: calc(var(--arr) * 0.6); }
-.arr-e::after  { clip-path: polygon(0% 0%, 100% 50%, 0% 100%);   width: calc(var(--arr) * 0.6);  height: calc(var(--arr) * 0.72); }
-.arr-w::after  { clip-path: polygon(100% 0%, 0% 50%, 100% 100%); width: calc(var(--arr) * 0.6);  height: calc(var(--arr) * 0.72); }
-
-/* Diagonal arrows */
-.arr-ne::after { clip-path: polygon(0% 0%, 100% 0%, 100% 100%);  width: calc(var(--arr) * 0.7); height: calc(var(--arr) * 0.7); }
-.arr-se::after { clip-path: polygon(100% 0%, 100% 100%, 0% 100%); width: calc(var(--arr) * 0.7); height: calc(var(--arr) * 0.7); }
-.arr-sw::after { clip-path: polygon(0% 0%, 100% 100%, 0% 100%);  width: calc(var(--arr) * 0.7); height: calc(var(--arr) * 0.7); }
-.arr-nw::after { clip-path: polygon(0% 0%, 100% 0%, 0% 100%);    width: calc(var(--arr) * 0.7); height: calc(var(--arr) * 0.7); }
-
-/* ─── Card face (shared) ─────────────────────────────────────────────────── */
-
-.card-face {
-  grid-area: face;
-  display: grid;
-  grid-template-rows: 1fr 2.5fr 1.5fr;
-  gap: 1px;
-  overflow: hidden;
-  background: #02020a;
-  position: relative;
-}
-
-.cf-name {
-  padding: clamp(2px, calc(var(--card-w) * 0.03), 5px) 4px;
-  background: rgba(4, 4, 10, 0.95);
-  font-family: 'Cinzel', serif;
-  font-size: clamp(0.6rem, calc(var(--card-w) * 0.1), 1.1rem);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--soul);
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  border: 1px solid rgba(74, 106, 170, 0.45);
-  border-radius: 1px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cf-img {
-  position: relative;
-  background-size: cover;
-  background-position: center top;
-  background-color: #070a1a;
-  min-height: 0;
-  border: 1px solid rgba(74, 106, 170, 0.45);
-  border-radius: 1px;
-  overflow: hidden;
-}
-
-.cf-stars {
-  position: absolute;
-  top: 2px;
-  left: 3px;
-  font-size: clamp(0.7rem, calc(var(--card-w) * 0.11), 1.2rem);
-  color: var(--gold);
-  text-shadow: 0 0 8px rgba(224, 144, 48, 0.95), 0 1px 2px rgba(0, 0, 0, 0.9);
-  letter-spacing: -1px;
-  line-height: 1;
-}
-
-.cf-stats {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(2px, calc(var(--card-w) * 0.025), 5px);
-  padding: clamp(3px, calc(var(--card-w) * 0.04), 7px) clamp(3px, calc(var(--card-w) * 0.04), 6px);
-  background: rgba(4, 4, 10, 0.95);
-  border: 1px solid rgba(74, 106, 170, 0.45);
-  border-radius: 1px;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.stat-row {
-  display: flex;
-  align-items: center;
-  gap: clamp(3px, calc(var(--card-w) * 0.03), 5px);
-}
-
-.stat-icon {
-  flex-shrink: 0;
-  width: clamp(12px, calc(var(--card-w) * 0.16), 22px);
-  height: clamp(12px, calc(var(--card-w) * 0.16), 22px);
-  object-fit: contain;
-}
-
-.stat-bar {
-  flex: 1;
-  height: clamp(6px, calc(var(--card-w) * 0.065), 10px);
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.stat-fill {
-  height: 100%;
-  border-radius: 1px;
-}
-
-.atk-fill {
-  background: #f0a030;
-  box-shadow: 0 0 4px rgba(240, 160, 48, 0.6);
-}
-
-.def-fill {
-  background: #60aacc;
-  box-shadow: 0 0 4px rgba(96, 170, 204, 0.6);
-}
-
-/* ─── Hand card (player, face-up) ───────────────────────────────────────── */
-
-.hand-card {
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  background: #06091c;
-  border: 1px solid var(--soul-dim);
-  border-radius: 2px;
-  cursor: pointer;
-  box-sizing: border-box;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
-}
-
-.hand-card:hover {
-  border-color: var(--soul);
-  box-shadow: 0 4px 20px rgba(100, 140, 255, 0.3);
-  transform: translateY(-2px);
-}
-
-.hand-card.card-selected {
-  border-color: var(--soul);
-  transform: translateY(-4px);
-  animation: selectPulse 1.4s ease-in-out infinite;
-}
-
-@keyframes selectPulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(100, 140, 255, 0.5); }
-  50%       { box-shadow: 0 0 22px rgba(100, 140, 255, 0.9); }
-}
-
-.hand-card.card-unselectable {
-  cursor: default;
-  opacity: 0.7;
-}
-
-.hand-card.card-unselectable:hover {
-  transform: none;
-  border-color: var(--soul-dim);
-  box-shadow: none;
-}
-
-/* ─── Face-down card (opponent) ─────────────────────────────────────────── */
-
-.card.face-down {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  background: #080c1e;
-  border: 1px solid var(--crimson-dim);
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: 0 0 12px rgba(192, 49, 42, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.5);
-}
-
-.card-back-pattern {
-  position: absolute;
-  inset: 4px;
-  border: 1px solid rgba(192, 49, 42, 0.2);
-  border-radius: 2px;
-  background:
-    repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 6px,
-      rgba(192, 49, 42, 0.04) 6px,
-      rgba(192, 49, 42, 0.04) 7px
-    );
-}
-
-.card-back-seal {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(45deg);
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--crimson-dim);
-  box-shadow: 0 0 8px rgba(192, 49, 42, 0.3);
-}
-
 /* ─── Board ──────────────────────────────────────────────────────────────── */
 
 .board {
@@ -504,10 +183,8 @@
   gap: 6px;
   padding: 12px;
   background: transparent;
-  border: 1px solid var(--gold-dim);
-  box-shadow:
-    0 0 40px rgba(0, 0, 0, 0.6),
-    inset 0 0 30px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-gold-dim);
+  box-shadow: var(--elev-board);
   position: relative;
   box-sizing: border-box;
   align-self: center;
@@ -521,17 +198,19 @@
   position: absolute;
   width: 10px;
   height: 10px;
-  border-color: var(--gold);
+  border-color: var(--color-gold);
   border-style: solid;
 }
 
 .board::before {
-  top: 4px; left: 4px;
+  top: 4px;
+  left: 4px;
   border-width: 1px 0 0 1px;
 }
 
 .board::after {
-  bottom: 4px; right: 4px;
+  bottom: 4px;
+  right: 4px;
   border-width: 0 1px 1px 0;
 }
 
@@ -552,125 +231,29 @@
 }
 
 .board-logo-hollow {
-  font-family: 'Cinzel Decorative', serif;
+  font-family: var(--font-display);
   font-weight: 900;
   font-size: clamp(1rem, calc(var(--card-w) * 1.6), 3.2rem);
-  color: var(--soul);
-  text-shadow: 0 0 24px var(--soul-glow);
+  color: var(--color-soul);
+  text-shadow: 0 0 24px var(--color-soul-glow);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   line-height: 1.1;
 }
 
 .board-logo-master {
-  font-family: 'Cinzel Decorative', serif;
+  font-family: var(--font-display);
   font-weight: 700;
   font-size: clamp(1.2rem, calc(var(--card-w) * 1.9), 3.8rem);
-  color: var(--gold);
+  color: var(--color-gold);
   text-shadow: 0 0 20px rgba(224, 144, 48, 0.6);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   line-height: 1.1;
 }
 
-/* ─── Board cells ────────────────────────────────────────────────────────── */
-
-.board-cell {
-  position: relative;
-  background: var(--cell-bg);
-  border: 1px solid var(--cell-border);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  overflow: hidden;
-  z-index: 1;
-}
-
-.cell-empty {
-  cursor: default;
-  background: transparent;
-}
-
-.cell-placeable {
-  cursor: pointer;
-  border-color: rgba(74, 106, 170, 0.5);
-  animation: placeableGlow 1.2s ease-in-out infinite;
-}
-
-.cell-placeable:hover {
-  border-color: var(--soul-dim);
-  box-shadow: inset 0 0 20px rgba(100, 140, 255, 0.12);
-}
-
-@keyframes placeableGlow {
-  0%, 100% { box-shadow: inset 0 0 8px rgba(100, 140, 255, 0.05); }
-  50%       { box-shadow: inset 0 0 18px rgba(100, 140, 255, 0.12); }
-}
-
 /* Owner colors on board cells */
-.cell-player {
-  border-color: var(--soul-dim);
-  box-shadow: 0 0 8px rgba(100, 140, 255, 0.25), inset 0 0 12px rgba(100, 140, 255, 0.05);
-}
-
-.cell-player .cf-name,
-.cell-player .cf-img,
-.cell-player .cf-stats {
-  border-color: rgba(74, 106, 170, 0.55);
-}
-
-.cell-opponent {
-  border-color: var(--crimson-dim);
-  box-shadow: 0 0 8px rgba(192, 49, 42, 0.25), inset 0 0 12px rgba(192, 49, 42, 0.05);
-}
-
-.cell-opponent .cf-name,
-.cell-opponent .cf-img,
-.cell-opponent .cf-stats {
-  border-color: rgba(122, 26, 20, 0.55);
-}
-
 /* Flip animation when card is captured */
-.cell-flipped {
-  animation: cardFlip 0.5s ease-out;
-}
-
-@keyframes cardFlip {
-  0%   { filter: brightness(2) saturate(0); }
-  50%  { filter: brightness(1.8) hue-rotate(180deg); }
-  100% { filter: brightness(1) saturate(1); }
-}
-
-/* Empty cell rune decoration — spans entire cell grid */
-.cell-rune {
-  grid-column: 1 / -1;
-  grid-row: 1 / -1;
-  opacity: 0.2;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(100, 140, 255, 0.3) 0%, transparent 60%);
-}
-
-.cell-rune::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(45deg);
-  width: 20px;
-  height: 20px;
-  border: 1px solid rgba(100, 140, 255, 0.5);
-}
-
-.cell-rune::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(100, 140, 255, 0.5);
-}
-
 /* ─── Footer ─────────────────────────────────────────────────────────────── */
 
 .game-footer {
@@ -678,40 +261,6 @@
   z-index: 10;
   padding: 0.5rem 0 0.75rem;
   flex-shrink: 0;
-}
-
-.hk-btn {
-  position: relative;
-  font-family: 'Cinzel', serif;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  background: transparent;
-  border: 1px solid var(--gold-dim);
-  padding: 0.65rem 1.8rem;
-  cursor: pointer;
-  overflow: hidden;
-  transition: color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.hk-btn:hover {
-  color: var(--gold-light);
-  border-color: var(--gold);
-  box-shadow: 0 0 18px rgba(200, 136, 42, 0.25), inset 0 0 18px rgba(200, 136, 42, 0.06);
-}
-
-.hk-btn.primary {
-  color: var(--soul);
-  border-color: var(--soul-dim);
-  background: rgba(90, 120, 210, 0.06);
-}
-
-.hk-btn.primary:hover {
-  color: #d8e8ff;
-  border-color: var(--soul);
-  box-shadow: 0 0 22px rgba(100, 140, 255, 0.35), inset 0 0 22px rgba(100, 140, 255, 0.1);
 }
 
 /* ─── Game Over overlay ──────────────────────────────────────────────────── */
@@ -725,12 +274,16 @@
   justify-content: center;
   background: rgba(4, 4, 10, 0.85);
   backdrop-filter: blur(4px);
-  animation: fadeIn 0.5s ease both;
+  animation: fadeIn var(--dur-slow) ease both;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .overlay-inner {
@@ -739,58 +292,48 @@
   align-items: center;
   gap: 1.5rem;
   padding: 3rem 3.5rem;
-  background: #06071a;
-  border: 1px solid var(--gold-dim);
-  box-shadow: 0 0 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(200, 136, 42, 0.08);
-  animation: slideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  background: var(--color-surface);
+  border: 1px solid var(--color-gold-dim);
+  box-shadow: var(--elev-overlay);
+  animation: slideUp var(--dur-slow) var(--ease-out-soft) both;
 }
 
 @keyframes slideUp {
-  from { transform: translateY(24px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
-.ornament {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-}
-
-.orn-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
-}
-
-.orn-gem {
-  width: 8px;
-  height: 8px;
-  background: var(--gold);
-  transform: rotate(45deg);
-  flex-shrink: 0;
-  box-shadow: 0 0 8px 2px rgba(200, 136, 42, 0.4);
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .result-eyebrow {
-  font-family: 'IM Fell English SC', serif;
+  font-family: var(--font-flavor);
   font-size: 0.85rem;
   letter-spacing: 0.15em;
-  color: var(--text-bright);
+  color: var(--color-text-bright);
   font-style: italic;
 }
 
 .result-title {
-  font-family: 'Cinzel Decorative', serif;
+  font-family: var(--font-display);
   font-size: clamp(1.1rem, 4vw, 1.6rem);
   font-weight: 700;
   text-align: center;
-  color: var(--soul);
-  text-shadow: 0 0 20px var(--soul-glow);
+  color: var(--color-soul);
+  text-shadow: 0 0 20px var(--color-soul-glow);
 }
 
-.result-win  { color: var(--soul); text-shadow: 0 0 20px var(--soul-glow); }
-.result-lose { color: var(--crimson); text-shadow: 0 0 20px var(--crimson-glow); }
+.result-win {
+  color: var(--color-soul);
+  text-shadow: 0 0 20px var(--color-soul-glow);
+}
+.result-lose {
+  color: var(--color-crimson);
+  text-shadow: 0 0 20px var(--color-crimson-glow);
+}
 
 .result-scores {
   display: flex;
@@ -805,20 +348,22 @@
   gap: 0.25rem;
 }
 
-.rs-item.right { align-items: center; }
+.rs-item.right {
+  align-items: center;
+}
 
 .rs-label {
   font-size: 0.65rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--text-bright);
+  color: var(--color-text-bright);
 }
 
 .rs-val {
-  font-family: 'Cinzel Decorative', serif;
+  font-family: var(--font-display);
   font-size: 2.2rem;
   font-weight: 700;
-  color: var(--gold-light);
+  color: var(--color-gold-light);
   line-height: 1;
 }
 
@@ -826,7 +371,7 @@
   font-size: 0.65rem;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--soul);
+  color: var(--color-soul);
   padding-top: 0.5rem;
 }
 

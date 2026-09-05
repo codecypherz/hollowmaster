@@ -1,0 +1,10 @@
+/* ─── Web fonts ───────────────────────────────────────────────────────────────
+   The single font request for the whole application. Imported first from
+   styles.css because CSS requires @import to precede all other rules.
+
+   Cinzel Decorative  → display / titles      (--font-display)
+   Cinzel             → UI text and labels    (--font-ui)
+   IM Fell English SC → flavor text           (--font-flavor)
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600&family=IM+Fell+English+SC&display=swap');

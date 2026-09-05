@@ -1,7 +1,6 @@
 @let s = state();
 
 <div class="game-wrap">
-
   <!-- Background -->
   <div class="void-bg" aria-hidden="true"></div>
   <div class="mist-layer" aria-hidden="true"></div>
@@ -40,49 +39,18 @@
 
   <!-- ─── Main arena ─── -->
   <div class="arena">
-
     <!-- Player hand -->
     <div class="hand player-hand" aria-label="Your hand">
       @for (card of s.player.hand; track $index; let i = $index) {
         <div class="hand-slot" [class.slot-empty]="!card">
           @if (card) {
-            <button
-              class="hand-card"
-              [class.card-selected]="s.selectedCardIndex === i"
-              [class.card-unselectable]="s.phase !== 'player-turn'"
-              (click)="onCardSelect(i)"
-              [attr.aria-label]="card.name + ' — click to select'"
-              [attr.aria-pressed]="s.selectedCardIndex === i"
-            >
-              <div class="arr arr-nw" [class.arr-on]="hasArrow(card, 'NW')"></div>
-              <div class="arr arr-n"  [class.arr-on]="hasArrow(card, 'N')"></div>
-              <div class="arr arr-ne" [class.arr-on]="hasArrow(card, 'NE')"></div>
-              <div class="arr arr-w"  [class.arr-on]="hasArrow(card, 'W')"></div>
-              <div class="card-face">
-                <div class="cf-name">{{ card.name }}</div>
-                <div class="cf-img" [style.background-image]="cardImageStyle(card)">
-                  <span class="cf-stars">{{ starString(card.rarity) }}</span>
-                </div>
-                <div class="cf-stats">
-                  <div class="stat-row">
-                    <img class="stat-icon" src="/images/attack_icon.png" alt="Attack" />
-                    <div class="stat-bar">
-                      <div class="stat-fill atk-fill" [style.width.%]="card.stats.attack"></div>
-                    </div>
-                  </div>
-                  <div class="stat-row">
-                    <img class="stat-icon" src="/images/defense_icon.png" alt="Defense" />
-                    <div class="stat-bar">
-                      <div class="stat-fill def-fill" [style.width.%]="card.stats.defense"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="arr arr-e"  [class.arr-on]="hasArrow(card, 'E')"></div>
-              <div class="arr arr-sw" [class.arr-on]="hasArrow(card, 'SW')"></div>
-              <div class="arr arr-s"  [class.arr-on]="hasArrow(card, 'S')"></div>
-              <div class="arr arr-se" [class.arr-on]="hasArrow(card, 'SE')"></div>
-            </button>
+            <app-card
+              [card]="card"
+              interactive
+              [selected]="s.selectedCardIndex === i"
+              [selectable]="s.phase === 'player-turn'"
+              (select)="onCardSelect(i)"
+            />
           }
         </div>
       }
@@ -90,7 +58,6 @@
 
     <!-- Board -->
     <div class="board" aria-label="Game board">
-
       <!-- Logo watermark -->
       <div class="board-logo" aria-hidden="true">
         <span class="board-logo-hollow">HOLLOW</span>
@@ -101,43 +68,14 @@
         @for (cell of row; track $index; let ci = $index) {
           <div
             class="board-cell"
+            [class.cell-occupied]="!!cell"
             [class.cell-empty]="!cell"
             [class.cell-placeable]="isPlaceable(ri, ci)"
-            [class.cell-player]="cell?.owner === 'player'"
-            [class.cell-opponent]="cell?.owner === 'opponent'"
-            [class.cell-flipped]="isFlipped(ri, ci)"
             (click)="onCellClick(ri, ci)"
-            [attr.aria-label]="cell ? cell.card.name : 'Empty cell'"
+            [attr.aria-label]="cell ? null : 'Empty cell'"
           >
             @if (cell) {
-              <div class="arr arr-nw" [class.arr-on]="hasArrow(cell.card, 'NW')"></div>
-              <div class="arr arr-n"  [class.arr-on]="hasArrow(cell.card, 'N')"></div>
-              <div class="arr arr-ne" [class.arr-on]="hasArrow(cell.card, 'NE')"></div>
-              <div class="arr arr-w"  [class.arr-on]="hasArrow(cell.card, 'W')"></div>
-              <div class="card-face">
-                <div class="cf-name">{{ cell.card.name }}</div>
-                <div class="cf-img" [style.background-image]="cardImageStyle(cell.card)">
-                  <span class="cf-stars">{{ starString(cell.card.rarity) }}</span>
-                </div>
-                <div class="cf-stats">
-                  <div class="stat-row">
-                    <img class="stat-icon" src="/images/attack_icon.png" alt="Attack" />
-                    <div class="stat-bar">
-                      <div class="stat-fill atk-fill" [style.width.%]="cell.card.stats.attack"></div>
-                    </div>
-                  </div>
-                  <div class="stat-row">
-                    <img class="stat-icon" src="/images/defense_icon.png" alt="Defense" />
-                    <div class="stat-bar">
-                      <div class="stat-fill def-fill" [style.width.%]="cell.card.stats.defense"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="arr arr-e"  [class.arr-on]="hasArrow(cell.card, 'E')"></div>
-              <div class="arr arr-sw" [class.arr-on]="hasArrow(cell.card, 'SW')"></div>
-              <div class="arr arr-s"  [class.arr-on]="hasArrow(cell.card, 'S')"></div>
-              <div class="arr arr-se" [class.arr-on]="hasArrow(cell.card, 'SE')"></div>
+              <app-card [card]="cell.card" [owner]="cell.owner" [flipped]="isFlipped(ri, ci)" />
             } @else {
               <div class="cell-rune" aria-hidden="true"></div>
             }
@@ -151,16 +89,13 @@
       @for (card of s.opponent.hand; track $index; let i = $index) {
         <div class="hand-slot" [class.slot-empty]="!card" [style.--i]="i">
           @if (card) {
-            <div class="card face-down">
-              <div class="card-back-pattern"></div>
-              <div class="card-back-seal"></div>
-            </div>
+            <app-card faceDown />
           }
         </div>
       }
     </div>
-
-  </div><!-- /arena -->
+  </div>
+  <!-- /arena -->
 
   <!-- Exit -->
   <footer class="game-footer">
@@ -171,13 +106,16 @@
   @if (s.phase === 'game-over') {
     <div class="overlay" role="dialog" aria-modal="true" aria-label="Game result">
       <div class="overlay-inner">
-
         <div class="ornament">
           <span class="orn-line"></span><span class="orn-gem"></span><span class="orn-line"></span>
         </div>
 
         <p class="result-eyebrow">The battle concludes</p>
-        <h2 class="result-title" [class.result-win]="s.winner === 'player'" [class.result-lose]="s.winner === 'opponent'">
+        <h2
+          class="result-title"
+          [class.result-win]="s.winner === 'player'"
+          [class.result-lose]="s.winner === 'opponent'"
+        >
           {{ resultText() }}
         </h2>
 
@@ -201,9 +139,7 @@
           <button class="hk-btn primary" (click)="playAgain()">Play Again</button>
           <button class="hk-btn" (click)="exitGame()">Return</button>
         </div>
-
       </div>
     </div>
   }
-
 </div>

@@ -1,0 +1,277 @@
+<div class="sg-wrap">
+  <div class="void-bg" aria-hidden="true"></div>
+  <div class="mist-layer" aria-hidden="true"></div>
+
+  <div class="corner corner-tl" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-tr" aria-hidden="true"><span></span><span></span></div>
+
+  <main class="sg-main">
+    <header class="sg-head">
+      <p class="eyebrow">Hollow Master</p>
+      <h1 class="sg-title">Design System</h1>
+      <div class="ornament">
+        <span class="orn-line"></span>
+        <span class="orn-node"></span>
+        <span class="orn-line short"></span>
+        <span class="orn-gem"></span>
+        <span class="orn-line short"></span>
+        <span class="orn-node"></span>
+        <span class="orn-line"></span>
+      </div>
+      <p class="sg-note">
+        Every value below is read from the live stylesheet at runtime —
+        {{ tokenCount() }} tokens registered on <code>:root</code>. Add a token to the theme and it
+        appears here on its own.
+      </p>
+    </header>
+
+    <!-- ─── Tokens ─────────────────────────────────────────────────────── -->
+    @for (group of groups(); track group.key) {
+      <section class="sg-section">
+        <h2 class="sg-h2">{{ group.title }}</h2>
+
+        @switch (group.key) {
+          @case ('color') {
+            <div class="swatch-grid">
+              @for (t of group.tokens; track t.name) {
+                <div class="swatch">
+                  <div
+                    class="swatch-chip"
+                    [class.on-check]="isTranslucent(t.value)"
+                    [style.background-color]="'var(' + t.name + ')'"
+                  ></div>
+                  <code class="swatch-name">{{ t.name }}</code>
+                  <span class="swatch-val">{{ t.value }}</span>
+                </div>
+              }
+            </div>
+          }
+
+          @case ('font') {
+            <div class="type-list">
+              @for (t of group.tokens; track t.name) {
+                <div class="type-row">
+                  <p class="type-sample" [style.font-family]="'var(' + t.name + ')'">
+                    The Pale King ponders — Hallownest 1234
+                  </p>
+                  <code class="swatch-name">{{ t.name }}</code>
+                  <span class="swatch-val">{{ t.value }}</span>
+                </div>
+              }
+            </div>
+          }
+
+          @case ('spacing') {
+            <div class="bar-list">
+              @for (t of group.tokens; track t.name) {
+                <div class="bar-row">
+                  <span class="bar-fill" [style.width]="'var(' + t.name + ')'"></span>
+                  <code class="swatch-name">{{ t.name }}</code>
+                  <span class="swatch-val">{{ t.value }}</span>
+                </div>
+              }
+            </div>
+          }
+
+          @case ('dur') {
+            <div class="bar-list">
+              @for (t of group.tokens; track t.name) {
+                <div class="bar-row">
+                  <span class="motion-track" aria-hidden="true">
+                    <span
+                      class="motion-dot"
+                      [style.animation-duration]="'var(' + t.name + ')'"
+                    ></span>
+                  </span>
+                  <code class="swatch-name">{{ t.name }}</code>
+                  <span class="swatch-val">{{ t.value }}</span>
+                </div>
+              }
+            </div>
+          }
+
+          @case ('elev') {
+            <div class="elev-grid">
+              @for (t of group.tokens; track t.name) {
+                <div class="elev-item">
+                  <div class="elev-box" [style.box-shadow]="'var(' + t.name + ')'"></div>
+                  <code class="swatch-name">{{ t.name }}</code>
+                </div>
+              }
+            </div>
+          }
+
+          @default {
+            <div class="plain-list">
+              @for (t of group.tokens; track t.name) {
+                <div class="plain-row">
+                  <code class="swatch-name">{{ t.name }}</code>
+                  <span class="swatch-val">{{ t.value }}</span>
+                </div>
+              }
+            </div>
+          }
+        }
+      </section>
+    }
+
+    <!-- ─── Buttons ────────────────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-h2">Buttons</h2>
+      <p class="sg-sub">
+        Hover and focus are shown pinned open with the same rules the real states use, so all four
+        are comparable at once.
+      </p>
+
+      <div class="state-grid">
+        @for (state of buttonStates; track state) {
+          <div class="state-item">
+            <button
+              class="hk-btn"
+              [class.is-hover]="state === 'is-hover'"
+              [class.is-focus]="state === 'is-focus'"
+              [disabled]="state === 'disabled'"
+            >
+              Descend
+            </button>
+            <span class="state-label">{{ state === 'resting' ? 'resting' : state }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="state-grid">
+        @for (state of buttonStates; track state) {
+          <div class="state-item">
+            <button
+              class="hk-btn primary"
+              [class.is-hover]="state === 'is-hover'"
+              [class.is-focus]="state === 'is-focus'"
+              [disabled]="state === 'disabled'"
+            >
+              <span class="btn-inner-glow"></span>
+              Start Game
+            </button>
+            <span class="state-label">primary · {{ state === 'resting' ? 'resting' : state }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ─── Ornaments ──────────────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-h2">Ornaments</h2>
+
+      <div class="orn-demo">
+        <div class="ornament">
+          <span class="orn-line"></span>
+          <span class="orn-node"></span>
+          <span class="orn-line short"></span>
+          <span class="orn-gem"></span>
+          <span class="orn-line short"></span>
+          <span class="orn-node"></span>
+          <span class="orn-line"></span>
+        </div>
+        <span class="state-label">divider</span>
+      </div>
+
+      <div class="corner-demo">
+        <div class="corner corner-tl" aria-hidden="true"><span></span><span></span></div>
+        <div class="corner corner-tr" aria-hidden="true"><span></span><span></span></div>
+        <div class="corner corner-bl" aria-hidden="true"><span></span><span></span></div>
+        <div class="corner corner-br" aria-hidden="true"><span></span><span></span></div>
+        <span class="state-label centred">corner frame</span>
+      </div>
+
+      <div class="atmos-demo">
+        <div class="void-bg" aria-hidden="true"></div>
+        <div class="mist-layer" aria-hidden="true"></div>
+        <div class="particles" aria-hidden="true">
+          @for (p of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; track p) {
+            <span class="particle" [style.--i]="p"></span>
+          }
+        </div>
+        <span class="state-label centred">atmosphere · void, mist, soul particles</span>
+      </div>
+    </section>
+
+    <!-- ─── Cards ──────────────────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-h2">Card states</h2>
+      <p class="sg-sub">
+        One component renders all of these. Aspect ratio 2.5:3.5, three sections, chevrons inside
+        the border but outside the sections, rarity as stars, stats as bars and never numerals.
+      </p>
+
+      <div class="card-grid">
+        @for (s of cardStates(); track s.label) {
+          <div class="card-demo">
+            <div class="card-slot">
+              <app-card
+                [card]="demo()"
+                [owner]="s.props.owner ?? null"
+                [interactive]="!!s.props.interactive"
+                [selectable]="!!s.props.selectable"
+                [selected]="!!s.props.selected"
+                [flipped]="!!s.props.flipped"
+              />
+            </div>
+            <span class="state-label">{{ s.label }}</span>
+          </div>
+        }
+
+        <div class="card-demo">
+          <div class="card-slot"><app-card faceDown /></div>
+          <span class="state-label">Face-down</span>
+        </div>
+
+        <div class="card-demo">
+          <div class="card-slot">
+            <div class="board-cell cell-empty">
+              <div class="cell-rune" aria-hidden="true"></div>
+            </div>
+          </div>
+          <span class="state-label">Empty board tile</span>
+        </div>
+
+        <div class="card-demo">
+          <div class="card-slot">
+            <div class="board-cell cell-empty cell-placeable">
+              <div class="cell-rune" aria-hidden="true"></div>
+            </div>
+          </div>
+          <span class="state-label">Placeable tile</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Rarity range ───────────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-h2">Rarity range</h2>
+      <div class="card-grid">
+        @for (c of samples(); track c.name) {
+          <div class="card-demo">
+            <div class="card-slot"><app-card [card]="c" /></div>
+            <span class="state-label">{{ c.name }} · rarity {{ c.rarity }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ─── Scale ──────────────────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-h2">Card at any size</h2>
+      <p class="sg-sub">
+        The card fills the width it is given and derives its height from the fixed ratio; everything
+        inside scales from the card's own width.
+      </p>
+      <div class="scale-row">
+        @for (w of [72, 110, 150, 200, 260]; track w) {
+          <div class="card-demo">
+            <div class="card-slot" [style.width.px]="w"><app-card [card]="demoAlt()" /></div>
+            <span class="state-label">{{ w }}px</span>
+          </div>
+        }
+      </div>
+    </section>
+  </main>
+</div>

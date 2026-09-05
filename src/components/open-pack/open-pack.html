@@ -1,25 +1,48 @@
-<div class="p-8">
-
- 
-
-  <button 
-    (click)="openPack()"
-    class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-200"
-  >
-    Open Pack
-  </button>
-
-  <div class="mt-8">
-    @for (card of cards; track card) {
-      <div class=" overflow-hidden m-2 inline-block w-60 h-80 p-6 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-        <h3 class="text-xl font-bold text-gray-800 mb-2">{{ card.name }}</h3>
-        <p class="text-gray-600 leading-relaxed">{{ card.rarity }}</p>
-        <img [src]=" card.image " class="mt-1">
-      </div>
-    } @empty {
-      <div class="col-span-full py-12 text-center border-2 border-dashed border-gray-300 rounded-xl">
-        <p class="text-gray-400">Click the button to open the pack.</p>
-      </div>
+<div class="pack-wrap">
+  <!-- Background -->
+  <div class="void-bg" aria-hidden="true"></div>
+  <div class="mist-layer" aria-hidden="true"></div>
+  <div class="particles" aria-hidden="true">
+    @for (p of particles; track p) {
+      <span class="particle" [style.--i]="p"></span>
     }
   </div>
+
+  <!-- Corner frames -->
+  <div class="corner corner-tl" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-tr" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-bl" aria-hidden="true"><span></span><span></span></div>
+  <div class="corner corner-br" aria-hidden="true"><span></span><span></span></div>
+
+  <main class="pack-content">
+    <header class="pack-header">
+      <p class="eyebrow">Relics of Hallownest</p>
+      <h1 class="pack-title">Open a Pack</h1>
+
+      <div class="ornament">
+        <span class="orn-line"></span>
+        <span class="orn-node"></span>
+        <span class="orn-line short"></span>
+        <span class="orn-gem"></span>
+        <span class="orn-line short"></span>
+        <span class="orn-node"></span>
+        <span class="orn-line"></span>
+      </div>
+    </header>
+
+    <button class="hk-btn primary" (click)="openPack()">
+      <span class="btn-inner-glow"></span>
+      {{ cards.length ? 'Draw Again' : 'Open Pack' }}
+    </button>
+
+    <div class="pack-grid">
+      @for (card of cards; track $index; let i = $index) {
+        <div class="pack-slot" [style.--i]="i">
+          <app-card [card]="card" />
+        </div>
+      } @empty {
+        <p class="pack-empty">The seal is unbroken. Open the pack to reveal what lies within.</p>
+      }
+    </div>
+  </main>
 </div>

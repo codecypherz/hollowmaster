@@ -1,0 +1,97 @@
+import { Component, booleanAttribute, computed, input, output } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Card, Direction } from '../../model/card';
+import { Owner } from '../../model/game';
+
+const DIRECTIONS: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'];
+
+/**
+ * The single card renderer. Every card in the application goes through this
+ * component — hand, board tile, and opened pack alike — so the look-and-feel
+ * constraints (2.5:3.5 frame, three sections, chevrons outside the sections,
+ * rarity as stars, stats as bars and never numerals) are enforced in one file.
+ *
+ * The component does not choose its own size: it fills the width it is given
+ * and derives its height from the fixed aspect ratio. Everything inside scales
+ * from the card's own width via container query units, so it renders correctly
+ * at any size without the caller passing measurements down.
+ *
+ * Named CardComponent rather than Card to avoid colliding with the domain model.
+ */
+@Component({
+  selector: 'app-card',
+  imports: [NgTemplateOutlet],
+  templateUrl: './card.html',
+  styleUrl: './card.css',
+  host: {
+    '[class.face-down]': 'faceDown()',
+    '[class.owner-player]': 'owner() === "player"',
+    '[class.owner-opponent]': 'owner() === "opponent"',
+    '[class.is-selected]': 'selected()',
+    '[class.is-selectable]': 'selectable()',
+    '[class.is-inert]': 'interactive() && !selectable()',
+    '[class.is-flipped]': 'flipped()',
+    '[class.is-empty]': '!card() && !faceDown()',
+  },
+})
+export class CardComponent {
+  /** The card to render. Null renders an empty slot. */
+  readonly card = input<Card | null>(null);
+
+  /** Whose card this is, when it sits on the board. */
+  readonly owner = input<Owner | null>(null);
+
+  /** Render the card back instead of the face, revealing nothing. */
+  readonly faceDown = input(false, { transform: booleanAttribute });
+
+  /** Currently chosen by the player. */
+  readonly selected = input(false, { transform: booleanAttribute });
+
+  /**
+   * This card belongs to a hand and participates in selection. Distinct from
+   * `selectable`, which says whether it can be chosen *right now* — an
+   * interactive card that is not currently selectable renders subdued, while a
+   * display-only card (a board tile, a card in an opened pack) renders at full
+   * strength.
+   */
+  readonly interactive = input(false, { transform: booleanAttribute });
+
+  /** Actionable right now — reachable by keyboard and responsive to hover. */
+  readonly selectable = input(false, { transform: booleanAttribute });
+
+  /** Just changed ownership; plays the capture transition. */
+  readonly flipped = input(false, { transform: booleanAttribute });
+
+  readonly select = output<void>();
+
+  readonly directions = DIRECTIONS;
+
+  readonly stars = computed(() => {
+    const c = this.card();
+    return c ? '★'.repeat(Math.max(1, Math.min(c.rarity, 7))) : '';
+  });
+
+  readonly imageStyle = computed(() => {
+    const c = this.card();
+    return c ? `url('${c.image}')` : '';
+  });
+
+  /**
+   * Stats reach assistive technology as text here because the card renders them
+   * only as bars — the numerals are deliberately never drawn.
+   */
+  readonly description = computed(() => {
+    const c = this.card();
+    if (!c) return '';
+    const owner = this.owner() ? `, ${this.owner()}` : '';
+    return `${c.name}, rarity ${c.rarity}, attack ${c.stats.attack}, defense ${c.stats.defense}${owner}`;
+  });
+
+  hasArrow(dir: Direction): boolean {
+    return this.card()?.stats.arrows.includes(dir) ?? false;
+  }
+
+  onActivate(): void {
+    if (this.selectable()) this.select.emit();
+  }
+}

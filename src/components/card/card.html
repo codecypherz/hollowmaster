@@ -1,0 +1,59 @@
+<!-- The chevron ring and the three sections are one 3×3 grid: the eight compass
+     positions surround a centre `face` area. Splitting them would put the grid
+     in the caller and half its children here. -->
+<ng-template #frame>
+  @for (dir of directions; track dir) {
+    <span class="arr" [class]="'arr-' + dir.toLowerCase()" [class.arr-on]="hasArrow(dir)"></span>
+  }
+
+  <span class="face">
+    <span class="cf-name">
+      <span class="owner-pip" aria-hidden="true"></span>
+      <span class="cf-name-text">{{ card()!.name }}</span>
+    </span>
+
+    <span class="cf-img" [style.background-image]="imageStyle()">
+      <span class="cf-stars" aria-hidden="true">{{ stars() }}</span>
+    </span>
+
+    <span class="cf-stats" aria-hidden="true">
+      <span class="stat-row">
+        <img class="stat-icon" src="/images/attack_icon.png" alt="" />
+        <span class="stat-bar">
+          <span class="stat-fill atk-fill" [style.width.%]="card()!.stats.attack"></span>
+        </span>
+      </span>
+      <span class="stat-row">
+        <img class="stat-icon" src="/images/defense_icon.png" alt="" />
+        <span class="stat-bar">
+          <span class="stat-fill def-fill" [style.width.%]="card()!.stats.defense"></span>
+        </span>
+      </span>
+    </span>
+  </span>
+</ng-template>
+
+@if (faceDown()) {
+  <!-- Reveals nothing: no name, art, rarity, stats, or chevrons. -->
+  <span class="frame back" aria-hidden="true">
+    <span class="back-pattern"></span>
+    <span class="back-seal"></span>
+  </span>
+} @else if (card()) {
+  @if (selectable()) {
+    <button
+      type="button"
+      class="frame"
+      [attr.aria-label]="description()"
+      [attr.aria-pressed]="selected()"
+      (click)="onActivate()"
+    >
+      <ng-container [ngTemplateOutlet]="frame" />
+    </button>
+  } @else {
+    <span class="frame">
+      <ng-container [ngTemplateOutlet]="frame" />
+      <span class="sr-only">{{ description() }}</span>
+    </span>
+  }
+}

@@ -1,0 +1,387 @@
+/* ─── Shared primitives ───────────────────────────────────────────────────────
+   The atmosphere, ornament, and control primitives, defined exactly once.
+
+   These live in a global stylesheet rather than a component's own because
+   Angular view encapsulation scopes component CSS — which is precisely why
+   these rules were copy-pasted between home.css and game.css before.
+
+   Screens differ on a few genuine parameters (particle density, corner size,
+   button scale). Those are custom properties with sensible defaults, set by
+   the consuming screen — not forks of the rule.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* ─── Atmosphere: void field ──────────────────────────────────────────────── */
+
+.void-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 25%, var(--color-nebula-core) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 60% at 15% 85%, var(--color-nebula-low) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 45% at 85% 15%, var(--color-nebula-high) 0%, transparent 55%),
+    var(--color-void);
+}
+
+/* ─── Atmosphere: drifting mist ───────────────────────────────────────────── */
+
+.mist-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 90% 25% at 50% 100%, var(--color-mist-low) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 20% at 50% 0%, var(--color-mist-high) 0%, transparent 65%);
+  animation: mistDrift var(--dur-drift) ease-in-out infinite alternate;
+}
+
+@keyframes mistDrift {
+  from {
+    opacity: 0.5;
+    transform: scaleX(1);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1.06);
+  }
+}
+
+/* ─── Atmosphere: rising soul particles ───────────────────────────────────────
+   --particle-gap spaces particles horizontally; set it to roughly
+   (100 / count)% so the field spans the viewport at any density.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.particles {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--color-soul);
+  box-shadow: 0 0 5px 2px var(--color-soul-glow);
+  bottom: -8px;
+  left: calc(var(--i) * var(--particle-gap, 4.76%) + 1%);
+  opacity: 0;
+  animation: floatUp calc(7s + var(--i) * 0.5s) calc(var(--i) * var(--particle-stagger, 0.35s))
+    ease-in-out infinite;
+}
+
+.particle:nth-child(3n) {
+  width: 3px;
+  height: 3px;
+}
+.particle:nth-child(7n) {
+  width: 1px;
+  height: 1px;
+  box-shadow: 0 0 3px 1px var(--color-soul-glow);
+}
+.particle:nth-child(5n + 1) {
+  animation-duration: calc(9s + var(--i) * 0.3s);
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  12% {
+    opacity: 0.9;
+  }
+  85% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-102vh);
+  }
+}
+
+/* ─── Ornament: corner frame brackets ─────────────────────────────────────── */
+
+.corner {
+  position: absolute;
+  width: var(--corner-size, 64px);
+  height: var(--corner-size, 64px);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.corner span {
+  position: absolute;
+  background: var(--color-gold-dim);
+  transition: background var(--dur-slow);
+}
+
+.corner span:first-child {
+  width: 100%;
+  height: 1px;
+  top: 0;
+  left: 0;
+}
+.corner span:last-child {
+  width: 1px;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.corner-tl {
+  top: var(--corner-inset, 28px);
+  left: var(--corner-inset, 28px);
+}
+.corner-tr {
+  top: var(--corner-inset, 28px);
+  right: var(--corner-inset, 28px);
+  transform: scaleX(-1);
+}
+.corner-bl {
+  bottom: var(--corner-inset, 28px);
+  left: var(--corner-inset, 28px);
+  transform: scaleY(-1);
+}
+.corner-br {
+  bottom: var(--corner-inset, 28px);
+  right: var(--corner-inset, 28px);
+  transform: scale(-1);
+}
+
+/* ─── Ornament: horizontal divider ────────────────────────────────────────── */
+
+.ornament {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.orn-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold-dim), transparent);
+}
+
+.orn-line.short {
+  flex: 0 0 24px;
+}
+
+.orn-node {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-gold-dim);
+  flex-shrink: 0;
+}
+
+.orn-gem {
+  width: 9px;
+  height: 9px;
+  background: var(--color-gold);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+  box-shadow: 0 0 10px 3px var(--color-gold-glow);
+}
+
+/* ─── Control: button ─────────────────────────────────────────────────────── */
+
+.hk-btn {
+  position: relative;
+  font-family: var(--font-ui);
+  font-size: var(--btn-font-size, 0.7rem);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-gold-dim);
+  padding: var(--btn-padding, 0.8rem 2.2rem);
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    color var(--dur-base) ease,
+    border-color var(--dur-base) ease,
+    box-shadow var(--dur-base) ease;
+}
+
+.hk-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(200, 136, 42, 0.06) 100%);
+  opacity: 0;
+  transition: opacity var(--dur-base);
+}
+
+.hk-btn:hover:not(:disabled),
+.hk-btn.is-hover {
+  color: var(--color-gold-light);
+  border-color: var(--color-gold);
+  box-shadow: var(--elev-glow-gold);
+}
+
+.hk-btn:hover:not(:disabled)::after,
+.hk-btn.is-hover::after {
+  opacity: 1;
+}
+
+/* Focus is independent of hover so keyboard users get the same affordance. */
+.hk-btn:focus-visible,
+.hk-btn.is-focus {
+  outline: 2px solid var(--color-gold-light);
+  outline-offset: 3px;
+  color: var(--color-gold-light);
+}
+
+.hk-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: var(--color-text-dim);
+  border-color: var(--color-gold-dim);
+  box-shadow: none;
+}
+
+/* Primary — soul-accented rather than gold, same metrics. */
+.hk-btn.primary {
+  color: var(--color-soul);
+  border-color: var(--color-soul-dim);
+  background: rgba(90, 120, 210, 0.06);
+}
+
+.hk-btn.primary:hover:not(:disabled),
+.hk-btn.primary.is-hover {
+  color: var(--color-soul-bright);
+  border-color: var(--color-soul);
+  box-shadow: var(--elev-glow-soul);
+}
+
+.hk-btn.primary:focus-visible,
+.hk-btn.primary.is-focus {
+  outline-color: var(--color-soul);
+  color: var(--color-soul-bright);
+}
+
+.btn-inner-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, var(--color-soul-faint) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────────────────────
+   Ambient looping animation is suppressed, but every element stays visible in
+   its resting state — particles hold at full opacity rather than at the 0%
+   keyframe, which would make them disappear entirely.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .mist-layer {
+    animation: none;
+    opacity: 0.75;
+  }
+
+  .particle {
+    animation: none;
+    opacity: 0.5;
+    bottom: auto;
+    top: calc(var(--i) * 6.5% + 4%);
+  }
+
+  .hk-btn,
+  .hk-btn::after,
+  .corner span {
+    transition: none;
+  }
+}
+
+/* ─── Board tile ──────────────────────────────────────────────────────────────
+   A tile is a slot the size and shape of a card. The ratio is declared here so
+   a tile cannot drift from the cards that sit in it; where a grid already sets
+   both dimensions (the game board) this is simply redundant, not conflicting.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.board-cell {
+  position: relative;
+  aspect-ratio: 2.5 / 3.5;
+  background: var(--color-cell-bg);
+  border: 1px solid var(--color-cell-border);
+  transition:
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+  z-index: 1;
+}
+
+.cell-empty {
+  cursor: default;
+  background: transparent;
+}
+
+/* Once a card sits in the tile, the card supplies every visual — border, glow,
+   and owner treatment — so the tile gets out of its way. */
+.cell-occupied {
+  background: transparent;
+  border-color: transparent;
+}
+
+.cell-placeable {
+  cursor: pointer;
+  border-color: rgba(74, 106, 170, 0.5);
+  animation: placeableGlow 1.2s ease-in-out infinite;
+}
+
+.cell-placeable:hover {
+  border-color: var(--color-soul-dim);
+  box-shadow: inset 0 0 20px rgba(100, 140, 255, 0.12);
+}
+
+@keyframes placeableGlow {
+  0%,
+  100% {
+    box-shadow: inset 0 0 8px rgba(100, 140, 255, 0.05);
+  }
+  50% {
+    box-shadow: inset 0 0 18px rgba(100, 140, 255, 0.12);
+  }
+}
+
+/* Empty-tile rune */
+.cell-rune {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+  background: radial-gradient(circle at 50% 50%, rgba(100, 140, 255, 0.3) 0%, transparent 60%);
+}
+
+.cell-rune::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(100, 140, 255, 0.5);
+}
+
+.cell-rune::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(100, 140, 255, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell-placeable {
+    animation: none;
+    box-shadow: inset 0 0 14px rgba(100, 140, 255, 0.1);
+  }
+}

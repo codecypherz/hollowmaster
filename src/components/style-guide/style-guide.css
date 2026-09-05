@@ -1,0 +1,320 @@
+/* ─── Style guide ─────────────────────────────────────────────────────────────
+   A development reference. Its own layout is deliberately plain so that what
+   stands out on the page is the system being documented, not this page.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.sg-wrap {
+  --corner-size: 48px;
+  --corner-inset: 20px;
+
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background: var(--color-void);
+  font-family: var(--font-ui);
+  color: var(--color-text-bright);
+  overflow-x: hidden;
+}
+
+.sg-main {
+  position: relative;
+  z-index: 10;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 4rem 2rem 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+}
+
+/* ─── Header ──────────────────────────────────────────────────────────────── */
+
+.sg-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.eyebrow {
+  font-size: 0.6rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin: 0;
+}
+
+.sg-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  font-weight: 700;
+  color: var(--color-soul);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow: 0 0 24px var(--color-soul-glow);
+  margin: 0;
+}
+
+.sg-note,
+.sg-sub {
+  font-family: var(--font-flavor);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  max-width: 62ch;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.sg-note code,
+.swatch-name {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* ─── Sections ────────────────────────────────────────────────────────────── */
+
+.sg-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  border-top: 1px solid var(--color-gold-dim);
+  padding-top: 1.75rem;
+}
+
+.sg-h2 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-gold-light);
+  margin: 0;
+}
+
+/* ─── Token displays ──────────────────────────────────────────────────────── */
+
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.swatch-chip {
+  height: 58px;
+  border: 1px solid var(--color-cell-border);
+  border-radius: 2px;
+}
+
+/* Translucent tokens are read against a checker so their alpha is visible. */
+.swatch-chip.on-check {
+  background-image:
+    linear-gradient(45deg, #1a1a2e 25%, transparent 25%),
+    linear-gradient(-45deg, #1a1a2e 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a1a2e 75%),
+    linear-gradient(-45deg, transparent 75%, #1a1a2e 75%);
+  background-size: 12px 12px;
+  background-position:
+    0 0,
+    0 6px,
+    6px -6px,
+    -6px 0;
+}
+
+.swatch-name {
+  font-size: 0.7rem;
+  color: var(--color-text-bright);
+  word-break: break-all;
+}
+
+.swatch-val {
+  font-size: 0.68rem;
+  color: var(--color-text-dim);
+  word-break: break-all;
+}
+
+.type-list,
+.bar-list,
+.plain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.type-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid rgba(74, 106, 170, 0.18);
+}
+
+.type-sample {
+  font-size: 1.35rem;
+  color: var(--color-soul);
+  margin: 0;
+}
+
+.bar-row,
+.plain-row {
+  display: grid;
+  grid-template-columns: 200px 1fr auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.plain-row {
+  grid-template-columns: 200px 1fr;
+}
+
+.bar-fill {
+  display: block;
+  height: 14px;
+  min-width: 1px;
+  background: var(--color-gold);
+  border-radius: 1px;
+}
+
+.motion-track {
+  display: block;
+  position: relative;
+  height: 14px;
+  background: rgba(74, 106, 170, 0.18);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.motion-dot {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-soul);
+  box-shadow: 0 0 6px 2px var(--color-soul-glow);
+  animation-name: sgSlide;
+  animation-timing-function: var(--ease-out-soft);
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+@keyframes sgSlide {
+  from {
+    left: 0;
+  }
+  to {
+    left: calc(100% - 8px);
+  }
+}
+
+.elev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.75rem;
+}
+
+.elev-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.elev-box {
+  width: 100%;
+  height: 74px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-cell-border);
+  border-radius: 2px;
+}
+
+/* ─── State galleries ─────────────────────────────────────────────────────── */
+
+.state-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.state-item,
+.card-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.state-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  text-align: center;
+}
+
+.state-label.centred {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+}
+
+/* ─── Ornament demos ──────────────────────────────────────────────────────── */
+
+.orn-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 460px;
+}
+
+.corner-demo,
+.atmos-demo {
+  position: relative;
+  height: 170px;
+  border: 1px solid rgba(74, 106, 170, 0.18);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.corner-demo {
+  --corner-size: 34px;
+  --corner-inset: 14px;
+}
+
+.atmos-demo {
+  --particle-gap: 8%;
+}
+
+/* ─── Card gallery ────────────────────────────────────────────────────────── */
+
+.card-grid,
+.scale-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.75rem;
+  align-items: flex-start;
+}
+
+/* The card takes its width from the slot and derives its own height. */
+.card-slot {
+  width: 132px;
+}
+
+.scale-row {
+  align-items: flex-end;
+}
