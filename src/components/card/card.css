@@ -164,7 +164,7 @@ button.frame {
 .cf-name {
   position: relative;
   padding: clamp(2px, 3cqw, 5px) 4px;
-  background: rgba(4, 4, 10, 0.95);
+  background: var(--color-scrim);
   font-family: var(--font-ui);
   font-size: clamp(0.6rem, 10cqw, 1.1rem);
   letter-spacing: 0.07em;
@@ -243,7 +243,7 @@ button.frame {
   flex-direction: column;
   gap: clamp(2px, 2.5cqw, 5px);
   padding: clamp(3px, 4cqw, 7px) clamp(3px, 4cqw, 6px);
-  background: rgba(4, 4, 10, 0.95);
+  background: var(--color-scrim);
   border: 1px solid var(--color-section-border);
   border-radius: 1px;
   justify-content: center;

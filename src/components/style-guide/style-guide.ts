@@ -1,6 +1,7 @@
 import { Component, computed, signal } from '@angular/core';
 import { CardComponent } from '../card/card';
 import { Card, CARD_DB } from '../../model/card';
+import { createParticleField, particleVars } from '../../model/particle';
 
 export interface Token {
   name: string;
@@ -54,6 +55,10 @@ export class StyleGuide {
   readonly demo = computed(() => this.samples()[0] ?? CARD_DB[0]);
   readonly demoAlt = computed(() => this.samples()[this.samples().length - 1] ?? CARD_DB[0]);
 
+  /** The atmosphere demo's own field, at the tile's smaller density. */
+  readonly particles = createParticleField(12, 0x5167);
+  readonly vars = particleVars;
+
   readonly buttonStates = ['resting', 'is-hover', 'is-focus', 'disabled'] as const;
 
   readonly cardStates = computed(() => [
@@ -65,9 +70,10 @@ export class StyleGuide {
     { label: 'Captured', props: { owner: 'opponent' as const, flipped: true } },
   ]);
 
-  /** Colour tokens that are not opaque enough to judge on their own ground. */
+  /** Colour tokens that are not opaque enough to judge on their own ground.
+      `transparent` catches the scrim, which is a color-mix rather than an rgba. */
   isTranslucent(value: string): boolean {
-    return value.includes('rgba') || value.includes('/');
+    return value.includes('rgba') || value.includes('/') || value.includes('transparent');
   }
 }
 

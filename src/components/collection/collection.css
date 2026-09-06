@@ -17,8 +17,6 @@
 
 .page-wrap {
   /* Primitive parameters for this screen: a sparse field, tighter frame. */
-  --particle-gap: 7%;
-  --particle-stagger: 0.45s;
   --corner-size: 48px;
   --corner-inset: 20px;
 

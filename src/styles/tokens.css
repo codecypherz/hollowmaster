@@ -15,53 +15,61 @@
    ──────────────────────────────────────────────────────────────────────────── */
 
 @theme static {
-  /* ── Void: the near-black ground everything sits on ───────────────────── */
-  --color-void: #04040a;
-  --color-deep: #08081a;
+  /* ── Void: the lit gloom everything sits on ───────────────────────────────
+     Cool blue-grey rather than black. Hallownest's darkness always has some
+     light in it; a true black ground flattens the atmosphere layers into one
+     another and leaves the text ramp nothing to sit on. ────────────────── */
+  --color-void: #0c1018;
+  --color-deep: #141b2e;
 
-  /* ── Soul: the player accent — pale blue, the game's primary glow ─────── */
-  --color-soul: #c4dcff;
-  --color-soul-bright: #d8e8ff;
-  --color-soul-dim: #6080cc;
-  --color-soul-glow: rgba(130, 170, 255, 0.45);
-  --color-soul-glow-sm: rgba(130, 170, 255, 0.28);
-  --color-soul-faint: rgba(100, 140, 255, 0.12);
+  /* Scrim: the wash laid over artwork and behind overlaid content to hold text
+     legible. Derived from the void rather than stated, so it can never be left
+     behind as a black band when the ground moves. */
+  --color-scrim: color-mix(in srgb, var(--color-void) 92%, transparent);
+
+  /* ── Soul: the player accent — pale cyan-blue, the game's primary glow ── */
+  --color-soul: #cfe6fb;
+  --color-soul-bright: #e6f4ff;
+  --color-soul-dim: #7a9ad8;
+  --color-soul-glow: rgba(140, 190, 255, 0.5);
+  --color-soul-glow-sm: rgba(140, 190, 255, 0.32);
+  --color-soul-faint: rgba(120, 165, 255, 0.14);
 
   /* ── Gold: ornament, structure, framing ──────────────────────────────── */
-  --color-gold: #e09030;
-  --color-gold-light: #f8c040;
-  --color-gold-dim: #8a5818;
-  --color-gold-glow: rgba(224, 144, 48, 0.45);
-  --color-gold-shimmer: #f0c464;
+  --color-gold: #e8a03c;
+  --color-gold-light: #ffcc58;
+  --color-gold-dim: #a06c24;
+  --color-gold-glow: rgba(232, 160, 60, 0.5);
+  --color-gold-shimmer: #ffd782;
 
   /* ── Crimson: the opponent accent ────────────────────────────────────── */
-  --color-crimson: #e03838;
-  --color-crimson-dim: #9a2020;
-  --color-crimson-glow: rgba(224, 56, 56, 0.5);
-  --color-crimson-seal: rgba(192, 49, 42, 0.2);
+  --color-crimson: #ec4a44;
+  --color-crimson-dim: #b02c2c;
+  --color-crimson-glow: rgba(236, 74, 68, 0.5);
+  --color-crimson-seal: rgba(206, 62, 56, 0.22);
 
   /* ── Atmosphere: the layered void field and drifting mist ────────────── */
-  --color-nebula-core: #0f1535;
-  --color-nebula-low: #0a0e28;
-  --color-nebula-high: #0a0e25;
-  --color-mist-low: rgba(12, 20, 55, 0.9);
-  --color-mist-high: rgba(8, 14, 40, 0.6);
+  --color-nebula-core: #1b2450;
+  --color-nebula-low: #141c3c;
+  --color-nebula-high: #141a38;
+  --color-mist-low: rgba(26, 38, 78, 0.85);
+  --color-mist-high: rgba(20, 30, 66, 0.55);
 
   /* ── Text ramp: dim → muted → bright ─────────────────────────────────── */
-  --color-text-dim: #4a5888;
-  --color-text-muted: #7888b8;
-  --color-text-bright: #a8bce8;
+  --color-text-dim: #6b7cae;
+  --color-text-muted: #93a4d0;
+  --color-text-bright: #c4d6f5;
 
   /* ── Surfaces: panels, cards, board cells ────────────────────────────── */
-  --color-surface: #06071a;
-  --color-card-bg: #06091c;
-  --color-card-face: #02020a;
-  --color-card-art: #070a1a;
-  --color-card-back: #080c1e;
-  --color-cell-bg: #0e1025;
-  --color-cell-border: #3a3e80;
-  --color-section-border: rgba(74, 106, 170, 0.45);
-  --color-section-border-crimson: rgba(122, 26, 20, 0.55);
+  --color-surface: #0f1424;
+  --color-card-bg: #101526;
+  --color-card-face: #0d111c;
+  --color-card-art: #111726;
+  --color-card-back: #121829;
+  --color-cell-bg: #161d33;
+  --color-cell-border: #4a5296;
+  --color-section-border: rgba(96, 132, 196, 0.5);
+  --color-section-border-crimson: rgba(146, 40, 34, 0.55);
 
   /* ── Stat bars ───────────────────────────────────────────────────────── */
   --color-attack: #f0a030;
@@ -92,7 +100,10 @@
   --dur-fast: 0.2s;
   --dur-base: 0.3s;
   --dur-slow: 0.5s;
-  --dur-entrance: 1s;
+  --dur-entrance: 0.5s;
+  /* The interval between successive elements in a staggered entrance. An element
+     declares its position in the sequence; its delay is this times that index. */
+  --dur-stagger: 0.09s;
   --dur-pulse: 1.4s;
   --dur-breathe: 2.5s;
   --dur-drift: 14s;
@@ -101,9 +112,9 @@
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* ── Elevation ───────────────────────────────────────────────────────── */
-  --elev-card-hover: 0 4px 20px rgba(100, 140, 255, 0.3);
+  --elev-card-hover: 0 4px 20px rgba(120, 165, 255, 0.34);
   --elev-board: 0 0 40px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(0, 0, 0, 0.4);
-  --elev-overlay: 0 0 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(200, 136, 42, 0.08);
-  --elev-glow-soul: 0 0 22px rgba(100, 140, 255, 0.35), inset 0 0 22px rgba(100, 140, 255, 0.1);
-  --elev-glow-gold: 0 0 18px rgba(200, 136, 42, 0.25), inset 0 0 18px rgba(200, 136, 42, 0.06);
+  --elev-overlay: 0 0 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(232, 160, 60, 0.1);
+  --elev-glow-soul: 0 0 22px rgba(120, 165, 255, 0.4), inset 0 0 22px rgba(120, 165, 255, 0.12);
+  --elev-glow-gold: 0 0 18px rgba(232, 160, 60, 0.3), inset 0 0 18px rgba(232, 160, 60, 0.08);
 }

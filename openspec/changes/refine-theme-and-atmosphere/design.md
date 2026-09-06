@@ -4,8 +4,8 @@ See `proposal.md — Why` for motivation. The constraints that shape the approac
 
 - **Tokens are already the single source of truth.** `src/styles/tokens.css` declares everything in
   one `@theme static` block, so a palette pass is a value edit in one file — *except* for four
-  hardcoded `rgba(4, 4, 10, …)` washes in `card.css` and `game.css` that copy the current void.
-  Those are the only literals that break when the ground moves; the other ~50 literals in component
+  hardcoded `rgba(4, 4, 10, …)` washes in `card.css` and `game.css` that copy the current void
+  (three of them: two card bands and the game overlay). Those are the only literals that break when the ground moves; the other ~50 literals in component
   CSS are additive glow shadows, which composite correctly over any ground.
 - **Particles are a shared primitive with six consumers.** `battle`, `game`, `shop`, `collection`,
   `open-pack`, and `style-guide` each render `<span class="particle" [style.--i]="p">` over an
@@ -59,7 +59,7 @@ Target values (hue family preserved throughout; this is a value/temperature pass
 | `--color-mist-high` | `rgba(8,14,40,.6)` | `rgba(20,30,66,.55)` |
 | `--color-surface` | `#06071a` | `#0f1424` |
 | `--color-card-bg` | `#06091c` | `#101526` |
-| `--color-card-face` | `#02020a` | `#080b14` |
+| `--color-card-face` | `#02020a` | `#0d111c` |
 | `--color-card-art` | `#070a1a` | `#111726` |
 | `--color-card-back` | `#080c1e` | `#121829` |
 | `--color-cell-bg` | `#0e1025` | `#161d33` |
@@ -90,14 +90,21 @@ component. Second, contrast improves rather than degrades:
 `text-dim` currently fails AA and is used for the Battle eyebrow and several labels; the lift fixes
 that as a side effect, which is why the spec pins a contrast floor rather than only a hue range.
 
+*Note on `--color-card-face`:* it is the card's inner grid background, visible only as the hairline
+between the three sections. At the originally proposed `#080b14` it was *darker* than the new void,
+which the spec's layer-ordering requirement forbids — the void must be the darkest ground. It sits
+at `#0d111c` instead: above the void, still below `card-bg`, so the seam still reads as a seam.
+
 *Alternative considered:* shifting soul toward true cyan (`#d0f0f0`, the lumafly reading). Rejected
 as too far from the established look — the nudge to `#cfe6fb` keeps the blue identity while picking
 up the cooler cast.
 
 ### 2. A scrim token derived from the ground
 
-Add `--color-scrim: color-mix(in srgb, var(--color-void) 92%, transparent)` and route the four
-`rgba(4, 4, 10, …)` washes through it (`card.css` name band and stat band, `game.css` overlay). The
+Add `--color-scrim: color-mix(in srgb, var(--color-void) 92%, transparent)` and route the three
+`rgba(4, 4, 10, …)` washes through it (`card.css` name band and stat band, `game.css` overlay).
+One alpha serves all three: the card bands go 0.95 → 0.92, imperceptibly, and the game overlay
+0.85 → 0.92, which a brighter ground wants anyway to keep the overlaid panel readable. The
 derivation is the point: a wash stated as a literal is exactly what left these four black against a
 moved ground.
 

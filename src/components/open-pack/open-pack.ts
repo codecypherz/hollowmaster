@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { Card, CARD_DB } from '../../model/card';
 import { CardComponent } from '../card/card';
+import { createParticleField, particleVars } from '../../model/particle';
 
 @Component({
   selector: 'app-open-pack',
@@ -11,7 +12,8 @@ import { CardComponent } from '../card/card';
 export class OpenPack {
   cards: Card[] = [];
 
-  readonly particles = Array.from({ length: 18 }, (_, i) => i);
+  readonly particles = createParticleField(18, 0x09ac);
+  readonly vars = particleVars;
 
   openPack() {
     const arr = [];

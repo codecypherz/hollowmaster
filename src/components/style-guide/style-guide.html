@@ -221,8 +221,8 @@
         <div class="void-bg" aria-hidden="true"></div>
         <div class="mist-layer" aria-hidden="true"></div>
         <div class="particles" aria-hidden="true">
-          @for (p of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; track p) {
-            <span class="particle" [style.--i]="p"></span>
+          @for (p of particles; track $index) {
+            <span class="particle" [class.falls]="p.falling" [style]="vars(p)"></span>
           }
         </div>
         <span class="state-label centred">atmosphere · void, mist, soul particles</span>

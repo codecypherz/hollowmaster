@@ -3,8 +3,8 @@
   <div class="void-bg" aria-hidden="true"></div>
   <div class="mist-layer" aria-hidden="true"></div>
   <div class="particles" aria-hidden="true">
-    @for (p of particles; track p) {
-      <span class="particle" [style.--i]="p"></span>
+    @for (p of particles; track $index) {
+      <span class="particle" [class.falls]="p.falling" [style]="vars(p)"></span>
     }
   </div>
 

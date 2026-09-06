@@ -29,9 +29,9 @@ Three concrete defects compound it:
   its cyan-white lumafly cast and gold toward lamp amber; lift the text ramp in step so contrast
   is preserved or improved. Hue families and semantic roles are unchanged — this is a value and
   temperature pass, not a repalette.
-- **Add a scrim token** for the near-black wash card bands and the game overlay currently paint
-  with a hardcoded copy of the *old* void (`rgba(4, 4, 10, …)`), so they track the new ground
-  instead of staying black against it.
+- **Add a scrim token** for the near-black wash the card bands and the game overlay currently
+  paint with a hardcoded copy of the *old* void (`rgba(4, 4, 10, …)`), so they track the new
+  ground instead of staying black against it.
 - **Rebuild the particle field as a seeded, depth-layered drift.** Each particle gets a generated
   set of properties — jittered horizontal position, a depth scalar that drives size, brightness,
   blur and speed together, an independent lateral sway, a slow twinkle, and a negative animation
@@ -79,8 +79,8 @@ animations; any change to card, board, or layout geometry.
   `--particle-stagger` parameters.
 - **Battle screen** — `src/components/battle/battle.{html,css}`: resting glow, retuned keyframes,
   index-based stagger, shorter entrance.
-- **Card and game scrims** — `src/components/card/card.css`, `src/components/game/game.css`: four
-  hardcoded `rgba(4, 4, 10, …)` washes routed through the new scrim token.
+- **Card and game scrims** — `src/components/card/card.css`, `src/components/game/game.css`: the
+  three hardcoded `rgba(4, 4, 10, …)` washes routed through the new scrim token.
 - **Style guide** — `src/components/style-guide/`: its atmosphere demo picks up the new field; its
   token tables pick up the new tokens automatically, since it enumerates `:root` at runtime.
 - **Tests** — new unit coverage for the particle generator (determinism, spread, depth coherence);

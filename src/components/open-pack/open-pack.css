@@ -11,8 +11,6 @@
 
 .pack-wrap {
   /* Primitive parameters for this screen. */
-  --particle-gap: 5.5%;
-  --particle-stagger: 0.4s;
   --corner-size: 56px;
   --corner-inset: 24px;
 

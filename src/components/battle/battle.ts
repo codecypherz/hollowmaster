@@ -1,6 +1,7 @@
 import { Component, inject, output } from '@angular/core';
 import { Router } from '@angular/router';
 import { GameService } from '../../services/game.service';
+import { createParticleField, particleVars } from '../../model/particle';
 
 @Component({
   selector: 'app-battle',
@@ -12,7 +13,8 @@ export class Battle {
   private readonly gameService = inject(GameService);
   private readonly router = inject(Router);
 
-  particles = Array.from({ length: 22 }, (_, i) => i);
+  particles = createParticleField(22, 0x5eed);
+  readonly vars = particleVars;
 
   /**
    * The template still only announces the intent to battle; the handler that

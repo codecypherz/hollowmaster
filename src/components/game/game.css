@@ -7,9 +7,7 @@
 }
 
 .game-wrap {
-  /* Primitive parameters for this screen: 14 particles, tighter frame. */
-  --particle-gap: 7%;
-  --particle-stagger: 0.45s;
+  /* Primitive parameters for this screen: a tighter frame. */
   --corner-size: 48px;
   --corner-inset: 20px;
   --btn-font-size: 0.65rem;
@@ -272,7 +270,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(4, 4, 10, 0.85);
+  background: var(--color-scrim);
   backdrop-filter: blur(4px);
   animation: fadeIn var(--dur-slow) ease both;
 }

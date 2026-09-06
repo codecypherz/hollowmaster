@@ -5,9 +5,10 @@
    Angular view encapsulation scopes component CSS — which is precisely why
    these rules were copy-pasted between home.css and game.css before.
 
-   Screens differ on a few genuine parameters (particle density, corner size,
-   button scale). Those are custom properties with sensible defaults, set by
-   the consuming screen — not forks of the rule.
+   Screens differ on a few genuine parameters (corner size, button scale).
+   Those are custom properties with sensible defaults, set by the consuming
+   screen — not forks of the rule. Particle density is the exception: it is a
+   count, so the screen passes it to the field generator instead.
    ──────────────────────────────────────────────────────────────────────────── */
 
 /* ─── Atmosphere: void field ──────────────────────────────────────────────── */
@@ -46,9 +47,18 @@
   }
 }
 
-/* ─── Atmosphere: rising soul particles ───────────────────────────────────────
-   --particle-gap spaces particles horizontally; set it to roughly
-   (100 / count)% so the field spans the viewport at any density.
+/* ─── Atmosphere: drifting soul particles ─────────────────────────────────────
+   A surface states only how many particles it wants; every other property comes
+   from the seeded generator in src/model/particle.ts, which hands each particle
+   the custom properties below. Nothing here is derived from a particle's index,
+   because an index-derived field is a field with a visible pattern in it.
+
+   The rise and the sway cannot share an element — two animations on one element
+   cannot both write `transform` — so the particle element is an invisible box
+   that travels, and its ::after is the dot that drifts inside it. The parent's
+   life-envelope opacity multiplies the child's twinkle, which is exactly the
+   composition wanted, and only transform and opacity animate, so the field
+   stays on the compositor.
    ──────────────────────────────────────────────────────────────────────────── */
 
 .particles {
@@ -58,47 +68,90 @@
   pointer-events: none;
 }
 
+/* The travelling box. */
 .particle {
   position: absolute;
-  width: 2px;
-  height: 2px;
+  bottom: calc(var(--size) * -2);
+  left: var(--x);
+  width: var(--size);
+  height: var(--size);
+  /* Negative offset: mid-flight on the first frame, so a surface is never
+     briefly airless while the field fills in. */
+  animation: particleRise var(--rise) var(--offset) linear infinite;
+}
+
+/* Dust rather than soul: enters from above and settles downward. */
+.particle.falls {
+  bottom: auto;
+  top: calc(var(--size) * -2);
+  animation-name: particleFall;
+}
+
+/* The visible dot. */
+.particle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
   background: var(--color-soul);
-  box-shadow: 0 0 5px 2px var(--color-soul-glow);
-  bottom: -8px;
-  left: calc(var(--i) * var(--particle-gap, 4.76%) + 1%);
-  opacity: 0;
-  animation: floatUp calc(7s + var(--i) * 0.5s) calc(var(--i) * var(--particle-stagger, 0.35s))
-    ease-in-out infinite;
+  box-shadow: 0 0 calc(var(--size) * 2.5) calc(var(--size) * 0.8) var(--color-soul-glow);
+  filter: blur(var(--blur));
+  opacity: var(--alpha);
+  animation:
+    particleSway var(--sway-dur) var(--sway-delay) ease-in-out infinite alternate,
+    particleTwinkle var(--twinkle-dur) ease-in-out infinite;
 }
 
-.particle:nth-child(3n) {
-  width: 3px;
-  height: 3px;
-}
-.particle:nth-child(7n) {
-  width: 1px;
-  height: 1px;
-  box-shadow: 0 0 3px 1px var(--color-soul-glow);
-}
-.particle:nth-child(5n + 1) {
-  animation-duration: calc(9s + var(--i) * 0.3s);
-}
-
-@keyframes floatUp {
+@keyframes particleRise {
   0% {
     opacity: 0;
     transform: translateY(0);
   }
-  12% {
-    opacity: 0.9;
+  8% {
+    opacity: 1;
   }
-  85% {
-    opacity: 0.3;
+  88% {
+    opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translateY(-102vh);
+    transform: translateY(-108vh);
+  }
+}
+
+@keyframes particleFall {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  10% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(108vh);
+  }
+}
+
+@keyframes particleSway {
+  from {
+    transform: translateX(calc(var(--sway) * -1));
+  }
+  to {
+    transform: translateX(var(--sway));
+  }
+}
+
+@keyframes particleTwinkle {
+  0%,
+  100% {
+    opacity: var(--alpha);
+  }
+  50% {
+    opacity: calc(var(--alpha) * 0.45);
   }
 }
 
@@ -301,11 +354,17 @@
     opacity: 0.75;
   }
 
-  .particle {
+  /* Rests where it was generated, on both axes, so the field stays a scattered
+     field with its size and brightness variation intact rather than collapsing
+     into a column. */
+  .particle,
+  .particle::after {
     animation: none;
-    opacity: 0.5;
+  }
+
+  .particle {
     bottom: auto;
-    top: calc(var(--i) * 6.5% + 4%);
+    top: var(--y);
   }
 
   .hk-btn,

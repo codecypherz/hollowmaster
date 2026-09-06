@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { GameService } from '../../services/game.service';
 import { CardComponent } from '../card/card';
+import { createParticleField, particleVars } from '../../model/particle';
 
 @Component({
   selector: 'app-game',
@@ -14,7 +15,8 @@ export class Game {
   private router = inject(Router);
 
   readonly state = computed(() => this.gs.state()!);
-  readonly particles = Array.from({ length: 14 }, (_, i) => i);
+  readonly particles = createParticleField(14, 0xa17);
+  readonly vars = particleVars;
 
   onCardSelect(index: number): void {
     this.gs.selectCard(index);

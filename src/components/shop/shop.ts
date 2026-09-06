@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { createParticleField, particleVars } from '../../model/particle';
 
 @Component({
   selector: 'app-shop',
@@ -7,5 +8,6 @@ import { Component } from '@angular/core';
   styleUrl: './shop.css',
 })
 export class Shop {
-  particles = Array.from({ length: 14 }, (_, i) => i);
+  particles = createParticleField(14, 0x5409);
+  readonly vars = particleVars;
 }

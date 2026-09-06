@@ -296,10 +296,6 @@
   --corner-inset: 14px;
 }
 
-.atmos-demo {
-  --particle-gap: 8%;
-}
-
 /* ─── Card gallery ────────────────────────────────────────────────────────── */
 
 .card-grid,

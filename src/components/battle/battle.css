@@ -14,9 +14,8 @@
 }
 
 .home-wrap {
-  /* Primitive parameters for this screen: 22 particles, generous corners. */
-  --particle-gap: 4.76%;
-  --particle-stagger: 0.35s;
+  /* Primitive parameters for this screen: generous corners. Particle density
+     is a component parameter now, not a CSS one. */
   --corner-size: 64px;
   --corner-inset: 28px;
 
@@ -119,56 +118,77 @@
   margin-bottom: 1.75rem;
 }
 
+/* Each title span owns its resting glow as a property, and applies it. Holding
+   the ramp in `--glow-rest` lets the ambient loop below open and close on the
+   exact value already on screen — the glow is part of the letterform from its
+   first visible frame rather than something that arrives later. Element opacity
+   attenuates a text-shadow along with the glyphs, so the entrance fades the two
+   in together for free. */
+
 .title-hollow {
+  --glow-rest:
+    0 0 25px rgba(150, 190, 255, 0.7), 0 0 55px rgba(110, 155, 255, 0.4),
+    0 0 110px rgba(90, 130, 255, 0.2);
+
   font-family: var(--font-display);
   font-size: clamp(3.5rem, 12vw, 7.5rem);
   font-weight: 900;
   color: var(--color-soul);
   letter-spacing: 0.06em;
+  text-shadow: var(--glow-rest);
 }
 
 .title-master {
+  --glow-rest: 0 0 22px rgba(255, 205, 110, 0.5), 0 0 45px rgba(232, 160, 60, 0.22);
+
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 5.5vw, 4rem);
   font-weight: 400;
   color: var(--color-gold-light);
   letter-spacing: 0.3em;
+  text-shadow: var(--glow-rest);
 }
 
 /* The title's layered glow ramp — a treatment specific to this hero, not a
-   reusable elevation step, so its stops stay local. */
+   reusable elevation step, so its stops stay local.
+
+   Both loops open and close on `--glow-rest`, the value the span already
+   carries. That makes the handoff from the entrance seamless in one direction
+   and the loop seam seamless in the other: there is no frame at which the
+   title's brightness steps. */
 @keyframes soulFlicker {
   0%,
   100% {
-    text-shadow:
-      0 0 25px rgba(140, 175, 255, 0.7),
-      0 0 55px rgba(100, 140, 255, 0.4),
-      0 0 110px rgba(80, 120, 255, 0.2);
+    text-shadow: var(--glow-rest);
   }
   35% {
     text-shadow:
-      0 0 18px rgba(140, 175, 255, 0.5),
-      0 0 40px rgba(100, 140, 255, 0.25),
-      0 0 80px rgba(80, 120, 255, 0.12);
+      0 0 18px rgba(150, 190, 255, 0.5),
+      0 0 40px rgba(110, 155, 255, 0.25),
+      0 0 80px rgba(90, 130, 255, 0.12);
   }
   65% {
     text-shadow:
-      0 0 35px rgba(160, 195, 255, 0.85),
-      0 0 70px rgba(120, 160, 255, 0.5),
-      0 0 130px rgba(90, 130, 255, 0.28);
+      0 0 35px rgba(175, 210, 255, 0.85),
+      0 0 70px rgba(130, 175, 255, 0.5),
+      0 0 130px rgba(100, 145, 255, 0.28);
   }
 }
 
+/* Gold shimmer moves colour and glow together. Its resting stop restates the
+   shadow as well as the colour — without it the gold halo vanished once per
+   cycle, the same defect as the flicker's, one loop slower. */
 @keyframes goldShimmer {
   0%,
   100% {
     color: var(--color-gold-light);
+    text-shadow: var(--glow-rest);
   }
   50% {
     color: var(--color-gold-shimmer);
     text-shadow:
-      0 0 25px rgba(240, 196, 100, 0.7),
-      0 0 50px rgba(200, 136, 42, 0.3);
+      0 0 30px rgba(255, 215, 130, 0.75),
+      0 0 55px rgba(232, 160, 60, 0.32);
   }
 }
 
@@ -190,33 +210,43 @@
   justify-content: center;
 }
 
-/* ─── Entrance animations ─────────────────────────────────────────────────── */
+/* ─── Entrance animations ─────────────────────────────────────────────────────
+   An element declares only its position in the sequence, as `--n`; the delay is
+   derived from that and the shared stagger token. The screen's whole pace is
+   therefore two tokens, not seven inline literals kept in proportion by hand.
+   ──────────────────────────────────────────────────────────────────────────── */
 
 .fade-in {
   opacity: 0;
-  animation: fadeInUp var(--dur-entrance) var(--delay, 0s) var(--ease-out-soft) both;
+  animation: fadeInUp var(--dur-entrance) calc(var(--n, 0) * var(--dur-stagger))
+    var(--ease-out-soft) both;
 }
 
 /* The title spans need their entrance delay without cancelling the continuous
-   glow animations, so both are composed on one shorthand. */
+   glow animations, so both are composed on one shorthand. The glow loops run
+   from the same instant as the entrance rather than a second behind it: their
+   opening stop is the resting glow already on the span, so there is nothing to
+   wait for and nothing to hide. */
 .title-hollow {
   opacity: 0;
   animation:
-    fadeInUp var(--dur-entrance) var(--delay, 0s) var(--ease-out-soft) both,
-    soulFlicker 7s calc(var(--delay, 0s) + 1s) ease-in-out infinite;
+    fadeInUp var(--dur-entrance) calc(var(--n, 0) * var(--dur-stagger)) var(--ease-out-soft) both,
+    soulFlicker 7s ease-in-out infinite;
 }
 
 .title-master {
   opacity: 0;
   animation:
-    fadeInUp var(--dur-entrance) var(--delay, 0s) var(--ease-out-soft) both,
-    goldShimmer 9s calc(var(--delay, 0s) + 1s) ease-in-out infinite;
+    fadeInUp var(--dur-entrance) calc(var(--n, 0) * var(--dur-stagger)) var(--ease-out-soft) both,
+    goldShimmer 9s ease-in-out infinite;
 }
 
+/* The throw is shorter than it was: at half the duration, the old 18px read as
+   a jerk rather than a rise. */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -237,10 +267,11 @@
     transform: none;
   }
 
-  .title-hollow {
-    text-shadow:
-      0 0 25px rgba(140, 175, 255, 0.7),
-      0 0 55px rgba(100, 140, 255, 0.4);
+  /* Both spans keep the resting glow they already declare — no second copy of
+     the ramp to fall out of step with the one above. */
+  .title-hollow,
+  .title-master {
+    text-shadow: var(--glow-rest);
   }
 
   .soul-ring {
