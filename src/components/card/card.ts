@@ -1,15 +1,23 @@
 import { Component, booleanAttribute, computed, input, output } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { Card, Direction } from '../../model/card';
+import { Card, Direction, DIRECTIONS as MODEL_DIRECTIONS } from '../../model/card';
 import { Owner } from '../../model/game';
 
-const DIRECTIONS: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'];
+/**
+ * The eight directions in the order the 3x3 chevron grid reads them. Which
+ * directions exist is the model's business; only their layout order is ours.
+ */
+const GRID_ORDER: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'];
+
+if (GRID_ORDER.length !== MODEL_DIRECTIONS.length) {
+  throw new Error('Card chevron grid is out of step with the model directions');
+}
 
 /**
  * The single card renderer. Every card in the application goes through this
  * component — hand, board tile, and opened pack alike — so the look-and-feel
  * constraints (2.5:3.5 frame, three sections, chevrons outside the sections,
- * rarity as stars, stats as bars and never numerals) are enforced in one file.
+ * stars, stats as bars and never numerals) are enforced in one file.
  *
  * The component does not choose its own size: it fills the width it is given
  * and derives its height from the fixed aspect ratio. Everything inside scales
@@ -64,11 +72,11 @@ export class CardComponent {
 
   readonly select = output<void>();
 
-  readonly directions = DIRECTIONS;
+  readonly directions = GRID_ORDER;
 
   readonly stars = computed(() => {
     const c = this.card();
-    return c ? '★'.repeat(Math.max(1, Math.min(c.rarity, 7))) : '';
+    return c ? '★'.repeat(c.stars) : '';
   });
 
   readonly imageStyle = computed(() => {
@@ -84,11 +92,11 @@ export class CardComponent {
     const c = this.card();
     if (!c) return '';
     const owner = this.owner() ? `, ${this.owner()}` : '';
-    return `${c.name}, rarity ${c.rarity}, attack ${c.stats.attack}, defense ${c.stats.defense}${owner}`;
+    return `${c.name}, stars ${c.stars}, attack ${c.attack}, defense ${c.defense}${owner}`;
   });
 
   hasArrow(dir: Direction): boolean {
-    return this.card()?.stats.arrows.includes(dir) ?? false;
+    return this.card()?.hasArrow(dir) ?? false;
   }
 
   onActivate(): void {

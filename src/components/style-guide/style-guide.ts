@@ -45,11 +45,11 @@ export class StyleGuide {
 
   readonly tokenCount = computed(() => this.tokens().length);
 
-  /** Cards spanning the full rarity range present in the database. */
+  /** Cards spanning the full star range present in the database. */
   readonly samples = computed<Card[]>(() => {
-    const byRarity = new Map<number, Card>();
-    for (const c of CARD_DB) if (!byRarity.has(c.rarity)) byRarity.set(c.rarity, c);
-    return [...byRarity.entries()].sort((a, b) => a[0] - b[0]).map(([, c]) => c);
+    const byStars = new Map<number, Card>();
+    for (const c of CARD_DB) if (!byStars.has(c.stars)) byStars.set(c.stars, c);
+    return [...byStars.entries()].sort((a, b) => a[0] - b[0]).map(([, c]) => c);
   });
 
   readonly demo = computed(() => this.samples()[0] ?? CARD_DB[0]);

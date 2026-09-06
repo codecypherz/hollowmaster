@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CardComponent } from './card';
-import { Card } from '../../model/card';
+import { Card, CardOptions } from '../../model/card';
 
 /**
  * The card is the one place the look-and-feel constraints are enforced, so the
@@ -10,11 +10,23 @@ describe('CardComponent', () => {
   let fixture: ComponentFixture<CardComponent>;
   let host: HTMLElement;
 
-  const sample = new Card('Gruz Mother', 3, 'gruz-mother.png', {
-    attack: 45,
-    defense: 40,
-    arrows: ['N', 'S', 'E', 'W'],
-  });
+  /** Every card needs all nine properties; a test should state only the ones it asserts on. */
+  function card(overrides: Partial<CardOptions> = {}): Card {
+    return new Card({
+      name: 'Gruz Mother',
+      arrows: ['N', 'S', 'E', 'W'],
+      stars: 3,
+      image: 'gruz-mother.png',
+      attack: 45,
+      defense: 40,
+      ability: 'Hurls her bulk from wall to wall.',
+      set: 'Forgotten Crossroads',
+      number: 2,
+      ...overrides,
+    });
+  }
+
+  const sample = card();
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [CardComponent] }).compileComponents();
@@ -46,7 +58,7 @@ describe('CardComponent', () => {
 
   describe('chevrons', () => {
     it('renders all eight compass positions regardless of which are active', () => {
-      render({ card: new Card('Crawlid', 1, undefined, { attack: 5, defense: 5, arrows: ['N'] }) });
+      render({ card: card({ name: 'Crawlid', arrows: ['N'], stars: 1, image: 'crawlid.webp' }) });
       expect(host.querySelectorAll('.arr').length).toBe(8);
     });
 
@@ -65,8 +77,8 @@ describe('CardComponent', () => {
     });
   });
 
-  describe('rarity and stats', () => {
-    it('renders rarity as one star per level', () => {
+  describe('stars and stats', () => {
+    it('renders the star rating as one star per level', () => {
       render();
       expect(host.querySelector('.cf-img .cf-stars')?.textContent).toBe('★★★');
     });

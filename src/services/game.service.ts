@@ -78,8 +78,7 @@ export class GameService {
 
     const empties: [number, number][] = [];
     for (let r = 0; r < 4; r++)
-      for (let c = 0; c < 4; c++)
-        if (!s.board[r][c]) empties.push([r, c]);
+      for (let c = 0; c < 4; c++) if (!s.board[r][c]) empties.push([r, c]);
 
     if (empties.length === 0) {
       this._state.set(finalize(s));
@@ -118,8 +117,14 @@ export class GameService {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const DIR_DELTA: Record<string, [number, number]> = {
-  N: [-1, 0],  NE: [-1, 1],  E: [0, 1],   SE: [1, 1],
-  S: [1, 0],   SW: [1, -1],  W: [0, -1],  NW: [-1, -1],
+  N: [-1, 0],
+  NE: [-1, 1],
+  E: [0, 1],
+  SE: [1, 1],
+  S: [1, 0],
+  SW: [1, -1],
+  W: [0, -1],
+  NW: [-1, -1],
 };
 
 function resolveBattles(
@@ -131,7 +136,7 @@ function resolveBattles(
   const placed = board[row][col]!;
   const flipped: { row: number; col: number }[] = [];
 
-  for (const dir of placed.card.stats.arrows) {
+  for (const dir of placed.card.arrows) {
     const [dr, dc] = DIR_DELTA[dir];
     const nr = row + dr;
     const nc = col + dc;
@@ -139,7 +144,7 @@ function resolveBattles(
     const target = board[nr][nc];
     if (!target || target.owner === attacker) continue;
 
-    if (roll(placed.card.stats.attack) - roll(target.card.stats.defense) > 0) {
+    if (roll(placed.card.attack) - roll(target.card.defense) > 0) {
       board[nr][nc] = { ...target, owner: attacker };
       flipped.push({ row: nr, col: nc });
       const combo = resolveBattles(board, nr, nc, attacker);
