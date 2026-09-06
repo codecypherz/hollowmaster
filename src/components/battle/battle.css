@@ -8,8 +8,8 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* Takes the column the nav shell leaves rather than a flat 100vh, which
-     would push the splash a nav's height past the viewport. */
+  /* Takes the column above the nav shell rather than a flat 100vh, which would
+     push the splash a nav's height past the viewport. */
   flex: 1;
 }
 

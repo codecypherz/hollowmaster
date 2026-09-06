@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* Takes the whole column below the nav shell, and hands that height on to
+  /* Takes the whole column above the nav shell, and hands that height on to
      .page-wrap, so the atmosphere and the corner frame reach the viewport
      edges rather than stopping at the content's natural height. */
   flex: 1;

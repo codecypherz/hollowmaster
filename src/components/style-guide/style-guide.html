@@ -120,7 +120,7 @@
       <h2 class="sg-h2">Buttons</h2>
       <p class="sg-sub">
         Hover and focus are shown pinned open with the same rules the real states use, so all four
-        are comparable at once.
+        are comparable at once. Each treatment appears at both size steps — size changes scale only.
       </p>
 
       <div class="state-grid">
@@ -152,6 +152,41 @@
               Start Game
             </button>
             <span class="state-label">primary · {{ state === 'resting' ? 'resting' : state }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="state-grid">
+        @for (state of buttonStates; track state) {
+          <div class="state-item">
+            <button
+              class="hk-btn lg"
+              [class.is-hover]="state === 'is-hover'"
+              [class.is-focus]="state === 'is-focus'"
+              [disabled]="state === 'disabled'"
+            >
+              Descend
+            </button>
+            <span class="state-label">large · {{ state === 'resting' ? 'resting' : state }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="state-grid">
+        @for (state of buttonStates; track state) {
+          <div class="state-item">
+            <button
+              class="hk-btn primary lg"
+              [class.is-hover]="state === 'is-hover'"
+              [class.is-focus]="state === 'is-focus'"
+              [disabled]="state === 'disabled'"
+            >
+              <span class="btn-inner-glow"></span>
+              Start Game
+            </button>
+            <span class="state-label"
+              >primary · large · {{ state === 'resting' ? 'resting' : state }}</span
+            >
           </div>
         }
       </div>

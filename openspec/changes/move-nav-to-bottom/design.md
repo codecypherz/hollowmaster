@@ -32,7 +32,9 @@ That third fact is the hinge: the primitive is already parameterised for size, i
 
 *Alternative — `position: fixed; bottom: 0`:* survives page scrolling, but floats over content, so every page would need bottom padding equal to a nav height it does not know, and the pages' full-bleed atmosphere and corner frames would run underneath it. Rejected: it trades a guaranteed no-overlap property for scroll behaviour no current page needs — all three out-of-battle pages fit the viewport.
 
-*Alternative — `position: sticky; bottom: 0`:* keeps it visible once pages scroll, but sticky needs the scroll container to be the shell rather than the document to behave predictably here. Deferred; noted under Risks as the upgrade path if the Cards page grows a long scroll.
+*Chosen alongside it — `position: sticky; bottom: 0` on the shell's `:host`:* in-flow placement alone was not enough. It was measured wrong at planning time: the nav also renders on `/style-guide`, which is ~5,950px tall, and any viewport shorter than a page's intrinsic height (the Battle splash needs ~608px) pushes the bar below the fold. Sticky fixes both while keeping the property that made in-flow attractive — the slot stays reserved, so at full scroll the bar sits in its own space and covers nothing. It does not need the shell to be the scroll container; the document is the containing scroller, and `bottom: 0` pins the bar to the viewport edge until its in-flow position catches up.
+
+*Alternative — the shell owns the scroll (`height: 100dvh; overflow: hidden` on the shell, pages scrolling internally):* would make the bar a true fixed last row, but changes scroll behaviour on every page including the style guide. Rejected as a much larger blast radius for the same result.
 
 ### The dividing hairline flips from `border-bottom` to `border-top`
 
@@ -72,7 +74,7 @@ The Buttons section renders a third `@for` row over `buttonStates` with `class="
 ## Risks / Trade-offs
 
 - **A taller bar takes height from the pages above it** → The pages are centred flex boxes that shrink gracefully; the in-game screen — the one surface with a hard height budget — has no nav at all, so its `--card-h` chain is untouched. Verify the three out-of-battle pages at a short viewport after the change.
-- **The nav scrolls out of view if a page ever exceeds the viewport** → None does today. If the Cards page grows a long collection grid, the fix is `position: sticky; bottom: 0` on `:host` plus making the shell the scroll container, not a return to fixed positioning.
-- **Larger buttons wrap to two rows on a narrow viewport** → `.nav-links` already sets `flex-wrap: wrap`, so it degrades to stacked rows rather than clipping. Check the wrap point; if it lands above a plausible phone width, tighten `--btn-padding` inside `.lg` rather than reintroducing nav-local metrics.
+- **~~The nav scrolls out of view if a page ever exceeds the viewport~~** → Found in verification, not deferred: `/style-guide` and any short viewport hit it immediately. Resolved by the sticky decision above. Residual: while a long page is scrolled mid-document, content passes *under* the pinned bar; scrolling to the end always reveals it, since the slot is reserved.
+- **~~Larger buttons wrap to two rows on a narrow viewport~~** → Measured worse than predicted: at 380px the three destinations stacked into *three* rows, 238px of nav, pushing the page past the fold. Resolved as the risk itself suggested — `.hk-btn.lg` gives back horizontal padding below 480px (keeping its type size, which is the point of the step), and the nav hides its two decorative `.nav-rule` hairlines at the same width so the destinations get their flex space. One row at 380px, no metrics reintroduced in the nav.
 - **Muscle memory: Battle moves from the leftmost slot to the centre** → Accepted, and the point of the change. Active-destination marking is unchanged, so the current page is still unambiguous.
 - **`.hk-btn.lg` on `.nav-links a` needs the anchor to keep `display: inline-block`** → It already does, and padding applies to it; no change needed, but it is the thing to check first if the buttons come out flat.

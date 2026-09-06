@@ -1,6 +1,7 @@
-/* The shell is a column: the nav takes what it needs, the routed page takes the
-   rest. On the in-game route the nav renders nothing at all, so the game screen
-   is the only child and keeps the whole viewport. */
+/* The shell is a column: the routed page takes the height it can, the nav sits
+   beneath it and takes what it needs. On the in-game route the nav renders
+   nothing at all, so the game screen is the only child and keeps the whole
+   viewport. */
 :host {
   display: flex;
   flex-direction: column;

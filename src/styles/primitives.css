@@ -265,6 +265,23 @@
   color: var(--color-soul-bright);
 }
 
+/* Size is a second axis, independent of the treatment above: it rides the two
+   custom properties the primitive already reads, so `.hk-btn.primary.lg` needs
+   no rule of its own and a step changes scale only — never colour or state. */
+.hk-btn.lg {
+  --btn-font-size: 0.85rem;
+  --btn-padding: 1.1rem 3rem;
+}
+
+/* Below a phone width the step keeps its type size — the scale is the point —
+   and gives back the horizontal padding, so a row of large buttons stays a row
+   rather than stacking. */
+@media (max-width: 480px) {
+  .hk-btn.lg {
+    --btn-padding: 0.9rem 1rem;
+  }
+}
+
 .btn-inner-glow {
   position: absolute;
   inset: 0;

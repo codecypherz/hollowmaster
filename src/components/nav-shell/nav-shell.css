@@ -1,26 +1,35 @@
 /* ─── Navigation shell ────────────────────────────────────────────────────────
    Chrome only: every colour, family, and duration comes from the token set,
-   and the destinations themselves are the shared `.hk-btn` primitive rather
-   than a parallel button defined here. What is local is the bar's layout and
-   the treatment that marks the current destination.
+   and the destinations themselves are the shared `.hk-btn` primitive at its
+   `lg` size step rather than a parallel button — or a parallel set of button
+   metrics — defined here. What is local is the bar's layout and the treatment
+   that marks the current destination.
    ──────────────────────────────────────────────────────────────────────────── */
 
+/* The last row of the shell column: the routed page takes the height above,
+   this bar takes what it needs below, so it never overlays page content.
+
+   Sticky rather than static because the bar must stay at the *viewport* bottom,
+   not merely the document's — the style guide is several screens tall, and a
+   short viewport pushes any page past the fold. Sticky keeps the slot reserved
+   in flow, so at full scroll the bar lands in its own space and covers nothing;
+   `fixed` would float over the pages' full-bleed atmosphere instead. */
 :host {
   display: block;
-  position: relative;
+  position: sticky;
+  bottom: 0;
   z-index: 20;
   background: var(--color-void);
 }
 
+/* The buttons supply the bar's height now — the `lg` step is 1.1rem of padding
+   on its own — so the bar adds only enough to keep them off the frame edge. */
 .nav-shell {
-  --btn-font-size: 0.62rem;
-  --btn-padding: 0.55rem 1.6rem;
-
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  padding: 0.9rem var(--spacing-frame);
-  border-bottom: 1px solid var(--color-gold-dim);
+  padding: 0.6rem var(--spacing-frame);
+  border-top: 1px solid var(--color-gold-dim);
   font-family: var(--font-ui);
 }
 
@@ -30,6 +39,12 @@
   flex: 1;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--color-gold-dim), transparent);
+}
+
+@media (max-width: 480px) {
+  .nav-rule {
+    display: none;
+  }
 }
 
 .nav-links {

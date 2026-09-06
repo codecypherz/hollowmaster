@@ -2,7 +2,7 @@
 
 ### Requirement: The navigation shell is anchored to the bottom of the viewport
 
-On the out-of-battle pages the navigation control SHALL occupy the bottom of the viewport, below the routed page's content. It MUST NOT overlay or obscure any part of that content: the page occupies the height above the control, and the control occupies the height below it.
+On the out-of-battle pages the navigation control SHALL occupy the bottom of the viewport, below the routed page's content. It SHALL remain at the viewport's bottom edge however tall the page is, and it SHALL reserve its own height in the page's layout rather than floating free of it, so that no part of the page's content is permanently hidden behind it.
 
 #### Scenario: The control sits below the page
 
@@ -10,11 +10,17 @@ On the out-of-battle pages the navigation control SHALL occupy the bottom of the
 - **THEN** the navigation control appears at the bottom of the viewport
 - **AND** the page's content occupies the area above it
 
+#### Scenario: The control stays at the viewport's edge on a page taller than the viewport
+
+- **WHEN** a page taller than the viewport renders, or the viewport is too short to hold a page's content
+- **THEN** the navigation control is still at the bottom edge of the viewport
+- **AND** it remains there as the page is scrolled
+
 #### Scenario: No page content is hidden beneath the control
 
-- **WHEN** an out-of-battle page renders at any viewport size
-- **THEN** no part of the page's content is covered by the navigation control
-- **AND** the page's own full-bleed treatment stops at the control's top edge rather than running underneath it
+- **WHEN** a page is scrolled to its end
+- **THEN** the navigation control occupies its own reserved height below the content
+- **AND** no part of the page's content is left covered by it
 
 #### Scenario: The dividing edge separates the control from the page above
 

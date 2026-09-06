@@ -4,7 +4,7 @@ The navigation shell currently sits at the top of the viewport as a thin bar of 
 
 ## What Changes
 
-- The navigation shell **moves from the top of the app shell to the bottom**. It becomes the last row of the shell column: the routed page takes the remaining height above it, and the nav sits beneath, in flow rather than floating over page content.
+- The navigation shell **moves from the top of the app shell to the bottom**. It becomes the last row of the shell column: the routed page takes the remaining height above it, and the nav sits beneath, in flow rather than floating over page content. It is pinned to the viewport's bottom edge, so a page taller than the viewport does not carry it out of reach.
 - Its ornamental edge follows it — the hairline that currently separates the bar from the page below becomes the line that separates it from the page above.
 - The destination order changes from **Battle · Shop · Cards** to **Shop · Battle · Cards**, so Battle occupies the centre slot and Shop the left. The set of destinations is unchanged, as is active-destination marking.
 - The shared button primitive gains a **large size variant**. Size becomes an axis independent of the existing standard/primary treatment: any button can be large, and a large button keeps its variant's colours, border, hover, focus, and disabled behaviour unchanged.
@@ -27,7 +27,7 @@ None.
 
 - **App shell**: `src/app/app.html` — `<app-nav-shell />` moves after `<router-outlet />`. `src/app/app.css` — the column already stretches to `100dvh` with `flex-direction: column`; the routed page keeps `flex: 1` so it absorbs the remaining height.
 - **Navigation**: `src/components/nav-shell/nav-shell.html` — link order reordered to Shop, Battle, Cards; links take the large size class. `src/components/nav-shell/nav-shell.css` — `border-bottom` becomes `border-top`, local button-metric overrides removed, bar padding retuned for the taller controls.
-- **Design system**: `src/styles/primitives.css` — a large size step added to `.hk-btn`, expressed through the existing `--btn-font-size` / `--btn-padding` custom properties the primitive already reads. `src/styles/tokens.css` — new sizing tokens only if the values warrant naming; no colour, type, or motion token changes.
+- **Design system**: `src/styles/primitives.css` — a large size step added to `.hk-btn`, expressed through the existing `--btn-font-size` / `--btn-padding` custom properties the primitive already reads, plus a narrow-viewport tightening of that step's horizontal padding. No token changes: `src/styles/tokens.css` is untouched.
 - **Style guide**: `src/components/style-guide/style-guide.html` — a large-button row added to the Buttons section so every variant/size combination stays visible.
 - **Pages**: `battle`, `shop`, and `collection` already use `flex: 1` under the shell and need no change; their comments referring to "the column below the nav shell" become stale and are corrected.
 - **Not affected**: the route map and guard, `GameService`, the card model and `CARD_DB`, the card component, the game rules engine, and the in-game screen's layout — the nav is still absent there.
