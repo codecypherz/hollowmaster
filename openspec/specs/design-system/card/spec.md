@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines the single rendering contract for a Hollow Master card — its proportions, internal structure, directional chevrons, rarity and stat display, and its ownership and interaction states — so that every card in the application looks and behaves identically no matter which surface presents it.
+Defines the single rendering contract for a Hollow Master card — its proportions, internal structure, directional chevrons, star rating and stat display, and its ownership and interaction states — so that every card in the application looks and behaves identically no matter which surface presents it.
 
 ## Requirements
 
@@ -64,6 +64,25 @@ A face-up card SHALL present exactly three stacked sections in order: a name sec
 - **THEN** the image section retains its allotted space
 - **AND** the name and stats sections remain correctly positioned
 
+### Requirement: The card face presents only name, artwork, stars, and stats
+
+The card face SHALL present the card's name, artwork, star rating, attack, and defense, and SHALL NOT display the card's ability text, its set, or its number within that set. Those properties exist on the model for surfaces outside the card face.
+
+#### Scenario: Ability text does not appear on the card face
+
+- **WHEN** a card carrying ability text is rendered
+- **THEN** the ability text does not appear anywhere on the card face
+
+#### Scenario: Collection identity does not appear on the card face
+
+- **WHEN** a card is rendered
+- **THEN** neither its set nor its number within that set appears on the card face
+
+#### Scenario: The three sections are unchanged by the added properties
+
+- **WHEN** a card carrying an ability, a set, and a set number is rendered
+- **THEN** it still presents exactly the name, image, and stats sections
+
 ### Requirement: Directional chevrons outside the sections
 
 A card SHALL display its eight directional chevron positions within the card's outer border but outside the three content sections. Chevrons for directions the card possesses MUST be rendered as active and visually distinct from inactive positions.
@@ -85,19 +104,30 @@ A card SHALL display its eight directional chevron positions within the card's o
 - **WHEN** a card is rendered
 - **THEN** all eight compass positions are present in the layout regardless of which are active
 
-### Requirement: Rarity rendered as stars
+### Requirement: Star rating rendered as stars
 
-A card's rarity SHALL be rendered as a count of stars in the top-left corner of its image section, one star per rarity level. The rarity number MUST NOT be displayed as a numeral.
+A card's star rating SHALL be rendered as a count of stars in the top-left corner of its image section, one star per level, for a rating between 1 and 6. The renderer MUST take the rating as given by the card model rather than clamping or defaulting it. The rating MUST NOT be displayed as a numeral.
 
-#### Scenario: Star count matches rarity
+#### Scenario: Star count matches the rating
 
-- **WHEN** a card of rarity N is rendered
+- **WHEN** a card with a star rating of N is rendered
 - **THEN** N stars appear in the top-left corner of its image section
 
-#### Scenario: Rarity numeral is never shown
+#### Scenario: The full range renders
+
+- **WHEN** cards spanning ratings 1 through 6 are rendered
+- **THEN** each shows exactly its own number of stars, up to six for the highest
+
+#### Scenario: The renderer does not clamp the rating
+
+- **WHEN** a card's star rating is rendered
+- **THEN** the number of stars drawn equals the card's rating exactly
+- **AND** the renderer applies no upper or lower bound of its own
+
+#### Scenario: The rating numeral is never shown
 
 - **WHEN** a card is rendered
-- **THEN** no numeric representation of its rarity appears anywhere on the card
+- **THEN** no numeric representation of its star rating appears anywhere on the card
 
 #### Scenario: Stars stay legible over artwork
 
