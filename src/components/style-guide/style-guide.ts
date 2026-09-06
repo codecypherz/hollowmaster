@@ -8,6 +8,21 @@ export interface Token {
   value: string;
 }
 
+/** A card standing in for one star rating on the guide, real or synthesised. */
+export interface RatingSample {
+  stars: number;
+  card: Card;
+  synthetic: boolean;
+}
+
+/**
+ * The card's declared minimum supported width, and the width its ability
+ * section appears at. The ladder is built from them so the guide can never
+ * drift from the contract it is demonstrating.
+ */
+const CARD_MIN_WIDTH = 120;
+const ABILITY_GATE = 200;
+
 /** Prefixes the guide groups tokens by. Anything else lands in "other". */
 const GROUPS = [
   { key: 'color', prefix: '--color-', title: 'Colour' },
@@ -45,6 +60,38 @@ export class StyleGuide {
 
   readonly tokenCount = computed(() => this.tokens().length);
 
+  /**
+   * One card per rating 1-6, so the star track and the rarity frames are both
+   * reviewable across the model's whole range. Ratings the database has no card
+   * for are synthesised from a real one rather than skipped — a missing tier
+   * would leave its frame treatment unreviewed.
+   */
+  readonly ratings = computed<RatingSample[]>(() => {
+    const byStars = new Map<number, Card>();
+    for (const c of CARD_DB) if (!byStars.has(c.stars)) byStars.set(c.stars, c);
+    const donor = CARD_DB[0];
+
+    return [1, 2, 3, 4, 5, 6].map((stars) => {
+      const real = byStars.get(stars);
+      if (real) return { stars, card: real, synthetic: false };
+      return {
+        stars,
+        synthetic: true,
+        card: new Card({
+          name: `Sample ${stars}★`,
+          arrows: ['N', 'NE', 'E', 'S', 'W'],
+          stars,
+          image: donor.image.replace('/images/', ''),
+          attack: 40 + stars * 8,
+          defense: 30 + stars * 9,
+          ability: 'Placeholder card, synthesised so this rating can be reviewed.',
+          set: donor.set,
+          number: 900 + stars,
+        }),
+      };
+    });
+  });
+
   /** Cards spanning the full star range present in the database. */
   readonly samples = computed<Card[]>(() => {
     const byStars = new Map<number, Card>();
@@ -60,6 +107,11 @@ export class StyleGuide {
   readonly vars = particleVars;
 
   readonly buttonStates = ['resting', 'is-hover', 'is-focus', 'disabled'] as const;
+
+  /** Floored at the minimum and straddling the ability gate, one pixel apart. */
+  readonly sizeLadder = [CARD_MIN_WIDTH, 160, ABILITY_GATE - 1, ABILITY_GATE, 260] as const;
+  readonly minWidth = CARD_MIN_WIDTH;
+  readonly abilityGate = ABILITY_GATE;
 
   readonly cardStates = computed(() => [
     { label: 'Player-owned', props: { owner: 'player' as const } },

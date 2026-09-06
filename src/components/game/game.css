@@ -14,8 +14,15 @@
   --btn-padding: 0.65rem 1.8rem;
 
   /* The tuned sizing chain — five cards must stack within 100dvh.
-     Everything on this screen is a function of these three. */
-  --card-h: clamp(65px, calc((100dvh - 7rem) / 5 - 6px), 220px); /* fits 5 cards vertically */
+     Everything on this screen is a function of these three.
+
+     The lower bound is the card's 120px minimum supported width expressed as a
+     height (120 * 1.4). Below it the renderer's own guarantees stop holding, so
+     the screen must change its layout rather than shrink the card — see
+     openspec/specs/design-system/card/spec.md. On short viewports this floor
+     wins over the viewport term and the legacy layout no longer fits; refitting
+     it belongs to the in-game rework. */
+  --card-h: clamp(168px, calc((100dvh - 7rem) / 5 - 6px), 220px); /* fits 5 cards vertically */
   --card-w: calc(var(--card-h) / 1.4); /* 2.5:3.5 trading-card ratio */
 
   position: relative;

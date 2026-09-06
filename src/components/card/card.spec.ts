@@ -41,13 +41,15 @@ describe('CardComponent', () => {
     fixture.detectChanges();
   }
 
-  describe('three-section face', () => {
-    it('renders name, image, and stats sections in order', () => {
+  describe('four-section face', () => {
+    it('renders name, image, stats, and ability sections in order', () => {
       render();
       const sections = [...host.querySelectorAll('.face > *')].map((e) => e.className);
+      expect(sections.length).toBe(4);
       expect(sections[0]).toContain('cf-name');
       expect(sections[1]).toContain('cf-img');
       expect(sections[2]).toContain('cf-stats');
+      expect(sections[3]).toContain('cf-ability');
     });
 
     it('shows the card name', () => {
@@ -70,24 +72,79 @@ describe('CardComponent', () => {
       expect(on.sort()).toEqual(['arr-e', 'arr-n', 'arr-s', 'arr-w']);
     });
 
-    it('keeps chevrons outside the three sections', () => {
+    it('keeps chevrons outside the four sections', () => {
       render();
       const face = host.querySelector('.face')!;
       expect(face.querySelector('.arr')).toBeNull();
     });
   });
 
-  describe('stars and stats', () => {
-    it('renders the star rating as one star per level', () => {
-      render();
-      expect(host.querySelector('.cf-img .cf-stars')?.textContent).toBe('★★★');
+  describe('star track', () => {
+    /** The track is a fixed five slots at every rating, so the ceiling reads without a legend. */
+    function starTrack(stars: number) {
+      render({ card: card({ stars }) });
+      const track = host.querySelector('.cf-img .cf-stars')!;
+      return {
+        slots: track.querySelectorAll('.star').length,
+        lit: track.querySelectorAll('.star.lit').length,
+        sixth: track.querySelector('.star-six'),
+      };
+    }
+
+    it('always renders five slots, whatever the rating', () => {
+      for (const stars of [1, 2, 3, 4, 5, 6]) {
+        expect(starTrack(stars).slots).toBe(5);
+      }
     });
 
-    it('never renders a numeral anywhere on the card', () => {
-      render();
+    it('lights one slot per level up to five', () => {
+      for (const stars of [1, 2, 3, 4, 5]) {
+        expect(starTrack(stars).lit).toBe(stars);
+      }
+    });
+
+    it('fills the track and adds the sixth star at a rating of six', () => {
+      const six = starTrack(6);
+      expect(six.lit).toBe(5);
+      expect(six.sixth).not.toBeNull();
+    });
+
+    it('omits the sixth star entirely below six — not lit, not unlit, not reserved', () => {
+      for (const stars of [1, 2, 3, 4, 5]) {
+        expect(starTrack(stars).sixth).toBeNull();
+      }
+    });
+  });
+
+  describe('stats', () => {
+    /** The visible face, with the accessible-only text and the collector plate removed. */
+    function visibleText(): string {
       const visible = host.cloneNode(true) as HTMLElement;
-      visible.querySelectorAll('.sr-only').forEach((e) => e.remove());
-      expect(visible.textContent ?? '').not.toMatch(/[0-9]/);
+      visible.querySelectorAll('.sr-only, .cf-plate').forEach((e) => e.remove());
+      return visible.textContent ?? '';
+    }
+
+    it('never renders an attack, defense, or rating numeral', () => {
+      render();
+      expect(visibleText()).not.toMatch(/[0-9]/);
+    });
+
+    it('renders the collector number, zero-padded, on the identity plate', () => {
+      render();
+      expect(host.querySelector('.cf-plate .cf-number')?.textContent?.trim()).toBe('002');
+      expect(host.querySelector('.cf-plate .cf-set')?.textContent?.trim()).toBe(
+        'Forgotten Crossroads',
+      );
+    });
+
+    it('labels each bar inside the bar itself, with no stat icons', () => {
+      render();
+      const bars = [...host.querySelectorAll('.cf-stats .stat-bar')];
+      expect(bars.map((b) => b.querySelector('.stat-label')?.textContent?.trim())).toEqual([
+        'AT',
+        'DE',
+      ]);
+      expect(host.querySelector('.cf-stats img')).toBeNull();
     });
 
     it('fills each stat bar to the stat percentage', () => {
@@ -103,18 +160,54 @@ describe('CardComponent', () => {
       const label = host.querySelector('button')!.getAttribute('aria-label')!;
       expect(label).toContain('attack 45');
       expect(label).toContain('defense 40');
+      expect(label).toContain('Forgotten Crossroads 002');
+    });
+  });
+
+  describe('ability', () => {
+    it('keeps the ability in the DOM so the size gate is visual only', () => {
+      render();
+      expect(host.querySelector('.cf-ability-text')?.textContent?.trim()).toBe(
+        'Hurls her bulk from wall to wall.',
+      );
+    });
+
+    it('points the frame at its own ability text through aria-describedby', () => {
+      render({ selectable: true });
+      const id = host.querySelector('button')!.getAttribute('aria-describedby')!;
+      expect(host.querySelector(`#${id}`)?.textContent?.trim()).toBe(
+        'Hurls her bulk from wall to wall.',
+      );
+    });
+
+    it('gives each rendered card its own ability id', () => {
+      const other = TestBed.createComponent(CardComponent);
+      other.componentRef.setInput('card', sample);
+      other.detectChanges();
+      expect(fixture.componentInstance.abilityId).not.toBe(other.componentInstance.abilityId);
+    });
+  });
+
+  describe('rarity', () => {
+    it('states the rating on the host so the frame can reflect it', () => {
+      render({ card: card({ stars: 3 }) });
+      expect(host.getAttribute('data-rarity')).toBe('3');
     });
   });
 
   describe('states', () => {
     it('reveals nothing when face down', () => {
-      render({ card: null, faceDown: true });
+      render({ faceDown: true });
       expect(host.querySelector('.frame.back')).not.toBeNull();
       expect(host.querySelector('.cf-name')).toBeNull();
       expect(host.querySelector('.cf-img')).toBeNull();
       expect(host.querySelector('.cf-stats')).toBeNull();
+      expect(host.querySelector('.cf-ability')).toBeNull();
+      expect(host.querySelector('.cf-stars')).toBeNull();
+      expect(host.querySelector('.star')).toBeNull();
       expect(host.querySelector('.arr')).toBeNull();
       expect(host.textContent?.trim()).toBe('');
+      expect(host.getAttribute('data-rarity')).toBeNull();
     });
 
     it('marks ownership on the host', () => {

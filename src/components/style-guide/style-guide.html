@@ -233,8 +233,10 @@
     <section class="sg-section">
       <h2 class="sg-h2">Card states</h2>
       <p class="sg-sub">
-        One component renders all of these. Aspect ratio 2.5:3.5, three sections, chevrons inside
-        the border but outside the sections, rarity as stars, stats as bars and never numerals.
+        One component renders all of these. Aspect ratio 2.5:3.5, four sections — name, image,
+        stats, ability — with the chevrons inside the border but outside the sections, rarity on a
+        five-slot star track, and stats as labelled bars that never show a numeral. The ability
+        section carries the set and collector number on its plate.
       </p>
 
       <div class="card-grid">
@@ -279,14 +281,40 @@
       </div>
     </section>
 
-    <!-- ─── Rarity range ───────────────────────────────────────────────── -->
+    <!-- ─── Star track ─────────────────────────────────────────────────── -->
     <section class="sg-section">
-      <h2 class="sg-h2">Rarity range</h2>
+      <h2 class="sg-h2">Star track</h2>
+      <p class="sg-sub">
+        Five slots at every rating, so the ceiling reads without a legend: the first N lit, the rest
+        empty settings. A rating of six adds a star outside the plaque and is the only rating that
+        shows one at all. Ratings the card database has no example of are synthesised so no tier
+        goes unreviewed.
+      </p>
       <div class="card-grid">
-        @for (c of samples(); track c.name) {
+        @for (r of ratings(); track r.stars) {
           <div class="card-demo">
-            <div class="card-slot"><app-card [card]="c" /></div>
-            <span class="state-label">{{ c.name }} · stars {{ c.stars }}</span>
+            <div class="card-slot card-slot-lg"><app-card [card]="r.card" /></div>
+            <span class="state-label">
+              {{ r.stars }}★ · {{ r.card.name }}{{ r.synthetic ? ' · synthesised' : '' }}
+            </span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ─── Rarity frames ──────────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-h2">Rarity frames</h2>
+      <p class="sg-sub">
+        The frame's metal shifts across the star range so rarity is recognisable before the stars
+        are read. Shown at one size, side by side, because the tiers are only judgeable against one
+        another. Reinforcement only — the star track states rarity on its own.
+      </p>
+      <div class="card-grid">
+        @for (r of ratings(); track r.stars) {
+          <div class="card-demo">
+            <div class="card-slot"><app-card [card]="r.card" /></div>
+            <span class="state-label">{{ r.stars }}★</span>
           </div>
         }
       </div>
@@ -297,13 +325,20 @@
       <h2 class="sg-h2">Card at any size</h2>
       <p class="sg-sub">
         The card fills the width it is given and derives its height from the fixed ratio; everything
-        inside scales from the card's own width.
+        inside scales from the card's own width. The ladder starts at the card's minimum supported
+        width of {{ minWidth }}px — nothing on this page renders one narrower — and straddles the
+        {{ abilityGate }}px ability gate a pixel apart, so the section can be seen appearing without
+        the surface telling the card anything. Ornament simplifies toward the minimum; sections,
+        star slots, bars, labels, and chevrons never do.
       </p>
       <div class="scale-row">
-        @for (w of [72, 110, 150, 200, 260]; track w) {
+        @for (w of sizeLadder; track w) {
           <div class="card-demo">
             <div class="card-slot" [style.width.px]="w"><app-card [card]="demoAlt()" /></div>
-            <span class="state-label">{{ w }}px</span>
+            <span class="state-label">
+              {{ w }}px{{ w === minWidth ? ' · minimum' : ''
+              }}{{ w === abilityGate ? ' · ability gate' : '' }}
+            </span>
           </div>
         }
       </div>

@@ -28,7 +28,6 @@ ng generate component components/<name>  # Scaffold a new component
 ```
 src/
   model/card.ts           # Card class + CARD_DB (the full card database)
-  components/open-pack/   # OpenPack component — draws 6 random cards from CARD_DB
   app/                    # Root App component, routing config (currently no routes)
   main.ts                 # Bootstrap entry point
 public/images/            # Card artwork (webp/png)
@@ -43,27 +42,17 @@ public/images/            # Card artwork (webp/png)
 - Angular control flow syntax (`@for`, `@if`, `@empty`) is used in templates — not `*ngFor`/`*ngIf` directives.
 
 ## Look and Feel requirements
-**Always** follow these constraints when making changes to the UI. **Always** check these constraints after making changes to the UI.
+
+Card and board-tile rendering is specified in `openspec/specs/design-system/card/spec.md`.
+That spec is the single authority: aspect ratio, sections, chevrons, stars, stat bars,
+frame craft, rarity, and the card's minimum supported width all live there, and board
+tiles follow the card. Do not restate those constraints here — read the spec instead.
+
+The in-game screen has no spec of its own yet. Until the in-game rework writes one, these
+constraints are **provisional** and live here:
+
 - The theme needs to be Hollow Knight
 - The in-game UI needs to fit on the screen without clipping.
 - The in-game UI needs to take up as much space as possible.
 - The in-game UI player cards and opponent cards must always be visible. Do not let them be clipped.
 - The in-game UI board and all cards must always be visible.
-
-### Card Look and Feel
-All cards must satisfy these constraints
-- Cards must have an aspect ratio of 2.5 : 3.5 to make them similar to trading cards.
-- Cards must have 3 sections
-  - Name
-  - Image
-  - Stats
-- Cards must have direction chevrons (according to it's model)
-  - The chevrons must be within the card border but outside of the 3 sections
-- Card rarity is rendered as stars in the top-left corner of the image
-- Card stats should never show the number for attack and defense, it should only render as a progress bar from 0 to 100.
-- Opponent cards must maintain the same aspect ratio
-- Opponent cards must be the same size as player cards.
-
-### Board Look and Feel
-- The board tiles must always be the same size as the player and opponent cards
-- The board tiles must maintain the same aspect ratio

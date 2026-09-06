@@ -311,6 +311,11 @@
   width: 132px;
 }
 
+/* The star row needs room for the track to be judged slot by slot. */
+.card-slot-lg {
+  width: 200px;
+}
+
 .scale-row {
   align-items: flex-end;
 }

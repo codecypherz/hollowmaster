@@ -6,20 +6,35 @@
    explicit conflicting height would silently break the ratio, so the ratio is
    declared here and wins.
 
-   `container-type: inline-size` makes the card its own query container, so
-   everything inside scales from the card's own width in `cqw` units. That
-   reproduces the game screen's old `calc(var(--card-w) * n)` chain exactly
-   (12.6cqw === card-w * 0.126) while making the card work at any size on any
-   surface, with no measurement plumbed in from outside.
+   The card is its own *named* query container, so everything inside scales from
+   the card's own width in `cqw` units and the ability gate measures the card
+   rather than whatever ancestor happens to be a container. That reproduces the
+   game screen's old `calc(var(--card-w) * n)` chain exactly (12.6cqw ===
+   card-w * 0.126) while making the card work at any size on any surface, with
+   no measurement plumbed in from outside.
+
+   Minimum supported width: 120px. Every element the card draws is legible at
+   and above it; a surface that cannot spare 120px changes its own layout rather
+   than shrinking the card. See openspec/specs/design-system/card/spec.md.
    ──────────────────────────────────────────────────────────────────────────── */
 
 :host {
   --arr: clamp(13px, 12.6cqw, 22px);
+  --frame-b: clamp(2px, 2.1cqw, 5px);
+  --star: clamp(5px, 6.2cqw, 13px);
+
+  /* Frame material, set per rarity below. These are the defaults an unrated
+     card (an empty slot, a card back) falls back to. */
+  --frame-metal: linear-gradient(150deg, #3b445f 0%, #232a42 38%, #4d5878 62%, #262d47 100%);
+  --frame-rim: rgba(120, 150, 210, 0.32);
+  --frame-aura: transparent;
+  --frame-sheen: none;
+  --frame-sheen-opacity: 0;
 
   display: block;
   width: 100%;
   aspect-ratio: 2.5 / 3.5;
-  container-type: inline-size;
+  container: card / inline-size;
 }
 
 :host(.is-empty) {
@@ -30,6 +45,7 @@
 
 .frame {
   display: grid;
+  position: relative;
   grid-template-areas:
     'nw n  ne'
     'w  face e'
@@ -40,22 +56,151 @@
   height: 100%;
   margin: 0;
   padding: 0;
-  background: var(--color-card-bg);
-  border: 1px solid var(--color-soul-dim);
-  border-radius: 2px;
+  /* The metal is a gradient, which a `border-color` cannot carry: the interior
+     paints to the padding box and the frame's material to the border box. */
+  border: var(--frame-b) solid transparent;
+  background:
+    linear-gradient(160deg, var(--color-card-bg), #0a0e1a) padding-box,
+    var(--frame-metal) border-box;
+  border-radius: 4px;
   box-sizing: border-box;
+  /* Bevel: a light hairline catching the top edge, a dark one under the bottom,
+     then the aura the owner treatment writes to. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 0 10px var(--frame-aura);
   font: inherit;
   color: inherit;
   text-align: inherit;
   transition:
-    border-color var(--dur-fast) ease,
     box-shadow var(--dur-fast) ease,
     transform var(--dur-instant) ease;
+}
+
+/* The rarity sheen. Absolutely positioned rather than a plain pseudo-element:
+   `.frame` is a grid, and a static ::before would become a grid item and claim
+   an auto row, shifting the whole 3×3 chevron layout. */
+.frame::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--frame-b));
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--frame-sheen);
+  opacity: var(--frame-sheen-opacity);
+  z-index: 3;
 }
 
 button.frame {
   cursor: pointer;
   appearance: none;
+}
+
+/* ─── Rarity: one frame implementation, six material sets ─────────────────── */
+
+:host([data-rarity='1']) {
+  --frame-metal: linear-gradient(
+    150deg,
+    var(--color-rarity-1) 0%,
+    #1e2436 45%,
+    var(--color-rarity-1) 100%
+  );
+  --frame-rim: rgba(110, 128, 170, 0.26);
+  --frame-aura: transparent;
+}
+
+:host([data-rarity='2']) {
+  --frame-metal: linear-gradient(
+    150deg,
+    var(--color-rarity-2) 0%,
+    #3a2c12 40%,
+    #a8813c 68%,
+    #40300f 100%
+  );
+  --frame-rim: rgba(168, 129, 60, 0.4);
+  --frame-aura: rgba(138, 106, 48, 0.18);
+}
+
+:host([data-rarity='3']) {
+  --frame-metal: linear-gradient(
+    150deg,
+    var(--color-rarity-3) 0%,
+    #59637d 38%,
+    #dfe7f4 62%,
+    #4d5670 100%
+  );
+  --frame-rim: rgba(185, 196, 216, 0.5);
+  --frame-aura: rgba(185, 196, 216, 0.2);
+}
+
+:host([data-rarity='4']) {
+  --frame-metal: linear-gradient(
+    150deg,
+    var(--color-rarity-4) 0%,
+    #6b4614 36%,
+    var(--color-gold-light) 62%,
+    #7a5018 100%
+  );
+  --frame-rim: var(--color-gold-glow);
+  --frame-aura: rgba(232, 160, 60, 0.3);
+}
+
+:host([data-rarity='5']) {
+  --frame-metal: linear-gradient(
+    150deg,
+    var(--color-rarity-5) 0%,
+    #a8761f 30%,
+    #fff0c4 52%,
+    var(--color-gold) 74%,
+    #8c5f16 100%
+  );
+  /* The soul-lit inner rim is what separates 5 from 4 at a glance. */
+  --frame-rim: var(--color-soul-glow);
+  --frame-aura: rgba(255, 215, 130, 0.4);
+  --frame-sheen: linear-gradient(
+    118deg,
+    transparent 34%,
+    rgba(255, 240, 196, 0.55) 50%,
+    transparent 64%
+  );
+  --frame-sheen-opacity: 0.18;
+}
+
+:host([data-rarity='6']) {
+  --frame-metal: linear-gradient(
+    150deg,
+    var(--color-rarity-6) 0%,
+    #150a20 26%,
+    var(--color-rarity-6-shimmer) 48%,
+    #1b0d28 70%,
+    var(--color-rarity-6) 100%
+  );
+  --frame-rim: var(--color-star-six-glow);
+  --frame-aura: rgba(224, 74, 208, 0.5);
+  --frame-sheen: linear-gradient(
+    112deg,
+    transparent 28%,
+    var(--color-rarity-6-shimmer) 47%,
+    rgba(255, 255, 255, 0.7) 52%,
+    transparent 70%
+  );
+  --frame-sheen-opacity: 0.32;
+}
+
+:host([data-rarity='6']) .frame::before {
+  background-size: 300% 100%;
+  animation: raritySheen 5s linear infinite;
+}
+
+@keyframes raritySheen {
+  from {
+    background-position: 160% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
 }
 
 /* ─── Chevrons ────────────────────────────────────────────────────────────── */
@@ -146,33 +291,41 @@ button.frame {
   height: calc(var(--arr) * 0.7);
 }
 
-/* ─── Face: the three sections ────────────────────────────────────────────── */
+/* ─── Face: the recessed interior the sections sit in ─────────────────────── */
 
 .face {
   grid-area: face;
   display: grid;
-  grid-template-rows: 1fr 2.5fr 1.5fr;
+  /* Three rows below the ability gate; the container query swaps in the fourth.
+     The ability section is still in the DOM below the gate — it is taken out of
+     flow, so it contributes nothing to track sizing either way. */
+  grid-template-rows: 1fr 2.6fr 1.4fr;
   gap: 1px;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   background: var(--color-card-face);
+  border-radius: 2px;
   position: relative;
+  /* Sunk into the frame: a hairline rim of the frame's own metal plus an inner
+     shadow, so the interior reads as a third depth behind the border. */
+  box-shadow:
+    inset 0 0 0 1px var(--frame-rim),
+    inset 0 2px 8px rgba(0, 0, 0, 0.7);
 }
 
 /* Section 1 — name */
 .cf-name {
   position: relative;
   padding: clamp(2px, 3cqw, 5px) 4px;
-  background: var(--color-scrim);
+  background: linear-gradient(180deg, rgba(28, 38, 64, 0.9), var(--color-scrim));
   font-family: var(--font-ui);
   font-size: clamp(0.6rem, 10cqw, 1.1rem);
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--color-soul);
   text-align: center;
-  border: 1px solid var(--color-section-border);
-  border-radius: 1px;
+  border-bottom: 1px solid var(--color-section-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -211,7 +364,7 @@ button.frame {
   border: 1px solid var(--color-crimson);
 }
 
-/* Section 2 — image */
+/* Section 2 — the art window, inset into the frame */
 .cf-img {
   position: relative;
   display: block;
@@ -219,114 +372,392 @@ button.frame {
   background-position: center top;
   background-color: var(--color-card-art);
   min-height: 0;
-  border: 1px solid var(--color-section-border);
-  border-radius: 1px;
   overflow: hidden;
+  /* The ring is drawn by the element itself, so the window still reads as inset
+     when the artwork fails to load. */
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 2px var(--frame-rim),
+    inset 0 3px 10px rgba(0, 0, 0, 0.6);
 }
+
+/* Bottom-weighted vignette seats the artwork in the frame; the top gloss is the
+   glass over the window. */
+.cf-img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, transparent 22%),
+    linear-gradient(180deg, transparent 45%, rgba(4, 7, 14, 0.72) 100%),
+    radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(4, 7, 14, 0.55) 100%);
+  z-index: 1;
+}
+
+/* ─── Star track: five slots on a plaque, and the sixth beyond it ─────────── */
 
 .cf-stars {
   position: absolute;
-  top: 2px;
-  left: 3px;
-  font-size: clamp(0.7rem, 11cqw, 1.2rem);
-  color: var(--color-gold);
-  text-shadow:
-    0 0 8px rgba(224, 144, 48, 0.95),
-    0 1px 2px rgba(0, 0, 0, 0.9);
-  letter-spacing: -1px;
-  line-height: 1;
+  top: clamp(2px, 2.2cqw, 5px);
+  left: clamp(2px, 2.2cqw, 5px);
+  display: flex;
+  align-items: center;
+  /* Above the window's vignette, so the slots stay legible over any artwork. */
+  z-index: 2;
 }
 
-/* Section 3 — stats, always bars and never numerals */
+.star-plaque {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--star) * 0.16);
+  padding: calc(var(--star) * 0.22) calc(var(--star) * 0.3);
+  border-radius: calc(var(--star) * 0.25);
+  background: var(--color-star-plaque);
+  /* Inset with a hairline rim, so the plaque reads as sunk into the artwork. */
+  box-shadow:
+    inset 0 0 0 1px var(--color-star-socket),
+    inset 0 1px 3px rgba(0, 0, 0, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.star {
+  display: block;
+  width: var(--star);
+  height: var(--star);
+  clip-path: polygon(
+    50% 0%,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+  /* An empty setting rather than a faded star: dark fill, no glow. */
+  background: var(--color-star-empty);
+}
+
+.star.lit {
+  background: linear-gradient(
+    160deg,
+    #fff0c4 0%,
+    var(--color-star-lit) 45%,
+    var(--color-star-lit-deep) 100%
+  );
+  filter: drop-shadow(0 0 calc(var(--star) * 0.28) var(--color-gold-glow));
+}
+
+/* Breaking out of the plaque is the point: beyond the scale, not one more of it. */
+.star-six {
+  display: block;
+  width: calc(var(--star) * 1.5);
+  height: calc(var(--star) * 1.5);
+  margin-left: calc(var(--star) * -0.32);
+  clip-path: polygon(
+    50% 0%,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+  background: radial-gradient(
+    circle at 50% 42%,
+    #ffffff 0%,
+    var(--color-star-six) 42%,
+    #4a0e5c 100%
+  );
+  filter: drop-shadow(0 0 calc(var(--star) * 0.5) var(--color-star-six-glow));
+  animation: sixthStarPulse var(--dur-breathe) ease-in-out infinite;
+}
+
+@keyframes sixthStarPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 calc(var(--star) * 0.4) var(--color-star-six-glow));
+  }
+  50% {
+    filter: drop-shadow(0 0 calc(var(--star) * 0.95) var(--color-star-six-glow));
+  }
+}
+
+/* ─── Section 3 — stats, always labelled bars and never numerals ──────────── */
+
 .cf-stats {
   display: flex;
   flex-direction: column;
   gap: clamp(2px, 2.5cqw, 5px);
-  padding: clamp(3px, 4cqw, 7px) clamp(3px, 4cqw, 6px);
-  background: var(--color-scrim);
-  border: 1px solid var(--color-section-border);
-  border-radius: 1px;
+  padding: clamp(3px, 3.5cqw, 7px) clamp(3px, 3.5cqw, 6px);
+  background: linear-gradient(180deg, var(--color-scrim), rgba(10, 14, 24, 0.96));
+  border-top: 1px solid var(--color-section-border);
   justify-content: center;
   overflow: hidden;
 }
 
-.stat-row {
-  display: flex;
-  align-items: center;
-  gap: clamp(3px, 3cqw, 5px);
-}
-
-.stat-icon {
-  flex-shrink: 0;
-  width: clamp(12px, 16cqw, 22px);
-  height: clamp(12px, 16cqw, 22px);
-  object-fit: contain;
-}
-
+/* Each bar is its own delineated row: track, fill, and the label capsule. */
 .stat-bar {
-  flex: 1;
+  position: relative;
   display: block;
-  height: clamp(6px, 6.5cqw, 10px);
-  background: var(--color-stat-track);
+  height: clamp(12px, 11.5cqw, 22px);
   border-radius: 2px;
   overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    inset 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+/* Faint quarter gradations, so a value can be read off the track without a
+   numeral. */
+.stat-track {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(25% - 1px),
+      var(--color-stat-tick) calc(25% - 1px),
+      var(--color-stat-tick) 25%
+    ),
+    var(--color-stat-track);
 }
 
 .stat-fill {
-  display: block;
-  height: 100%;
-  border-radius: 1px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 1px 0 0 1px;
+}
+
+/* Specular edge along the top of the fill. */
+.stat-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 40%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), transparent);
 }
 
 .atk-fill {
-  background: var(--color-attack);
-  box-shadow: 0 0 4px rgba(240, 160, 48, 0.6);
+  background: linear-gradient(180deg, #ffc367 0%, var(--color-attack) 55%, #a5651a 100%);
+  box-shadow: 0 0 5px rgba(240, 160, 48, 0.55);
 }
 
 .def-fill {
-  background: var(--color-defense);
-  box-shadow: 0 0 4px rgba(96, 170, 204, 0.6);
+  background: linear-gradient(180deg, #a8dcf2 0%, var(--color-defense) 55%, #2c6a88 100%);
+  box-shadow: 0 0 5px rgba(96, 170, 204, 0.55);
 }
 
-/* ─── Ownership treatments ────────────────────────────────────────────────── */
+/* The capsule carries its own ground, so it reads over an empty track on a
+   low-attack card and over a bright fill on a high one alike. */
+.stat-label {
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0 clamp(2px, 1.6cqw, 4px);
+  border-radius: 2px;
+  background: var(--color-stat-label-bg);
+  color: var(--color-stat-label);
+  font-family: var(--font-ui);
+  font-size: clamp(8px, 7.5cqw, 11px);
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+/* ─── Section 4 — ability, set, and collector number ──────────────────────── */
+
+.cf-ability {
+  /* Below the gate this is the project's visually-hidden treatment. Absolutely
+     positioned children do not size grid tracks, so the three-row face is
+     unaffected — the layout effect of `display: none` without dropping the text
+     from the accessibility tree, which would also break `aria-describedby`. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+}
+
+.cf-ability-text {
+  /* Fades rather than cutting: a line-clamp would need a line count, and the
+     right count changes with the card's width. `min-height: 0` is what lets the
+     1fr track actually shrink — a grid item's automatic minimum size would
+     otherwise let the text grow the row and push the plate over its own tail. */
+  min-height: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 97%);
+  font-family: var(--font-flavor);
+  font-size: clamp(6px, 4.6cqw, 11px);
+  line-height: 1.35;
+  color: var(--color-ability-text);
+}
+
+.cf-plate {
+  display: flex;
+  align-items: baseline;
+  justify-content: end;
+  gap: 0.4em;
+  min-width: 0;
+  padding: 0 clamp(2px, 1.4cqw, 4px);
+  border-radius: 2px;
+  background: var(--color-plate-bg);
+  font-family: var(--font-ui);
+  font-size: clamp(5px, 3.4cqw, 8px);
+  letter-spacing: 0.08em;
+  color: var(--color-plate-text);
+}
+
+.cf-set {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.cf-number {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── The ability gate ────────────────────────────────────────────────────────
+   Decided from the card's own rendered width. No surface declares, configures,
+   or passes in which mode to use.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@container card (min-width: 200px) {
+  .face {
+    grid-template-rows: 1fr 3.4fr 1.5fr 2.6fr;
+  }
+
+  .cf-ability {
+    position: static;
+    display: grid;
+    /* The identity strip gets its own track rather than a corner overlay, so
+       the ability text structurally cannot run underneath it. */
+    grid-template-rows: 1fr auto;
+    gap: clamp(1px, 1cqw, 3px);
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: clamp(3px, 3cqw, 7px) clamp(3px, 3.5cqw, 7px);
+    overflow: hidden;
+    clip-path: none;
+    min-height: 0;
+    background: var(--color-ability-panel);
+    border-top: 1px solid var(--color-ability-rule);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* ─── Ornament degradation toward the 120px minimum ───────────────────────────
+   Only ornament gives way. Every section, star slot, stat bar, label, and
+   chevron is present at every supported size.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@container card (max-width: 160px) {
+  /* Filigree that cannot resolve: the frame's bevel hairlines, the window's
+     double ring, the plaque's rim, the bar gradations, the fill's specular. */
+  .frame {
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+      0 0 8px var(--frame-aura);
+  }
+
+  .frame::before {
+    display: none;
+  }
+
+  .face {
+    box-shadow: inset 0 0 0 1px var(--frame-rim);
+  }
+
+  .cf-img {
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.75);
+  }
+
+  .cf-img::after {
+    background: linear-gradient(180deg, transparent 55%, rgba(4, 7, 14, 0.7) 100%);
+  }
+
+  .star-plaque {
+    box-shadow: none;
+  }
+
+  .stat-bar {
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+  }
+
+  .stat-track {
+    background: var(--color-stat-track);
+  }
+
+  .stat-fill::after {
+    display: none;
+  }
+}
+
+/* ─── Ownership treatments ────────────────────────────────────────────────────
+   Ownership owns the aura and the pip; rarity owns the frame's material. Two
+   channels on different properties, so neither overwrites the other.
+   ──────────────────────────────────────────────────────────────────────────── */
 
 :host(.owner-player) .frame {
-  border-color: var(--color-soul-dim);
   box-shadow:
-    0 0 8px rgba(100, 140, 255, 0.25),
-    inset 0 0 12px rgba(100, 140, 255, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    inset 0 0 12px rgba(100, 140, 255, 0.1),
+    0 0 10px var(--frame-aura),
+    0 0 9px rgba(100, 140, 255, 0.4);
 }
 
 :host(.owner-opponent) .frame {
-  border-color: var(--color-crimson-dim);
   box-shadow:
-    0 0 8px rgba(192, 49, 42, 0.25),
-    inset 0 0 12px rgba(192, 49, 42, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    inset 0 0 12px rgba(192, 49, 42, 0.1),
+    0 0 10px var(--frame-aura),
+    0 0 9px rgba(192, 49, 42, 0.45);
 }
 
-:host(.owner-opponent) .cf-name,
-:host(.owner-opponent) .cf-img,
+:host(.owner-opponent) .cf-name {
+  border-bottom-color: var(--color-section-border-crimson);
+}
+
 :host(.owner-opponent) .cf-stats {
-  border-color: var(--color-section-border-crimson);
+  border-top-color: var(--color-section-border-crimson);
 }
 
 /* ─── Interaction ─────────────────────────────────────────────────────────── */
 
 :host(.is-selectable) .frame:hover {
-  border-color: var(--color-soul);
-  box-shadow: var(--elev-card-hover);
+  box-shadow:
+    inset 0 0 0 1px var(--color-soul),
+    var(--elev-card-hover);
   transform: translateY(-2px);
 }
 
 .frame:focus-visible {
   outline: 2px solid var(--color-soul);
   outline-offset: 2px;
-  border-color: var(--color-soul);
 }
 
 /* Selected — lifted as well as lit, so the state is not colour alone. */
 :host(.is-selected) .frame {
-  border-color: var(--color-soul);
   transform: translateY(-4px);
   animation: selectPulse var(--dur-pulse) ease-in-out infinite;
 }
@@ -334,10 +765,14 @@ button.frame {
 @keyframes selectPulse {
   0%,
   100% {
-    box-shadow: 0 0 10px rgba(100, 140, 255, 0.5);
+    box-shadow:
+      inset 0 0 0 1px var(--color-soul),
+      0 0 10px rgba(100, 140, 255, 0.5);
   }
   50% {
-    box-shadow: 0 0 22px rgba(100, 140, 255, 0.9);
+    box-shadow:
+      inset 0 0 0 1px var(--color-soul),
+      0 0 22px rgba(100, 140, 255, 0.9);
   }
 }
 
@@ -351,8 +786,7 @@ button.frame {
 
 :host(.is-inert) .frame:hover {
   transform: none;
-  box-shadow: none;
-  border-color: var(--color-soul-dim);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 /* Capture */
@@ -385,6 +819,10 @@ button.frame {
     0 0 12px rgba(192, 49, 42, 0.2),
     inset 0 0 20px rgba(0, 0, 0, 0.5);
   opacity: 1;
+}
+
+.frame.back::before {
+  display: none;
 }
 
 .back-pattern {
@@ -430,14 +868,29 @@ button.frame {
 
 @media (prefers-reduced-motion: reduce) {
   .frame,
+  .star-six,
   :host(.is-selected) .frame,
   :host(.is-flipped) .frame {
     animation: none;
     transition: none;
   }
 
+  /* Matched on the same selector that starts it: a bare `.frame::before` here
+     loses to the rarity rule's specificity and the sheen keeps travelling. */
+  :host([data-rarity='6']) .frame::before {
+    animation: none;
+  }
+
   /* Selection stays legible without the pulse. */
   :host(.is-selected) .frame {
-    box-shadow: 0 0 18px rgba(100, 140, 255, 0.8);
+    box-shadow:
+      inset 0 0 0 1px var(--color-soul),
+      0 0 18px rgba(100, 140, 255, 0.8);
+  }
+
+  /* Rarity stays identifiable: the sheen holds still rather than vanishing, and
+     the sixth star keeps its glow at the animation's resting value. */
+  .star-six {
+    filter: drop-shadow(0 0 calc(var(--star) * 0.6) var(--color-star-six-glow));
   }
 }

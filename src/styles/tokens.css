@@ -76,6 +76,45 @@
   --color-defense: #60aacc;
   --color-stat-track: rgba(255, 255, 255, 0.1);
 
+  /* ── Stat bar labels: the AT / DE capsule that rides inside each bar ───
+     The capsule carries its own ground so the label reads whether it sits over
+     an empty track or over a bright fill — no per-value contrast logic. */
+  --color-stat-label: #e2ecff;
+  --color-stat-label-bg: rgba(8, 12, 22, 0.82);
+  --color-stat-tick: rgba(255, 255, 255, 0.07);
+
+  /* ── Star track ──────────────────────────────────────────────────────────
+     An unlit slot is an empty setting, not a faded star: a dark fill in a
+     slightly lighter socket, distinguished by fill and by the absence of glow. */
+  --color-star-lit: #ffcf6a;
+  --color-star-lit-deep: #c47a1c;
+  --color-star-empty: #46527d;
+  --color-star-socket: rgba(120, 150, 210, 0.16);
+  --color-star-plaque: rgba(8, 11, 20, 0.72);
+  --color-star-six: #e04ad0;
+  --color-star-six-glow: rgba(224, 74, 208, 0.75);
+
+  /* ── Ability panel ───────────────────────────────────────────────────── */
+  --color-ability-panel: #0a0e18;
+  --color-ability-text: #a8bce4;
+  --color-ability-rule: rgba(120, 150, 210, 0.28);
+
+  /* ── Collector plate: set name and number, quieter than the ability ──── */
+  --color-plate-bg: rgba(18, 24, 42, 0.85);
+  --color-plate-text: #6f82b4;
+
+  /* ── Rarity: the frame's metal, one per star rating ──────────────────────
+     Reinforcement only — the star track states rarity independently. Six runs
+     dull carapace → tarnished bronze → bone silver → gold → soul-lit gold →
+     void-touched. */
+  --color-rarity-1: #46506e;
+  --color-rarity-2: #8a6a30;
+  --color-rarity-3: #b9c4d8;
+  --color-rarity-4: #e8a03c;
+  --color-rarity-5: #ffd782;
+  --color-rarity-6: #7a2f96;
+  --color-rarity-6-shimmer: #ff8ae8;
+
   /* ── Type families ───────────────────────────────────────────────────── */
   --font-display: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
   --font-ui: 'Cinzel', Georgia, 'Times New Roman', serif;

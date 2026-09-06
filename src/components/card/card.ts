@@ -13,6 +13,20 @@ if (GRID_ORDER.length !== MODEL_DIRECTIONS.length) {
   throw new Error('Card chevron grid is out of step with the model directions');
 }
 
+/** The five slots the star track always draws, lit or unlit. */
+const STAR_SLOTS = [1, 2, 3, 4, 5];
+
+/** The rating at which the sixth star renders outside the five-slot track. */
+const SIXTH_STAR = 6;
+
+/**
+ * Distinguishes the ability text of one rendered card from another's, so
+ * `aria-describedby` on each frame resolves to that card's own text. Module
+ * level rather than per-component because the ids must be unique across every
+ * card on the page, not within one.
+ */
+let nextAbilityId = 0;
+
 /**
  * The single card renderer. Every card in the application goes through this
  * component — hand, board tile, and opened pack alike — so the look-and-feel
@@ -40,6 +54,9 @@ if (GRID_ORDER.length !== MODEL_DIRECTIONS.length) {
     '[class.is-inert]': 'interactive() && !selectable()',
     '[class.is-flipped]': 'flipped()',
     '[class.is-empty]': '!card() && !faceDown()',
+    // Face-down reveals nothing, rarity included, so the attribute is withheld
+    // rather than left for the frame treatment to broadcast.
+    '[attr.data-rarity]': 'faceDown() ? null : (card()?.stars ?? null)',
   },
 })
 export class CardComponent {
@@ -74,10 +91,24 @@ export class CardComponent {
 
   readonly directions = GRID_ORDER;
 
-  readonly stars = computed(() => {
-    const c = this.card();
-    return c ? '★'.repeat(c.stars) : '';
+  /**
+   * The star track is a fixed five slots so the ceiling is legible without a
+   * legend: the first N are lit for a rating of N, the rest render as empty
+   * settings. A rating of 6 is not a sixth slot — see `showSixth`.
+   */
+  readonly starSlots = computed(() => {
+    const rating = this.card()?.stars ?? 0;
+    return STAR_SLOTS.map((slot) => slot <= rating);
   });
+
+  /** A rating of exactly 6 draws one more star *outside* the five-slot track. */
+  readonly showSixth = computed(() => this.card()?.stars === SIXTH_STAR);
+
+  /** The card's number within its set, zero-padded to three: `002`. */
+  readonly setNumber = computed(() => String(this.card()?.number ?? 0).padStart(3, '0'));
+
+  /** Unique per rendered card; the `aria-describedby` target for its ability text. */
+  readonly abilityId = `card-ability-${nextAbilityId++}`;
 
   readonly imageStyle = computed(() => {
     const c = this.card();
@@ -92,7 +123,10 @@ export class CardComponent {
     const c = this.card();
     if (!c) return '';
     const owner = this.owner() ? `, ${this.owner()}` : '';
-    return `${c.name}, stars ${c.stars}, attack ${c.attack}, defense ${c.defense}${owner}`;
+    return (
+      `${c.name}, stars ${c.stars}, attack ${c.attack}, defense ${c.defense}${owner}, ` +
+      `${c.set} ${this.setNumber()}`
+    );
   });
 
   hasArrow(dir: Direction): boolean {

@@ -1,4 +1,4 @@
-<!-- The chevron ring and the three sections are one 3×3 grid: the eight compass
+<!-- The chevron ring and the four sections are one 3×3 grid: the eight compass
      positions surround a centre `face` area. Splitting them would put the grid
      in the caller and half its children here. -->
 <ng-template #frame>
@@ -13,28 +13,48 @@
     </span>
 
     <span class="cf-img" [style.background-image]="imageStyle()">
-      <span class="cf-stars" aria-hidden="true">{{ stars() }}</span>
+      <!-- Five slots always, so the ceiling reads without a legend. The sixth
+           star sits outside the plaque: beyond the scale, not one more of it. -->
+      <span class="cf-stars" aria-hidden="true">
+        <span class="star-plaque">
+          @for (lit of starSlots(); track $index) {
+            <span class="star" [class.lit]="lit"></span>
+          }
+        </span>
+        @if (showSixth()) {
+          <span class="star-six"></span>
+        }
+      </span>
     </span>
 
     <span class="cf-stats" aria-hidden="true">
-      <span class="stat-row">
-        <img class="stat-icon" src="/images/attack_icon.png" alt="" />
-        <span class="stat-bar">
-          <span class="stat-fill atk-fill" [style.width.%]="card()!.attack"></span>
-        </span>
+      <span class="stat-bar">
+        <span class="stat-track"></span>
+        <span class="stat-fill atk-fill" [style.width.%]="card()!.attack"></span>
+        <span class="stat-label">AT</span>
       </span>
-      <span class="stat-row">
-        <img class="stat-icon" src="/images/defense_icon.png" alt="" />
-        <span class="stat-bar">
-          <span class="stat-fill def-fill" [style.width.%]="card()!.defense"></span>
-        </span>
+      <span class="stat-bar">
+        <span class="stat-track"></span>
+        <span class="stat-fill def-fill" [style.width.%]="card()!.defense"></span>
+        <span class="stat-label">DE</span>
+      </span>
+    </span>
+
+    <!-- Always in the DOM. Below the width gate it is visually hidden rather
+         than removed, so the text stays reachable and `aria-describedby`
+         keeps resolving. -->
+    <span class="cf-ability">
+      <span class="cf-ability-text" [id]="abilityId">{{ card()!.ability }}</span>
+      <span class="cf-plate">
+        <span class="cf-set">{{ card()!.set }}</span>
+        <span class="cf-number">{{ setNumber() }}</span>
       </span>
     </span>
   </span>
 </ng-template>
 
 @if (faceDown()) {
-  <!-- Reveals nothing: no name, art, rarity, stats, or chevrons. -->
+  <!-- Reveals nothing: no name, art, rarity, stats, chevrons, ability, or set. -->
   <span class="frame back" aria-hidden="true">
     <span class="back-pattern"></span>
     <span class="back-seal"></span>
@@ -45,13 +65,14 @@
       type="button"
       class="frame"
       [attr.aria-label]="description()"
+      [attr.aria-describedby]="abilityId"
       [attr.aria-pressed]="selected()"
       (click)="onActivate()"
     >
       <ng-container [ngTemplateOutlet]="frame" />
     </button>
   } @else {
-    <span class="frame">
+    <span class="frame" [attr.aria-describedby]="abilityId">
       <ng-container [ngTemplateOutlet]="frame" />
       <span class="sr-only">{{ description() }}</span>
     </span>
