@@ -62,9 +62,9 @@ The style guide SHALL render every shared primitive, including each button varia
 - **WHEN** the style guide renders the ornament section
 - **THEN** the divider and corner framing primitives are displayed
 
-### Requirement: Card state coverage
+### Requirement: Card and card-face coverage
 
-The style guide SHALL render the card component in every state it supports: player-owned, opponent-owned, selected, unselectable, placeable, face-down, and captured, alongside an empty board tile. It SHALL additionally demonstrate the card's size-dependent behavior and its full rarity range, so that both are reviewable without running the game.
+The style guide SHALL render the card component in every state it supports: player-owned, opponent-owned, selected, unselectable, placeable, face-down, and captured, alongside an empty board tile. It SHALL additionally demonstrate the card's size-dependent behavior and its full star range, so that both are reviewable without running the game.
 
 #### Scenario: Every card state is displayed
 
@@ -74,12 +74,12 @@ The style guide SHALL render the card component in every state it supports: play
 #### Scenario: Card constraints are verifiable on the page
 
 - **WHEN** a reviewer inspects the card section
-- **THEN** the aspect ratio, four-section structure, chevron placement, star track, labelled numeral-free stat bars, and the ability section with its set/number plate are all directly observable
+- **THEN** the aspect ratio, four-section structure, chevron placement, star track, labelled numeral-free stat bars, and the bordered ability section with its set/number plate are all directly observable
 
-#### Scenario: Rarity range is represented
+#### Scenario: The star range is represented
 
 - **WHEN** the style guide renders card examples
-- **THEN** cards spanning the full range of rarity values are shown
+- **THEN** cards spanning the full range of star ratings are shown
 
 #### Scenario: The ability gate is demonstrated on both sides of the threshold
 
@@ -105,15 +105,28 @@ The style guide SHALL render the card component in every state it supports: play
 - **AND** the unlit slots are visible on every rating below 5
 - **AND** the sixth star's distinct treatment is visible on the 6-star example and absent from every other
 
-#### Scenario: The rarity frame treatments are comparable side by side
+#### Scenario: The frame does not vary with rarity
 
-- **WHEN** the style guide renders the rarity section
-- **THEN** the frame treatment for each rarity is shown alongside the others at the same size
+- **WHEN** the style guide renders cards of differing star ratings side by side at the same size
+- **THEN** their frames are identical
+- **AND** the page presents no per-rarity frame treatment to compare
 
 #### Scenario: Examples exist for ratings the card database lacks
 
 - **WHEN** the card database contains no card at some rating in the 1-to-6 range
-- **THEN** the style guide still shows that rating's star track and frame treatment
+- **THEN** the style guide still shows that rating's star track
+
+#### Scenario: Stat bars are demonstrated across the value range
+
+- **WHEN** the style guide renders the card section
+- **THEN** examples at low, middling, and high stat values are shown
+- **AND** a reviewer can confirm that both the label and the fill read at each
+
+#### Scenario: Name fitting is demonstrated
+
+- **WHEN** the style guide renders the card section
+- **THEN** examples with a short name and with a name long enough to be shrunk and wrapped are shown
+- **AND** a reviewer can confirm that neither is truncated
 
 ### Requirement: The style guide is not part of the game experience
 

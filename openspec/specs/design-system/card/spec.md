@@ -45,17 +45,23 @@ Every card SHALL render at a 2.5 : 3.5 aspect ratio. This ratio MUST hold at eve
 
 ### Requirement: Four-section card face
 
-A face-up card SHALL present exactly four stacked sections in order: a name section, an image section, a stats section, and an ability section. Each section MUST be visually delineated from the others.
+A face-up card SHALL present exactly four stacked sections in order: a name section, an image section, a stats section, and an ability section. Each section MUST be visually delineated from the others, and the ability section MUST additionally be enclosed by a border on all four of its sides so that it reads as a contained box rather than an open area of the frame.
 
 #### Scenario: Sections render in order
 
 - **WHEN** a face-up card is rendered
 - **THEN** the name section appears at the top, the image section below it, the stats section below that, and the ability section at the bottom
 
+#### Scenario: The ability section is an enclosed box
+
+- **WHEN** a card is rendered at a width that shows the ability section
+- **THEN** the section is bounded by a visible border on its top, bottom, left, and right
+- **AND** the ability text and the set/number plate sit within that border
+
 #### Scenario: A long name does not break the layout
 
-- **WHEN** a card's name is too long to fit its section
-- **THEN** the name is truncated within the section
+- **WHEN** a card's name is longer than its section would hold at the default size
+- **THEN** the name is fitted to the section in full rather than truncated
 - **AND** the image, stats, and ability sections keep their positions and sizes
 
 #### Scenario: A missing image does not collapse the section
@@ -68,8 +74,53 @@ A face-up card SHALL present exactly four stacked sections in order: a name sect
 
 - **WHEN** a card's ability text is longer than its section can display
 - **THEN** the text is contained within the ability section
-- **AND** no part of it escapes the card's outer border
+- **AND** no part of it escapes the card's outer border or the ability section's own border
 - **AND** the other three sections keep their positions and sizes
+
+### Requirement: The card's name is fitted, never truncated
+
+The card SHALL display its name in full. The name is rendered at a default size and reduced as the name grows longer, so that it fits the name section without truncation, ellipsis, or clipping. When the name will not fit on one line at the smallest size the card uses, it SHALL wrap within the section rather than be cut. The name section's height MUST NOT change with the length of the name, and the fitting MUST hold at every supported card width without the surface passing anything in.
+
+#### Scenario: A short name renders at the default size
+
+- **WHEN** a card whose name comfortably fits its section is rendered
+- **THEN** the name is displayed at the card's default name size
+- **AND** it is not shrunk to accommodate a length it does not have
+
+#### Scenario: A longer name is shrunk rather than cut
+
+- **WHEN** a card's name is too long to fit its section at the default size
+- **THEN** the name is rendered smaller so that all of it fits
+- **AND** no ellipsis, clipped glyph, or omitted word appears
+
+#### Scenario: A name that will not fit one line wraps instead of truncating
+
+- **WHEN** a card's name still exceeds one line at the smallest size the card uses
+- **THEN** the name wraps within the name section
+- **AND** every character of it remains visible
+
+#### Scenario: No name escapes or is clipped by its section
+
+- **WHEN** a card of any name length is rendered at any supported width
+- **THEN** the whole name is visible inside the name section
+- **AND** no part of it is clipped by the section's bounds or crosses into the image section
+
+#### Scenario: Name length does not disturb the layout
+
+- **WHEN** cards with a very short and a very long name are rendered side by side at the same width
+- **THEN** both name sections have the same height
+- **AND** their image, stats, and ability sections are identically positioned and sized
+
+#### Scenario: Fitting holds at the minimum supported width
+
+- **WHEN** a card is rendered at its minimum supported width
+- **THEN** its name is displayed in full and remains legible
+
+#### Scenario: The name is fitted without the surface being asked
+
+- **WHEN** the same card is rendered in a narrow slot and a wide slot
+- **THEN** the name is fitted to each
+- **AND** the surface declares, configures, and measures nothing to make that happen
 
 ### Requirement: The card face presents the card's full identity
 
@@ -204,24 +255,46 @@ A card's star rating SHALL be rendered in the top-left corner of the image secti
 
 ### Requirement: Stats rendered as bars without numerals
 
-A card's attack and defense SHALL each be rendered as a progress bar filled proportionally on a 0-to-100 scale, each bar carrying its own text label within the bar itself: `AT` for attack and `DE` for defense. The two bars MUST be separately delineated rows. The numeric value of attack or defense MUST NOT appear on the card, and the bars MUST NOT be accompanied by stat icons.
+A card's attack and defense SHALL each be rendered as a progress bar filled proportionally on a 0-to-100 scale, each bar carrying its own text label, `AT` for attack and `DE` for defense. The two bars MUST be separately delineated rows. At every value the stat may hold, both the label and the bar's filled extent MUST be readable: the label MUST NOT conceal any part of the fill, and the fill MUST NOT render the label illegible. The numeric value of attack or defense MUST NOT appear on the card, and the bars MUST NOT be accompanied by stat icons.
 
 #### Scenario: Bar fill is proportional
 
 - **WHEN** a card with an attack value of N is rendered
-- **THEN** its attack bar is filled to N percent of the bar's width
+- **THEN** its attack bar is filled to N percent of the bar's fillable width
+
+#### Scenario: A low value's fill is still visible
+
+- **WHEN** a card's attack is low enough that its fill is shorter than the `AT` label is wide
+- **THEN** the fill is visible in full
+- **AND** the label does not cover it
+
+#### Scenario: A high value's label is still legible
+
+- **WHEN** a card's defense is high enough that the fill spans the whole bar
+- **THEN** the `DE` label remains legible against the fill
+
+#### Scenario: Two different low values are distinguishable
+
+- **WHEN** two cards whose attack values differ by a small amount at the bottom of the range are rendered side by side
+- **THEN** the difference in their visible fill is discernible
 
 #### Scenario: Each bar is labelled inside itself
 
 - **WHEN** a card is rendered
-- **THEN** the text `AT` appears within the attack bar
-- **AND** the text `DE` appears within the defense bar
-- **AND** neither label sits outside its bar
+- **THEN** the text `AT` appears within the bounds of the attack bar
+- **AND** the text `DE` appears within the bounds of the defense bar
+- **AND** neither label sits outside its bar or is mistakable for the other bar's
 
 #### Scenario: Labels stay legible over the fill and over the track
 
-- **WHEN** a card's attack is low enough that the label sits over the empty track, and high enough on another card that it sits over the fill
+- **WHEN** a card's attack is low and another card's attack is high
 - **THEN** the label is legible in both cases
+- **AND** in neither case does the label conceal its bar's fill
+
+#### Scenario: Labels are legible at every supported width
+
+- **WHEN** a card is rendered at any width from its minimum upward
+- **THEN** both labels and both fills remain readable
 
 #### Scenario: Stat numerals are never shown
 
@@ -284,33 +357,31 @@ The card SHALL be framed as a layered object rather than a set of flat rectangle
 - **WHEN** a card is rendered at any size
 - **THEN** no part of the frame treatment covers the name, the stars, the stat bars, the ability text, or any chevron
 
-### Requirement: The frame reflects the card's rarity
+### Requirement: Ownership, selection, and interaction states
 
-The card's frame treatment SHALL vary across the star range so that a card's rarity is recognisable from the frame alone at a glance, before its stars are read. Rarity MUST remain readable from the star track independently, so the frame treatment is reinforcement and never the sole carrier of rarity.
+The card renderer SHALL support distinct visual states for player ownership, opponent ownership, selection, placeability, capture, and face-down presentation, and MUST NOT convey any of these states through color alone. The card's frame is ownership's channel: an owned card's border SHALL read as its owner's, and a card with no owner SHALL frame in the renderer's neutral treatment. No other property of the card may colour the frame.
 
-#### Scenario: Rarity is legible across a grid
-
-- **WHEN** cards of differing rarity are displayed together
-- **THEN** their frames are distinguishable from one another
-
-#### Scenario: The highest rarity is unmistakable
-
-- **WHEN** a 6-star card is displayed among lower-rarity cards
-- **THEN** its frame is the most distinct of them
-
-#### Scenario: Rarity does not rest on the frame alone
-
-- **WHEN** a card is rendered
-- **THEN** its star track states its rarity independently of the frame treatment
-
-### Requirement: Ownership and interaction states
-
-The card renderer SHALL support distinct visual states for player ownership, opponent ownership, selection, placeability, capture, and face-down presentation, and MUST NOT convey any of these states through color alone.
-
-#### Scenario: Ownership is visible
+#### Scenario: Ownership is visible on the frame
 
 - **WHEN** a card on the board is owned by the player versus the opponent
-- **THEN** the two render with distinguishable owner treatments
+- **THEN** the two frames render in distinguishable owner treatments
+- **AND** each is distinguishable from the neutral frame of an unowned card
+
+#### Scenario: Ownership is not carried by colour alone
+
+- **WHEN** a card's owner treatment is rendered
+- **THEN** the owner is also indicated by a non-colour cue on the card
+
+#### Scenario: An unowned card frames neutrally
+
+- **WHEN** a card is rendered outside play — in an opened pack, in the collection, or as an empty board tile
+- **THEN** its frame renders in the neutral treatment
+- **AND** it is not tinted toward either owner
+
+#### Scenario: Every card frames alike before ownership applies
+
+- **WHEN** cards of differing star ratings are rendered with no owner
+- **THEN** their frames are identical in colour and material
 
 #### Scenario: A selected card is identifiable
 
@@ -334,10 +405,10 @@ The card renderer SHALL support distinct visual states for player ownership, opp
 - **THEN** it shows the card back
 - **AND** its name, artwork, rarity, stats, chevrons, ability text, set, and number are not discernible
 
-#### Scenario: Ownership reads over the rarity treatment
+#### Scenario: Ownership reads on every card
 
-- **WHEN** cards of differing rarity are owned by the player and the opponent
-- **THEN** the owner treatment remains identifiable on every rarity
+- **WHEN** cards of differing star ratings are owned by the player and the opponent
+- **THEN** the owner treatment is equally identifiable on each of them
 
 ### Requirement: Size parity across surfaces
 
