@@ -17,10 +17,10 @@
 
 ## 3. Four-column layout
 
-- [ ] 3.1 Rebuild `game.html` as four columns — codex, player hand, board, opponent hand — and delete the `.game-footer` element and the `.score-bar` header. Verify the rendered screen shows no footer band and no reserved space where one was.
-- [ ] 3.2 Replace the `--card-h` clamp chain in `game.css` with the `--cw` / `--ch` unit pair and express every column width, gap, and board padding as a multiple of it. Verify a repo search of `game.css` finds no remaining `clamp(` sizing chain and no hardcoded card pixel dimension.
-- [ ] 3.3 Confirm the arena never scrolls or clips: verify at 1920×1080, 1600×900, 1440×900, 1366×768, and a deliberately awkward 1100×620 that no scrollbar appears and that all four columns, all 18 hand positions, all 25 cells, the standing panel, and the inspector are fully inside the viewport.
-- [ ] 3.4 Verify continuous resize holds the fit: drag the window from wide to narrow and tall to short and confirm nothing clips or scrolls at any intermediate size.
+- [x] 3.1 Rebuild `game.html` as four columns — codex, player hand, board, opponent hand — and delete the `.game-footer` element and the `.score-bar` header. Verify the rendered screen shows no footer band and no reserved space where one was.
+- [x] 3.2 Replace the `--card-h` clamp chain in `game.css` with the `--cw` / `--ch` unit pair and express every column width, gap, and board padding as a multiple of it. Verify a repo search of `game.css` finds no remaining `clamp(` sizing chain and no hardcoded card pixel dimension.
+- [x] 3.3 Confirm the arena never scrolls or clips: verify at 1920×1080, 1600×900, 1440×900, 1366×768, and a deliberately awkward 1100×620 that no scrollbar appears and that all four columns, all 18 hand positions, all 25 cells, the standing panel, and the inspector are fully inside the viewport.
+- [x] 3.4 Verify continuous resize holds the fit: drag the window from wide to narrow and tall to short and confirm nothing clips or scrolls at any intermediate size.
 
 ## 4. Scoreboard
 

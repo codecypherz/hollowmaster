@@ -14,68 +14,111 @@
   /* Primitive parameters for this screen: a tighter frame. */
   --corner-size: 48px;
   --corner-inset: 20px;
-  --btn-font-size: 0.65rem;
-  --btn-padding: 0.65rem 1.8rem;
-
-  /* The tuned sizing chain — five cards must stack within 100dvh.
-     Everything on this screen is a function of these three.
-
-     The lower bound is the card's 120px minimum supported width expressed as a
-     height (120 * 1.4). Below it the renderer's own guarantees stop holding, so
-     the screen must change its layout rather than shrink the card — see
-     openspec/specs/design-system/card/spec.md. On short viewports this floor
-     wins over the viewport term and the legacy layout no longer fits; refitting
-     it belongs to the in-game rework. */
-  --card-h: clamp(168px, calc((100dvh - 7rem) / 5 - 6px), 220px); /* fits 5 cards vertically */
-  --card-w: calc(var(--card-h) / 1.4); /* 2.5:3.5 trading-card ratio */
+  --btn-font-size: 0.6rem;
+  --btn-padding: 0.5rem 1.4rem;
 
   position: relative;
   width: 100%;
   height: 100%;
   background: var(--color-void);
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
   overflow: hidden;
   font-family: var(--font-ui);
 }
 
-/* ─── Background ────────────────────────────────────────────────────────── */
+/* ─── Arena ──────────────────────────────────────────────────────────────── */
 
-/* ─── Score bar ─────────────────────────────────────────────────────────── */
+/* `--cw` (a card's laid-out width) and `--arena-scale` are written onto this
+   element by the component — see `src/model/arena.ts`. Everything below is a
+   multiple of `--cw` and `--g`; no length on this screen is chosen by eye.
 
-.score-bar {
+   The gutter is fixed pixels rather than a fraction of `--cw` on purpose. The
+   geometry reserves a *constant* 48px of chrome (`CHROME_W` / `CHROME_H` in
+   `arena.ts`) before dividing the viewport into 11 × 7 card units, so the sum
+   of the gutters has to be constant too — a gutter that grew with the unit
+   would outgrow that reservation and push the arena past the viewport edge
+   exactly where the fit is tightest. The arithmetic that has to hold:
+
+     width  = codex(2cw + g) + g + rack(2cw + g) + g
+            + board(5cw + 6g) + g + rack(2cw + g)   = 11cw + 12g = 11cw + 48px
+     height = board(5ch + 6g) = 7cw + 6g            = 7cw + 24px  ≤ 7cw + 48px
+
+   so the width consumes the reservation exactly and the height leaves 24px of
+   slack for the arena to breathe in vertically. The board's 1px rule is drawn
+   inside its own gutter (`--board-edge`) rather than outside it, so the frame
+   costs the arithmetic above nothing. */
+.arena {
+  --ch: calc(var(--cw) * 1.4); /* 2.5:3.5 trading-card ratio */
+  --g: 4px; /* the one gutter: between cards, columns, and board edge */
+
+  --rack-w: calc(2 * var(--cw) + var(--g));
+  --board-edge: calc(var(--g) - 1px); /* padding + the 1px rule = one gutter */
+  --board-w: calc(5 * var(--cw) + 6 * var(--g));
+  --board-h: calc(5 * var(--ch) + 6 * var(--g));
+
   position: relative;
   z-index: 10;
-  width: 100%;
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--rack-w) var(--rack-w) var(--board-w) var(--rack-w);
+  gap: var(--g);
   align-items: center;
-  justify-content: space-between;
-  padding: 1.75rem 2rem 0.5rem;
-  gap: 1rem;
+  height: var(--board-h);
+}
+
+/* Only when the viewport cannot host the arena at the card's minimum width.
+   Above that threshold the scale is exactly 1 and no transform is applied at
+   all, so the arena rasterises sharp rather than through a no-op transform. */
+.arena-scaled {
+  transform: scale(var(--arena-scale));
+  transform-origin: center;
+}
+
+/* ─── Codex ──────────────────────────────────────────────────────────────── */
+
+.codex {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g);
+  height: var(--board-h);
+  min-height: 0;
+}
+
+.standing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 0.75rem;
+  border: 1px solid var(--color-gold-dim);
+  box-shadow: var(--elev-board);
   flex-shrink: 0;
 }
 
-.score-side {
+.standing-side {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 0.6rem;
+  width: 100%;
+  opacity: 0.55;
 }
 
-.score-side.right {
-  flex-direction: row-reverse;
+.standing-side.is-active {
+  opacity: 1;
 }
 
-.score-name {
-  font-size: 0.7rem;
+.standing-name {
+  font-size: 0.65rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--color-text-bright);
 }
 
-.score-val {
+.standing-score {
   font-family: var(--font-display);
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1;
 }
@@ -90,14 +133,14 @@
   text-shadow: 0 0 14px var(--color-crimson-glow);
 }
 
-.status-center {
-  flex: 1;
+.standing-status {
+  min-height: 1rem;
   text-align: center;
 }
 
 .status-text {
-  font-size: 0.7rem;
-  letter-spacing: 0.25em;
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--color-soul);
   animation: statusPulse var(--dur-breathe) ease-in-out infinite;
@@ -117,75 +160,71 @@
   }
 }
 
-/* ─── Arena ──────────────────────────────────────────────────────────────── */
+/* ─── Inspector ──────────────────────────────────────────────────────────── */
 
-/* `--cw` (a card's laid-out width) and `--arena-scale` are written here by the
-   component — see `src/model/arena.ts`. */
-.arena {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0.25rem 1rem;
+/* The slot holds the inspector's box whether or not a card is in it, so the
+   other three columns sit in the same place before and after the first
+   inspection. Two card units wide — comfortably above the renderer's 200px
+   ability gate at every unit the geometry can produce. */
+.inspector-slot {
   flex: 1;
   min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inspector {
+  width: calc(2 * var(--cw));
+  height: calc(2 * var(--ch));
+}
+
+.inspector-resting {
   width: 100%;
-  box-sizing: border-box;
-}
-
-/* Only when the viewport cannot host the arena at the card's minimum width.
-   Above that threshold the scale is exactly 1 and no transform is applied at
-   all, so the arena rasterises sharp rather than through a no-op transform. */
-.arena-scaled {
-  transform: scale(var(--arena-scale));
-  transform-origin: center;
-}
-
-/* ─── Hands ──────────────────────────────────────────────────────────────── */
-
-.hand {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  align-self: center;
-  width: var(--card-w);
+  gap: 0.75rem;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.015);
 }
 
-/* Player hand: 2-column grid, left col 3 cards, right col 2 cards */
-.player-hand {
+.inspector-rune {
+  width: calc(var(--cw) / 4);
+  height: calc(var(--cw) / 4);
+  border: 1px solid var(--color-gold-dim);
+  transform: rotate(45deg);
+  opacity: 0.5;
+}
+
+.inspector-hint {
+  font-family: var(--font-flavor);
+  font-size: 0.7rem;
+  font-style: italic;
+  color: var(--color-text-dim);
+}
+
+/* ─── Hand racks ─────────────────────────────────────────────────────────── */
+
+/* Nine positions do not make a rectangle: five fill the outer sub-column and
+   four the inner one, so the rack spans exactly the board's five rows. */
+.rack {
   display: grid;
-  grid-template-columns: repeat(2, var(--card-w));
-  grid-template-rows: repeat(3, var(--card-h));
+  grid-template-columns: repeat(2, var(--cw));
+  grid-template-rows: repeat(5, var(--ch));
   grid-auto-flow: column;
-  gap: 6px;
-  width: calc(2 * var(--card-w) + 6px);
-}
-
-/* Opponent hand: 5 cards overlapping vertically to match board height */
-.opponent-hand {
-  position: relative;
-  width: var(--card-w);
-  height: calc(4 * var(--card-h) + 42px);
+  gap: var(--g);
+  width: var(--rack-w);
+  height: calc(5 * var(--ch) + 4 * var(--g));
   align-self: center;
-  flex-shrink: 0;
-}
-
-.opponent-hand .hand-slot {
-  position: absolute;
-  width: var(--card-w);
-  height: var(--card-h);
-  top: calc(var(--i, 0) * (3 * var(--card-h) + 42px) / 4);
 }
 
 .hand-slot {
-  width: var(--card-w);
-  height: var(--card-h);
-  flex-shrink: 0;
+  width: var(--cw);
+  height: var(--ch);
 }
 
 .slot-empty {
@@ -198,16 +237,17 @@
 
 .board {
   display: grid;
-  grid-template: repeat(4, var(--card-h)) / repeat(4, var(--card-w));
-  gap: 6px;
-  padding: 12px;
+  grid-template: repeat(5, var(--ch)) / repeat(5, var(--cw));
+  gap: var(--g);
+  padding: var(--board-edge);
+  width: var(--board-w);
+  height: var(--board-h);
   background: transparent;
   border: 1px solid var(--color-gold-dim);
   box-shadow: var(--elev-board);
   position: relative;
   box-sizing: border-box;
   align-self: center;
-  flex-shrink: 0;
 }
 
 /* Board border ornament corners */
@@ -252,7 +292,7 @@
 .board-logo-hollow {
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(1rem, calc(var(--card-w) * 1.6), 3.2rem);
+  font-size: calc(var(--cw) * 0.55);
   color: var(--color-soul);
   text-shadow: 0 0 24px var(--color-soul-glow);
   letter-spacing: 0.18em;
@@ -263,7 +303,7 @@
 .board-logo-master {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: clamp(1.2rem, calc(var(--card-w) * 1.9), 3.8rem);
+  font-size: calc(var(--cw) * 0.66);
   color: var(--color-gold);
   text-shadow: 0 0 20px rgba(224, 144, 48, 0.6);
   letter-spacing: 0.18em;
@@ -273,15 +313,6 @@
 
 /* Owner colors on board cells */
 /* Flip animation when card is captured */
-/* ─── Footer ─────────────────────────────────────────────────────────────── */
-
-.game-footer {
-  position: relative;
-  z-index: 10;
-  padding: 0.5rem 0 0.75rem;
-  flex-shrink: 0;
-}
-
 /* ─── Game Over overlay ──────────────────────────────────────────────────── */
 
 .overlay {
