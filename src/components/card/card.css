@@ -189,13 +189,15 @@ button.frame {
   min-height: 0;
   overflow: hidden;
   background: var(--color-card-face);
+  /* The inner border: one rule around the whole interior, drawn between the
+     chevron ring and the contents. It is the sections' shared edge, which is
+     why none of them carries a rule of its own on the sides it meets. */
+  border: 1px solid var(--color-section-border);
   border-radius: 2px;
   position: relative;
-  /* Sunk into the frame: a hairline rim of the frame's own metal plus an inner
-     shadow, so the interior reads as a third depth behind the border. */
-  box-shadow:
-    inset 0 0 0 1px var(--frame-rim),
-    inset 0 2px 8px rgba(0, 0, 0, 0.7);
+  /* Sunk into the frame: the inner shadow behind the border, so the interior
+     reads as a third depth behind the frame. */
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7);
 }
 
 /* Section 1 — name.
@@ -229,7 +231,6 @@ button.frame {
   text-transform: uppercase;
   color: var(--color-soul);
   text-align: center;
-  border-bottom: 1px solid var(--color-section-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -615,7 +616,7 @@ button.frame {
   }
 
   .face {
-    box-shadow: inset 0 0 0 1px var(--frame-rim);
+    box-shadow: none;
   }
 
   .cf-img {
@@ -681,8 +682,8 @@ button.frame {
     0 0 9px rgba(192, 49, 42, 0.45);
 }
 
-:host(.owner-opponent) .cf-name {
-  border-bottom-color: var(--color-section-border-crimson);
+:host(.owner-opponent) .face {
+  border-color: var(--color-section-border-crimson);
 }
 
 :host(.owner-opponent) .cf-stats {
