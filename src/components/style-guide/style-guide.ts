@@ -1,6 +1,6 @@
 import { Component, computed, signal } from '@angular/core';
 import { CardComponent } from '../card/card';
-import { Card, CARD_DB } from '../../model/card';
+import { Card, CardOptions, CARD_DB } from '../../model/card';
 import { createParticleField, particleVars } from '../../model/particle';
 
 export interface Token {
@@ -61,10 +61,10 @@ export class StyleGuide {
   readonly tokenCount = computed(() => this.tokens().length);
 
   /**
-   * One card per rating 1-6, so the star track and the rarity frames are both
-   * reviewable across the model's whole range. Ratings the database has no card
-   * for are synthesised from a real one rather than skipped — a missing tier
-   * would leave its frame treatment unreviewed.
+   * One card per rating 1-6, so the star track is reviewable across the model's
+   * whole range and the frame can be seen not varying with it. Ratings the
+   * database has no card for are synthesised from a real one rather than
+   * skipped — a missing tier would go unreviewed.
    */
   readonly ratings = computed<RatingSample[]>(() => {
     const byStars = new Map<number, Card>();
@@ -91,6 +91,51 @@ export class StyleGuide {
       };
     });
   });
+
+  /**
+   * The stat bars at the bottom, middle, and top of the range, so the label and
+   * the fill can both be judged where each is hardest to read: a fill narrower
+   * than the label, and a fill running the whole track under it.
+   */
+  readonly statSamples = computed(() =>
+    [
+      { label: 'Low · 3 / 6', attack: 3, defense: 6 },
+      { label: 'Middling · 45 / 40', attack: 45, defense: 40 },
+      { label: 'High · 100 / 92', attack: 100, defense: 92 },
+    ].map(({ label, attack, defense }) => ({
+      label,
+      card: this.variant({ name: 'Husk Sentry', attack, defense, number: 910 + attack }),
+    })),
+  );
+
+  /**
+   * A short name and one long enough to be stepped down and wrapped, so the
+   * fitting can be judged without a card database that has such a name.
+   */
+  readonly nameSamples = computed(() =>
+    [
+      { label: 'Short name', name: 'Goam' },
+      { label: 'Longest in the database', name: 'Aspid Hatchling' },
+      { label: 'Deliberately long name', name: 'The Hollow Knight Of Hallownest' },
+    ].map(({ label, name }, i) => ({ label, card: this.variant({ name, number: 920 + i }) })),
+  );
+
+  /** A card built from a real one, so a demonstration is never a blank slate. */
+  private variant(overrides: Partial<CardOptions>): Card {
+    const donor = this.demo();
+    return new Card({
+      name: donor.name,
+      arrows: [...donor.arrows],
+      stars: donor.stars,
+      image: donor.image.replace('/images/', ''),
+      attack: donor.attack,
+      defense: donor.defense,
+      ability: donor.ability,
+      set: donor.set,
+      number: donor.number,
+      ...overrides,
+    });
+  }
 
   /** Cards spanning the full star range present in the database. */
   readonly samples = computed<Card[]>(() => {

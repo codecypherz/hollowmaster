@@ -92,7 +92,9 @@ function requireArrows(arrows: Direction[]): Direction[] {
   return [...arrows];
 }
 
-const CROSSROADS = 'Forgotten Crossroads';
+/** The set every card in the database belongs to. `FC` is the set's name, not
+    an abbreviation of it — the face prints it verbatim. */
+const FC = 'FC';
 
 export const CARD_DB: Card[] = [
   new Card({
@@ -105,7 +107,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Trundles the crossroads floor without malice, turning only where the stone runs out. ' +
       'Even a newly fallen wanderer may step over it unharmed.',
-    set: CROSSROADS,
+    set: FC,
     number: 1,
   }),
   new Card({
@@ -118,7 +120,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Bloated with young, she drifts the tunnels until roused, then hurls her bulk from wall ' +
       'to wall. Her death spills a dozen squirming grubs into the dark.',
-    set: CROSSROADS,
+    set: FC,
     number: 2,
   }),
   new Card({
@@ -131,7 +133,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Crowned by his swarm, he screeches from above and lets lesser flies close the distance. ' +
       'Cut down the escort and the king fights alone.',
-    set: CROSSROADS,
+    set: FC,
     number: 3,
   }),
   new Card({
@@ -144,7 +146,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Hangs at a careful distance and spits arcs of acid three at a time. ' +
       'It withdraws the moment a nail comes near.',
-    set: CROSSROADS,
+    set: FC,
     number: 4,
   }),
   new Card({
@@ -157,7 +159,7 @@ export const CARD_DB: Card[] = [
     ability:
       'She births hatchlings without pause, filling a passage faster than a nail can clear it. ' +
       'Killing her ends the tide; ignoring her does not.',
-    set: CROSSROADS,
+    set: FC,
     number: 5,
   }),
   new Card({
@@ -170,7 +172,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Sleeps buried in the ceiling until a tremor wakes it, then falls as a spear of shell. ' +
       'Once it drops, nothing turns it aside.',
-    set: CROSSROADS,
+    set: FC,
     number: 6,
   }),
   new Card({
@@ -183,7 +185,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Darts in erratic loops and strikes only from behind. ' +
       'Alone it is a nuisance; in numbers it is a storm.',
-    set: CROSSROADS,
+    set: FC,
     number: 7,
   }),
   new Card({
@@ -196,7 +198,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Bounces blindly through the tunnels, caroming off stone with no thought for its course. ' +
       'Harmless until it drifts between a wanderer and the way out.',
-    set: CROSSROADS,
+    set: FC,
     number: 8,
   }),
   new Card({
@@ -209,7 +211,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Clings to the walls behind a shell of grey stone, ticking as it crawls. ' +
       'Its armour turns aside all but a well-struck blow.',
-    set: CROSSROADS,
+    set: FC,
     number: 9,
   }),
   new Card({
@@ -221,7 +223,7 @@ export const CARD_DB: Card[] = [
     defense: 5,
     ability:
       'Newly spat from its mother and already spitting in turn. Weak alone, and never alone.',
-    set: CROSSROADS,
+    set: FC,
     number: 10,
   }),
   new Card({
@@ -234,7 +236,7 @@ export const CARD_DB: Card[] = [
     ability:
       'A vessel long hollowed by the infection, still walking the roads it walked in life. ' +
       'It swings without aim and never stops.',
-    set: CROSSROADS,
+    set: FC,
     number: 11,
   }),
   new Card({
@@ -247,7 +249,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Lowers its horned skull and charges the length of a corridor. ' +
       'The horn breaks before the husk does.',
-    set: CROSSROADS,
+    set: FC,
     number: 12,
   }),
   new Card({
@@ -260,7 +262,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Springs across the gap a wanderer thought safe, arms flailing before it lands. ' +
       'The leap is its only remaining thought.',
-    set: CROSSROADS,
+    set: FC,
     number: 13,
   }),
   new Card({
@@ -273,7 +275,7 @@ export const CARD_DB: Card[] = [
     ability:
       'Grown fat on infected orange, it rolls forward heedless of the nail. ' +
       'Its flesh smothers a strike before the strike can bite.',
-    set: CROSSROADS,
+    set: FC,
     number: 14,
   }),
   new Card({
@@ -286,7 +288,7 @@ export const CARD_DB: Card[] = [
     ability:
       'It remembers the drill of the guard even with its mind burned away. ' +
       'It parries, steps, and strikes as it was taught to.',
-    set: CROSSROADS,
+    set: FC,
     number: 15,
   }),
 ];

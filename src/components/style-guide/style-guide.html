@@ -236,7 +236,10 @@
         One component renders all of these. Aspect ratio 2.5:3.5, four sections — name, image,
         stats, ability — with the chevrons inside the border but outside the sections, rarity on a
         five-slot star track, and stats as labelled bars that never show a numeral. The ability
-        section carries the set and collector number on its plate.
+        section is an enclosed box, bordered on all four sides and held off the face's edges,
+        carrying the set and collector number on its plate. The frame's colour is ownership's and
+        nothing else's: blue for the player, crimson for the opponent, neutral for a card in no
+        one's hands.
       </p>
 
       <div class="card-grid">
@@ -302,19 +305,58 @@
       </div>
     </section>
 
-    <!-- ─── Rarity frames ──────────────────────────────────────────────── -->
+    <!-- ─── The frame across the star range ────────────────────────────── -->
     <section class="sg-section">
-      <h2 class="sg-h2">Rarity frames</h2>
+      <h2 class="sg-h2">The frame does not vary with rarity</h2>
       <p class="sg-sub">
-        The frame's metal shifts across the star range so rarity is recognisable before the stars
-        are read. Shown at one size, side by side, because the tiers are only judgeable against one
-        another. Reinforcement only — the star track states rarity on its own.
+        The same ratings again at one size, side by side, so the frames can be compared directly:
+        they are identical. Rarity is the star track's to state, and the frame's colour is reserved
+        for ownership — a metal that also shifted across the star range would make the reader
+        separate two colour channels on one element.
       </p>
       <div class="card-grid">
         @for (r of ratings(); track r.stars) {
           <div class="card-demo">
             <div class="card-slot"><app-card [card]="r.card" /></div>
             <span class="state-label">{{ r.stars }}★</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ─── Stat bars ──────────────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-h2">Stat bars across the range</h2>
+      <p class="sg-sub">
+        Each bar is a fixed label cap and the track it leaves behind, so the fill is a proportion of
+        the track alone. At the bottom of the range the fill is narrower than the label and still
+        wholly visible; at the top it runs the full track and the label still reads, because the two
+        never share a box. No numeral appears anywhere.
+      </p>
+      <div class="card-grid">
+        @for (s of statSamples(); track s.label) {
+          <div class="card-demo">
+            <div class="card-slot"><app-card [card]="s.card" /></div>
+            <span class="state-label">{{ s.label }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ─── Name fitting ───────────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-h2">Name fitting</h2>
+      <p class="sg-sub">
+        A name is fitted, never cut. A short one is drawn at the default size; a longer one steps
+        down until it fits, and wraps within the name row if the smallest step still will not hold
+        it on one line. No ellipsis, no clipped glyph, and the row's height never moves — compare
+        the image, stats, and ability sections across the three.
+      </p>
+      <div class="card-grid">
+        @for (n of nameSamples(); track n.label) {
+          <div class="card-demo">
+            <div class="card-slot"><app-card [card]="n.card" /></div>
+            <span class="state-label">{{ n.label }}</span>
           </div>
         }
       </div>

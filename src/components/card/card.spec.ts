@@ -20,13 +20,44 @@ describe('CardComponent', () => {
       attack: 45,
       defense: 40,
       ability: 'Hurls her bulk from wall to wall.',
-      set: 'Forgotten Crossroads',
+      set: 'FC',
       number: 2,
       ...overrides,
     });
   }
 
   const sample = card();
+
+  /**
+   * The component's own stylesheet, as the test document received it. Container
+   * queries do not evaluate in the test DOM, so a rule that only applies above
+   * the ability gate is asserted against the stylesheet rather than against a
+   * computed style that would report the below-gate value.
+   */
+  function componentCss(): string {
+    return [...document.querySelectorAll('style')].map((s) => s.textContent ?? '').join('\n');
+  }
+
+  /** The body of a brace-matched at-rule block, by its prelude. */
+  function atRuleBody(prelude: string): string {
+    const css = componentCss();
+    const start = css.indexOf(prelude);
+    expect(start).toBeGreaterThan(-1);
+    const open = css.indexOf('{', start);
+    let depth = 0;
+    for (let i = open; i < css.length; i++) {
+      if (css[i] === '{') depth++;
+      else if (css[i] === '}' && --depth === 0) return css.slice(open + 1, i);
+    }
+    throw new Error(`unterminated block for ${prelude}`);
+  }
+
+  /** One rule's declarations, found by the class its (encapsulated) selector carries. */
+  function ruleBody(css: string, className: string): string {
+    const match = new RegExp(`\\.${className}\\[[^\\]]*\\]\\s*\\{([^}]*)\\}`).exec(css);
+    expect(match).not.toBeNull();
+    return match![1];
+  }
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [CardComponent] }).compileComponents();
@@ -55,6 +86,55 @@ describe('CardComponent', () => {
     it('shows the card name', () => {
       render();
       expect(host.querySelector('.cf-name-text')?.textContent?.trim()).toBe('Gruz Mother');
+    });
+  });
+
+  describe('name fitting', () => {
+    /** The factor the host publishes for the stylesheet to scale the name by. */
+    function nameFit(name: string): number {
+      render({ card: card({ name }) });
+      return Number(host.style.getPropertyValue('--name-fit'));
+    }
+
+    it('draws a short name at the default size', () => {
+      expect(nameFit('Goam')).toBe(1);
+    });
+
+    it('keeps the longest name in the database at the default size', () => {
+      expect(nameFit('Aspid Hatchling')).toBe(1);
+    });
+
+    it('steps a mid-length name down', () => {
+      const mid = nameFit('Wandering Husk Elder');
+      expect(mid).toBeLessThan(1);
+      expect(mid).toBeGreaterThan(nameFit('W'.repeat(60)));
+    });
+
+    it('gives a very long name the smallest step', () => {
+      expect(nameFit('W'.repeat(60))).toBe(nameFit('W'.repeat(80)));
+    });
+
+    it('never grows the name as it gets longer', () => {
+      let previous = Infinity;
+      for (let length = 1; length <= 60; length++) {
+        const factor = nameFit('n'.repeat(length));
+        expect(factor).toBeLessThanOrEqual(previous);
+        previous = factor;
+      }
+    });
+
+    /** The name is fitted, so nothing in the section may cut it. */
+    it('neither truncates nor ellipsises the name at any length', () => {
+      const css = componentCss();
+      const nameText = ruleBody(css, 'cf-name-text');
+      expect(nameText).not.toMatch(/text-overflow/);
+      expect(nameText).not.toMatch(/white-space:\s*nowrap/);
+      expect(ruleBody(css, 'cf-name')).not.toMatch(/text-overflow/);
+
+      for (const name of ['Goam', 'Aspid Hatchling', 'W'.repeat(60)]) {
+        render({ card: card({ name }) });
+        expect(host.querySelector('.cf-name-text')?.textContent).toBe(name);
+      }
     });
   });
 
@@ -132,15 +212,13 @@ describe('CardComponent', () => {
     it('renders the collector number, zero-padded, on the identity plate', () => {
       render();
       expect(host.querySelector('.cf-plate .cf-number')?.textContent?.trim()).toBe('002');
-      expect(host.querySelector('.cf-plate .cf-set')?.textContent?.trim()).toBe(
-        'Forgotten Crossroads',
-      );
+      expect(host.querySelector('.cf-plate .cf-set')?.textContent?.trim()).toBe('FC');
     });
 
     it('labels each bar inside the bar itself, with no stat icons', () => {
       render();
       const bars = [...host.querySelectorAll('.cf-stats .stat-bar')];
-      expect(bars.map((b) => b.querySelector('.stat-label')?.textContent?.trim())).toEqual([
+      expect(bars.map((b) => b.querySelector('.stat-cap')?.textContent?.trim())).toEqual([
         'AT',
         'DE',
       ]);
@@ -155,12 +233,29 @@ describe('CardComponent', () => {
       expect(def.style.width).toBe('40%');
     });
 
+    /** The label cannot cover the fill because it does not share the fill's box:
+        the cap is the track's sibling and the fill is measured against the track
+        alone, so no value of the stat puts fill underneath the label. */
+    it("keeps a low value's fill out from under its label", () => {
+      render({ card: card({ attack: 3 }) });
+      const bar = host.querySelector('.cf-stats .stat-bar')!;
+      const cap = bar.querySelector('.stat-cap')!;
+      const track = bar.querySelector('.stat-track')!;
+      const fill = host.querySelector<HTMLElement>('.atk-fill')!;
+
+      expect(cap.parentElement).toBe(bar);
+      expect(track.parentElement).toBe(bar);
+      expect(cap.contains(fill)).toBe(false);
+      expect(fill.parentElement).toBe(track);
+      expect(fill.style.width).toBe('3%');
+    });
+
     it('exposes the stats to assistive technology as text', () => {
       render({ selectable: true });
       const label = host.querySelector('button')!.getAttribute('aria-label')!;
       expect(label).toContain('attack 45');
       expect(label).toContain('defense 40');
-      expect(label).toContain('Forgotten Crossroads 002');
+      expect(label).toContain('FC 002');
     });
   });
 
@@ -180,6 +275,21 @@ describe('CardComponent', () => {
       );
     });
 
+    it('encloses the section in a border on all four sides above the gate', () => {
+      render();
+      const gate = atRuleBody('@container card (min-width: 200px)');
+      const ability = ruleBody(gate, 'cf-ability');
+      // A four-sided shorthand, not the single edge the section used to carry.
+      expect(ability).toMatch(/(^|;)\s*border:\s*\d/);
+      expect(ability).not.toMatch(/border-(top|right|bottom|left):/);
+    });
+
+    it('draws no border below the gate, where the section is hidden', () => {
+      render();
+      const base = ruleBody(componentCss().split('@container')[0], 'cf-ability');
+      expect(base).toMatch(/(^|;)\s*border:\s*0/);
+    });
+
     it('gives each rendered card its own ability id', () => {
       const other = TestBed.createComponent(CardComponent);
       other.componentRef.setInput('card', sample);
@@ -189,9 +299,19 @@ describe('CardComponent', () => {
   });
 
   describe('rarity', () => {
-    it('states the rating on the host so the frame can reflect it', () => {
-      render({ card: card({ stars: 3 }) });
-      expect(host.getAttribute('data-rarity')).toBe('3');
+    /** Rarity is the star track's to state. The frame is ownership's channel. */
+    it('frames every rating alike', () => {
+      const frames = [1, 2, 3, 4, 5, 6].map((stars) => {
+        render({ card: card({ stars }) });
+        const frame = host.querySelector('.frame')!;
+        return {
+          host: host.getAttribute('style'),
+          hostClasses: [...host.classList].sort().join(' '),
+          frameClasses: [...frame.classList].sort().join(' '),
+        };
+      });
+      expect(new Set(frames.map((f) => JSON.stringify(f))).size).toBe(1);
+      expect(componentCss()).not.toMatch(/data-rarity|rarity-\d/);
     });
   });
 
@@ -207,7 +327,6 @@ describe('CardComponent', () => {
       expect(host.querySelector('.star')).toBeNull();
       expect(host.querySelector('.arr')).toBeNull();
       expect(host.textContent?.trim()).toBe('');
-      expect(host.getAttribute('data-rarity')).toBeNull();
     });
 
     it('marks ownership on the host', () => {

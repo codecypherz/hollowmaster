@@ -27,16 +27,20 @@
       </span>
     </span>
 
+    <!-- Each bar is a label cap plus a track. The fill is a percentage of the
+         track alone, so no value can put fill underneath the label. -->
     <span class="cf-stats" aria-hidden="true">
       <span class="stat-bar">
-        <span class="stat-track"></span>
-        <span class="stat-fill atk-fill" [style.width.%]="card()!.attack"></span>
-        <span class="stat-label">AT</span>
+        <span class="stat-cap">AT</span>
+        <span class="stat-track">
+          <span class="stat-fill atk-fill" [style.width.%]="card()!.attack"></span>
+        </span>
       </span>
       <span class="stat-bar">
-        <span class="stat-track"></span>
-        <span class="stat-fill def-fill" [style.width.%]="card()!.defense"></span>
-        <span class="stat-label">DE</span>
+        <span class="stat-cap">DE</span>
+        <span class="stat-track">
+          <span class="stat-fill def-fill" [style.width.%]="card()!.defense"></span>
+        </span>
       </span>
     </span>
 

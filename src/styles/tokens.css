@@ -103,18 +103,6 @@
   --color-plate-bg: rgba(18, 24, 42, 0.85);
   --color-plate-text: #6f82b4;
 
-  /* ── Rarity: the frame's metal, one per star rating ──────────────────────
-     Reinforcement only — the star track states rarity independently. Six runs
-     dull carapace → tarnished bronze → bone silver → gold → soul-lit gold →
-     void-touched. */
-  --color-rarity-1: #46506e;
-  --color-rarity-2: #8a6a30;
-  --color-rarity-3: #b9c4d8;
-  --color-rarity-4: #e8a03c;
-  --color-rarity-5: #ffd782;
-  --color-rarity-6: #7a2f96;
-  --color-rarity-6-shimmer: #ff8ae8;
-
   /* ── Type families ───────────────────────────────────────────────────── */
   --font-display: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
   --font-ui: 'Cinzel', Georgia, 'Times New Roman', serif;

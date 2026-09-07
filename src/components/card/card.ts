@@ -13,6 +13,30 @@ if (GRID_ORDER.length !== MODEL_DIRECTIONS.length) {
   throw new Error('Card chevron grid is out of step with the model directions');
 }
 
+/**
+ * How far the name's type scales down as the name grows, as an ordered ladder
+ * of `maxChars → factor` read top to bottom. Character count rather than a
+ * measured width: it is available synchronously, gives the same answer on every
+ * render, and does not wait on the webfont, where a measuring pass would size
+ * the first paint against a fallback and never correct. The tiers under-estimate
+ * a wide-glyph name; wrapping — never truncation — is the correction.
+ */
+const NAME_FIT_TIERS: readonly { maxChars: number; factor: number }[] = [
+  { maxChars: 15, factor: 1 },
+  { maxChars: 18, factor: 0.86 },
+  { maxChars: 32, factor: 0.66 },
+  { maxChars: 44, factor: 0.5 },
+];
+
+/**
+ * The factor for a name longer than every tier. Every factor from the third
+ * tier down is small enough that two lines fit the name row at every supported
+ * width, which is what makes wrapping — the correction for a name whose glyphs
+ * are wider than its character count suggests — a legible outcome instead of a
+ * clipped one.
+ */
+const NAME_FIT_FLOOR = 0.44;
+
 /** The five slots the star track always draws, lit or unlit. */
 const STAR_SLOTS = [1, 2, 3, 4, 5];
 
@@ -54,9 +78,7 @@ let nextAbilityId = 0;
     '[class.is-inert]': 'interactive() && !selectable()',
     '[class.is-flipped]': 'flipped()',
     '[class.is-empty]': '!card() && !faceDown()',
-    // Face-down reveals nothing, rarity included, so the attribute is withheld
-    // rather than left for the frame treatment to broadcast.
-    '[attr.data-rarity]': 'faceDown() ? null : (card()?.stars ?? null)',
+    '[style.--name-fit]': 'nameFit()',
   },
 })
 export class CardComponent {
@@ -103,6 +125,16 @@ export class CardComponent {
 
   /** A rating of exactly 6 draws one more star *outside* the five-slot track. */
   readonly showSixth = computed(() => this.card()?.stars === SIXTH_STAR);
+
+  /**
+   * The unitless scale the name's type is drawn at, from the name's own length.
+   * The card's stylesheet multiplies every term of the name's size by it, so a
+   * name that fits at one card width fits at all of them.
+   */
+  readonly nameFit = computed(() => {
+    const length = this.card()?.name.length ?? 0;
+    return NAME_FIT_TIERS.find((tier) => length <= tier.maxChars)?.factor ?? NAME_FIT_FLOOR;
+  });
 
   /** The card's number within its set, zero-padded to three: `002`. */
   readonly setNumber = computed(() => String(this.card()?.number ?? 0).padStart(3, '0'));
