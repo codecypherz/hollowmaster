@@ -29,6 +29,14 @@ yarn-error.log
 !.vscode/mcp.json
 .history/*
 
+# Playwright browser-verification output — review artifacts, never committed
+/test-results
+/playwright-report
+
+# Throwaway browser checks: inside testDir so Playwright collects them,
+# outside version control so they leave no trace.
+/e2e/scratch/
+
 # Miscellaneous
 /.angular/cache
 .sass-cache/

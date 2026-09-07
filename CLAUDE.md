@@ -13,6 +13,9 @@ npm start          # Dev server at http://localhost:4200
 ng serve           # Same as above
 ng build           # Production build to dist/
 ng test            # Run unit tests with Vitest
+npm run e2e        # Browser verification with Playwright (see below)
+npm run e2e:ui     # The same suite in Playwright's UI mode, for debugging
+npm run e2e:headed # The same suite with the browser window shown
 ng generate component components/<name>  # Scaffold a new component
 ```
 
@@ -20,7 +23,8 @@ ng generate component components/<name>  # Scaffold a new component
 
 - **Angular 21** with standalone components (no NgModules)
 - **Tailwind CSS v4** — imported via `@import "tailwindcss"` in `src/styles.css`
-- **Vitest** for unit testing
+- **Vitest** for unit testing, **@playwright/test** for browser verification — logic is
+  tested in Vitest, and only claims that need real rendering go to Playwright
 - **Prettier** — 100 char print width, single quotes; HTML uses the `angular` parser
 
 ## Architecture
@@ -40,6 +44,27 @@ public/images/            # Card artwork (webp/png)
 - The `Card` model lives in `src/model/card.ts` alongside `CARD_DB`, the static array of all cards. New cards are added there.
 - Card images are served from `public/images/` and referenced as `/images/<filename>` in the `Card` constructor.
 - Angular control flow syntax (`@for`, `@if`, `@empty`) is used in templates — not `*ngFor`/`*ngIf` directives.
+
+## Browser Verification
+
+Playwright, through the committed `playwright.config.ts`, is the required and only way this
+project drives a browser. Do not write a separate driver, launch a browser binary directly, or
+speak the DevTools protocol by hand — extend the suite in `e2e/` instead. Run it with
+`npm run e2e`, debug with `npm run e2e:ui`, and watch it with `npm run e2e:headed`.
+
+The config handles the dev server: a server already on `http://localhost:4200` is adopted and
+left running, and one the harness starts is torn down when the run ends. Nothing about a run
+requires checking the port first.
+
+Screenshots are review artifacts written to `test-results/` for a person to look at — no
+baselines are committed and nothing is compared against a stored image. One-off checks go in
+`e2e/scratch/`, which is gitignored but inside `testDir`, so a throwaway spec inherits this
+config and leaves no trace: `npm run e2e -- scratch/<name>`. Vitest remains the home for logic
+tests; the browser suite is for what only a browser can answer.
+
+What the harness owes and what the suite must cover is specified in
+`openspec/specs/tooling/browser-verification/spec.md` — that spec is the single authority, so
+read it rather than restating it here.
 
 ## Look and Feel requirements
 
