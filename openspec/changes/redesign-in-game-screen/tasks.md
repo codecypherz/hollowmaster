@@ -11,9 +11,9 @@
 
 ## 2. Arena geometry
 
-- [ ] 2.1 Add a pure geometry function (unit + scale from a viewport width and height, per `design.md` decision 1) in its own file under `src/model/`. Verify unit tests cover: a 1920×1080 viewport yields scale exactly 1 and a unit above 120px; a 1366×768 viewport clamps the unit to 120px and yields a scale below 1; a very wide short viewport is height-bound and a narrow tall one is width-bound; and the unit is never below 120px at any viewport size including 320×240.
-- [ ] 2.2 Wire the function into `Game` with a `ResizeObserver` on the host feeding a signal, writing `--cw` and `--arena-scale` onto the inner `.arena` element (never the host). Verify by resizing the browser through the fitting threshold that the values update live and that no resize loop occurs (the observer fires once per resize, not repeatedly at rest).
-- [ ] 2.3 Apply `transform: scale(var(--arena-scale))` with `transform-origin: center` on `.arena` and `overflow: hidden` on the host, rounding the scale to two decimals and omitting the transform entirely when it is 1. Verify at 1920×1080 that no transform is applied, and at 1366×768 that the whole arena is visibly scaled with all four columns intact.
+- [x] 2.1 Add a pure geometry function (unit + scale from a viewport width and height, per `design.md` decision 1) in its own file under `src/model/`. Verify unit tests cover: a 1920×1080 viewport yields scale exactly 1 and a unit above 120px; a 1366×768 viewport clamps the unit to 120px and yields a scale below 1; a very wide short viewport is height-bound and a narrow tall one is width-bound; and the unit is never below 120px at any viewport size including 320×240.
+- [x] 2.2 Wire the function into `Game` with a `ResizeObserver` on the host feeding a signal, writing `--cw` and `--arena-scale` onto the inner `.arena` element (never the host). Verify by resizing the browser through the fitting threshold that the values update live and that no resize loop occurs (the observer fires once per resize, not repeatedly at rest).
+- [x] 2.3 Apply `transform: scale(var(--arena-scale))` with `transform-origin: center` on `.arena` and `overflow: hidden` on the host, rounding the scale to two decimals and omitting the transform entirely when it is 1. Verify at 1920×1080 that no transform is applied, and at 1366×768 that the whole arena is visibly scaled with all four columns intact.
 
 ## 3. Four-column layout
 

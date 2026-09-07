@@ -38,7 +38,13 @@
   </header>
 
   <!-- ─── Main arena ─── -->
-  <div class="arena">
+  <!-- The geometry lands here, never on the host: the host is what is measured. -->
+  <div
+    class="arena"
+    [class.arena-scaled]="arenaScale() < 1"
+    [style.--cw.px]="cardUnit()"
+    [style.--arena-scale]="arenaScale()"
+  >
     <!-- Player hand -->
     <div class="hand player-hand" aria-label="Your hand">
       @for (card of s.player.hand; track $index; let i = $index) {

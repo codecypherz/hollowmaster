@@ -1,7 +1,8 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { GameService } from '../../services/game.service';
 import { CardComponent } from '../card/card';
+import { fitArena, type ArenaGeometry } from '../../model/arena';
 import { createParticleField, particleVars } from '../../model/particle';
 
 @Component({
@@ -13,11 +14,43 @@ import { createParticleField, particleVars } from '../../model/particle';
 export class Game {
   private gs = inject(GameService);
   private router = inject(Router);
+  private host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly state = computed(() => this.gs.state()!);
   readonly scores = this.gs.scores;
   readonly particles = createParticleField(14, 0xa17);
   readonly vars = particleVars;
+
+  /* The arena's fit, refreshed on every host resize. Seeded rather than left
+     empty so the first painted frame is already laid out at a sane unit; the
+     observer's initial callback replaces it with the measured one. */
+  private readonly geometry = signal<ArenaGeometry>(fitArena(1920, 1080));
+
+  /** `--cw`: a card's laid-out width, in CSS pixels. */
+  readonly cardUnit = computed(() => this.geometry().unit);
+
+  /** `--arena-scale`: the uniform viewing transform, `1` when the arena fits. */
+  readonly arenaScale = computed(() => this.geometry().scale);
+
+  constructor() {
+    /* Observe the host, write to `.arena`. The host is sized by the viewport
+       alone — `100dvh` tall, `overflow: hidden` — so nothing the geometry puts
+       on the inner element can feed back into what is being measured, and the
+       observer settles after one callback per resize instead of oscillating.
+
+       A `ResizeObserver` rather than a `window` resize listener: it also
+       catches the host changing size without the window doing so, and it
+       delivers the first measurement itself, so there is no separate
+       measure-on-init path to keep in step with this one. */
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      this.geometry.set(fitArena(width, height));
+    });
+    observer.observe(this.host.nativeElement);
+    inject(DestroyRef).onDestroy(() => observer.disconnect());
+  }
 
   onCardSelect(index: number): void {
     this.gs.selectCard(index);

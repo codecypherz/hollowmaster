@@ -4,6 +4,10 @@
   display: block;
   width: 100%;
   height: 100dvh;
+  /* The host is the measured element and the clip boundary: it takes its size
+     from the viewport alone, so the geometry written onto `.arena` inside it
+     can never feed back into the measurement. */
+  overflow: hidden;
 }
 
 .game-wrap {
@@ -115,6 +119,8 @@
 
 /* ─── Arena ──────────────────────────────────────────────────────────────── */
 
+/* `--cw` (a card's laid-out width) and `--arena-scale` are written here by the
+   component — see `src/model/arena.ts`. */
 .arena {
   position: relative;
   z-index: 10;
@@ -128,6 +134,14 @@
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Only when the viewport cannot host the arena at the card's minimum width.
+   Above that threshold the scale is exactly 1 and no transform is applied at
+   all, so the arena rasterises sharp rather than through a no-op transform. */
+.arena-scaled {
+  transform: scale(var(--arena-scale));
+  transform-origin: center;
 }
 
 /* ─── Hands ──────────────────────────────────────────────────────────────── */
