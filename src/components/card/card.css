@@ -453,21 +453,12 @@ button.frame {
   font-weight: 700;
 }
 
-/* Faint quarter gradations, so a value can be read off the track without a
-   numeral. */
+/* Unmarked ground: the fill's length is the whole reading. */
 .stat-track {
   position: relative;
   flex: 1;
   min-width: 0;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      transparent 0,
-      transparent calc(25% - 1px),
-      var(--color-stat-tick) calc(25% - 1px),
-      var(--color-stat-tick) 25%
-    ),
-    var(--color-stat-track);
+  background: var(--color-stat-track);
 }
 
 .stat-fill {
@@ -618,7 +609,7 @@ button.frame {
 
 @container card (max-width: 160px) {
   /* Filigree that cannot resolve: the frame's bevel hairlines, the window's
-     double ring, the plaque's rim, the bar gradations, the fill's specular. */
+     double ring, the plaque's rim, the fill's specular. */
   .frame {
     box-shadow:
       inset 0 0 0 1px rgba(0, 0, 0, 0.4),
@@ -649,10 +640,6 @@ button.frame {
      as one piece. Only the bevel highlight, which cannot resolve here, goes. */
   .stat-cap {
     box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.5);
-  }
-
-  .stat-track {
-    background: var(--color-stat-track);
   }
 
   .stat-fill::after {

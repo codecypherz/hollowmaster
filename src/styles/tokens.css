@@ -81,7 +81,6 @@
      an empty track or over a bright fill — no per-value contrast logic. */
   --color-stat-label: #e2ecff;
   --color-stat-label-bg: rgba(8, 12, 22, 0.82);
-  --color-stat-tick: rgba(255, 255, 255, 0.07);
 
   /* ── Star track ──────────────────────────────────────────────────────────
      An unlit slot is an empty setting, not a faded star: a dark fill in a
