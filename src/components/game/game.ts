@@ -15,6 +15,7 @@ export class Game {
   private router = inject(Router);
 
   readonly state = computed(() => this.gs.state()!);
+  readonly scores = this.gs.scores;
   readonly particles = createParticleField(14, 0xa17);
   readonly vars = particleVars;
 

@@ -20,7 +20,7 @@
   <header class="score-bar">
     <div class="score-side">
       <span class="score-name">Player 1</span>
-      <span class="score-val player-score">{{ s.player.score }}</span>
+      <span class="score-val player-score">{{ scores().player }}</span>
     </div>
 
     <div class="status-center">
@@ -32,7 +32,7 @@
     </div>
 
     <div class="score-side right">
-      <span class="score-val opponent-score">{{ s.opponent.score }}</span>
+      <span class="score-val opponent-score">{{ scores().opponent }}</span>
       <span class="score-name">Player 2</span>
     </div>
   </header>
@@ -122,11 +122,11 @@
         <div class="result-scores">
           <div class="rs-item">
             <span class="rs-label">Player 1</span>
-            <span class="rs-val">{{ s.player.score }}</span>
+            <span class="rs-val">{{ scores().player }}</span>
           </div>
           <span class="rs-sep">vs</span>
           <div class="rs-item right">
-            <span class="rs-val">{{ s.opponent.score }}</span>
+            <span class="rs-val">{{ scores().opponent }}</span>
             <span class="rs-label">Player 2</span>
           </div>
         </div>
