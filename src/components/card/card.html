@@ -48,11 +48,16 @@
          than removed, so the text stays reachable and `aria-describedby`
          keeps resolving. -->
     <span class="cf-ability">
-      <span class="cf-ability-text" [id]="abilityId">{{ card()!.ability }}</span>
+      <!-- Both floats come before the text so the text flows around them. The
+           sink reserves the box's full height less the plate's, so the plate
+           that clears it settles into the bottom-right corner instead of
+           claiming a row of its own, and the text wraps around it. -->
+      <span class="cf-sink" aria-hidden="true"></span>
       <span class="cf-plate">
         <span class="cf-set">{{ card()!.set }}</span>
         <span class="cf-number">{{ setNumber() }}</span>
       </span>
+      <span class="cf-ability-text" [id]="abilityId">{{ card()!.ability }}</span>
     </span>
   </span>
 </ng-template>

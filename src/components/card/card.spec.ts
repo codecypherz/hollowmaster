@@ -290,6 +290,19 @@ describe('CardComponent', () => {
       expect(base).toMatch(/(^|;)\s*border:\s*0/);
     });
 
+    /* The plate sits in the section's bottom-right corner rather than on a row
+       of its own; the sink float is what still keeps the text out from under
+       it, so both floats are asserted together. */
+    it('sets the collection plate in the corner, not on a row of its own', () => {
+      render();
+      const plate = ruleBody(componentCss(), 'cf-plate');
+      expect(plate).toMatch(/float:\s*right/);
+      expect(plate).toMatch(/clear:\s*right/);
+      expect(ruleBody(componentCss(), 'cf-sink')).toMatch(/float:\s*right/);
+      const gate = atRuleBody('@container card (min-width: 200px)');
+      expect(ruleBody(gate, 'cf-ability')).not.toMatch(/grid-template-rows/);
+    });
+
     it('gives each rendered card its own ability id', () => {
       const other = TestBed.createComponent(CardComponent);
       other.componentRef.setInput('card', sample);

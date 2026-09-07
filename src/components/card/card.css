@@ -22,6 +22,7 @@
   --arr: clamp(13px, 12.6cqw, 22px);
   --frame-b: clamp(2px, 2.1cqw, 5px);
   --star: clamp(5px, 6.2cqw, 13px);
+  --plate-h: clamp(7px, 4.6cqw, 12px);
 
   /* Overwritten per card by the component's length-derived name fit. */
   --name-fit: 1;
@@ -497,16 +498,9 @@ button.frame {
   overflow: hidden;
   clip-path: inset(50%);
   border: 0;
-}
-
-.cf-ability-text {
-  /* Fades rather than cutting: a line-clamp would need a line count, and the
-     right count changes with the card's width. `min-height: 0` is what lets the
-     1fr track actually shrink — a grid item's automatic minimum size would
-     otherwise let the text grow the row and push the plate over its own tail. */
-  min-height: 0;
-  overflow: hidden;
-  mask-image: linear-gradient(to bottom, #000 62%, transparent 97%);
+  /* The type lives on the section, not on the text: `.cf-ability-text` is an
+     inline box so it flows around the floats, and a block's line boxes are
+     struck from the block's own font, not its inline children's. */
   font-family: var(--font-flavor);
   font-size: clamp(6px, 4.6cqw, 11px);
   line-height: 1.35;
@@ -514,11 +508,20 @@ button.frame {
 }
 
 .cf-plate {
+  /* `clear: right` puts it below the sink, whose negative bottom margin leaves
+     exactly this height free: the corner. Raised over the section's fade so the
+     plate stays crisp where the fade is deepest. */
+  float: right;
+  clear: right;
+  position: relative;
+  z-index: 1;
   display: flex;
-  align-items: baseline;
-  justify-content: end;
+  align-items: center;
   gap: 0.4em;
-  min-width: 0;
+  height: var(--plate-h);
+  max-width: 62%;
+  /* The text wraps against this margin, so it never touches the plate. */
+  margin-left: clamp(3px, 2cqw, 6px);
   padding: 0 clamp(2px, 1.4cqw, 4px);
   border-radius: 2px;
   background: var(--color-plate-bg);
@@ -526,6 +529,15 @@ button.frame {
   font-size: clamp(5px, 3.4cqw, 8px);
   letter-spacing: 0.08em;
   color: var(--color-plate-text);
+}
+
+/* Zero-width and invisible: all it does is push the plate down. Its full height
+   less the plate's is the region the text keeps to itself. */
+.cf-sink {
+  float: right;
+  width: 0;
+  height: 100%;
+  margin-bottom: calc(-1 * var(--plate-h));
 }
 
 .cf-set {
@@ -554,12 +566,10 @@ button.frame {
   .cf-ability {
     --ability-inset: clamp(2px, 1.5cqw, 4px);
 
-    position: static;
-    display: grid;
-    /* The identity strip gets its own track rather than a corner overlay, so
-       the ability text structurally cannot run underneath it. */
-    grid-template-rows: 1fr auto;
-    gap: clamp(1px, 1cqw, 3px);
+    /* The section is the containing block for the plate's corner and the fade
+       that sits under it, and the box the floated pair is measured against. */
+    position: relative;
+    display: block;
     width: auto;
     height: auto;
     /* Held off the face's edges so all four sides read as this section's own
@@ -575,6 +585,18 @@ button.frame {
     border: 1px solid var(--color-ability-rule);
     border-radius: 2px;
     box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  }
+
+  /* Fades the cut rather than slicing it: painted over the text, under the
+     plate. Transparent to the panel's own colour, so it shows only where there
+     is text to fade. */
+  .cf-ability::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: clamp(6px, 5cqw, 14px);
+    background: linear-gradient(180deg, transparent, var(--color-ability-panel));
+    pointer-events: none;
   }
 }
 
