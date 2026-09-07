@@ -24,6 +24,15 @@
   --star: clamp(5px, 6.2cqw, 13px);
   --plate-h: clamp(7px, 4.6cqw, 12px);
 
+  /* Every section is an enclosed panel: the same rule around it, held the same
+     2px off the face's border. Sections meeting each other take half the inset
+     apiece, so every channel on the face — panel to panel and panel to border —
+     is the same 2px. */
+  --section-inset: 2px;
+  --section-gap: 1px;
+  --section-rule: 1px solid var(--color-ability-rule);
+  --section-radius: 2px;
+
   /* Overwritten per card by the component's length-derived name fit. */
   --name-fit: 1;
 
@@ -184,7 +193,6 @@ button.frame {
      The ability section is still in the DOM below the gate — it is taken out of
      flow, so it contributes nothing to track sizing either way. */
   grid-template-rows: 1fr 2.6fr 1.4fr;
-  gap: 1px;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -217,9 +225,13 @@ button.frame {
   position: relative;
   /* Tighter than the other sections' padding on purpose: the row's height is
      fixed by the grid, and what the padding does not take is what a wrapped
-     name has to live in. */
-  padding: clamp(1px, 1.6cqw, 4px) 4px;
+     name has to live in — so the padding gives back exactly what the panel's
+     inset takes. */
+  margin: var(--section-inset) var(--section-inset) var(--section-gap);
+  padding: max(0px, clamp(1px, 1.6cqw, 4px) - var(--section-inset)) calc(4px - var(--section-inset));
   background: linear-gradient(180deg, rgba(28, 38, 64, 0.9), var(--color-scrim));
+  border: var(--section-rule);
+  border-radius: var(--section-radius);
   font-family: var(--font-ui);
   font-size: clamp(
     calc(0.4rem * var(--name-fit)),
@@ -277,12 +289,12 @@ button.frame {
   background-color: var(--color-card-art);
   min-height: 0;
   overflow: hidden;
-  /* The ring is drawn by the element itself, so the window still reads as inset
-     when the artwork fails to load. */
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.8),
-    inset 0 0 0 2px var(--frame-rim),
-    inset 0 3px 10px rgba(0, 0, 0, 0.6);
+  margin: var(--section-gap) var(--section-inset);
+  border: var(--section-rule);
+  border-radius: var(--section-radius);
+  /* The depth is drawn by the element itself, so the window still reads as
+     inset when the artwork fails to load. */
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.6);
 }
 
 /* Bottom-weighted vignette seats the artwork in the frame; the top gloss is the
@@ -401,7 +413,7 @@ button.frame {
   gap: clamp(2px, 2.5cqw, 5px);
   padding: clamp(3px, 3.5cqw, 7px) clamp(3px, 3.5cqw, 6px);
   background: linear-gradient(180deg, var(--color-scrim), rgba(10, 14, 24, 0.96));
-  border-top: 1px solid var(--color-section-border);
+  margin: var(--section-gap) var(--section-inset);
   justify-content: center;
   overflow: hidden;
 }
@@ -565,8 +577,6 @@ button.frame {
   }
 
   .cf-ability {
-    --ability-inset: clamp(2px, 1.5cqw, 4px);
-
     /* The section is the containing block for the plate's corner and the fade
        that sits under it, and the box the floated pair is measured against. */
     position: relative;
@@ -576,15 +586,15 @@ button.frame {
     /* Held off the face's edges so all four sides read as this section's own
        border rather than as the face's rim. The padding gives back exactly what
        the inset takes, so the text keeps the room it had. */
-    margin: var(--ability-inset);
-    padding: calc(clamp(3px, 3cqw, 7px) - var(--ability-inset))
-      calc(clamp(3px, 3.5cqw, 7px) - var(--ability-inset));
+    margin: var(--section-gap) var(--section-inset) var(--section-inset);
+    padding: calc(clamp(3px, 3cqw, 7px) - var(--section-inset))
+      calc(clamp(3px, 3.5cqw, 7px) - var(--section-inset));
     overflow: hidden;
     clip-path: none;
     min-height: 0;
     background: var(--color-ability-panel);
-    border: 1px solid var(--color-ability-rule);
-    border-radius: 2px;
+    border: var(--section-rule);
+    border-radius: var(--section-radius);
     box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
   }
 
@@ -620,7 +630,7 @@ button.frame {
   }
 
   .cf-img {
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.75);
+    box-shadow: none;
   }
 
   .cf-img::after {
@@ -686,8 +696,10 @@ button.frame {
   border-color: var(--color-section-border-crimson);
 }
 
-:host(.owner-opponent) .cf-stats {
-  border-top-color: var(--color-section-border-crimson);
+:host(.owner-opponent) .cf-name,
+:host(.owner-opponent) .cf-img,
+:host(.owner-opponent) .cf-ability {
+  border-color: var(--color-section-border-crimson);
 }
 
 /* ─── Interaction ─────────────────────────────────────────────────────────── */

@@ -280,8 +280,21 @@ describe('CardComponent', () => {
       const gate = atRuleBody('@container card (min-width: 200px)');
       const ability = ruleBody(gate, 'cf-ability');
       // A four-sided shorthand, not the single edge the section used to carry.
-      expect(ability).toMatch(/(^|;)\s*border:\s*\d/);
+      expect(ability).toMatch(/(^|;)\s*border:\s*var\(--section-rule\)/);
       expect(ability).not.toMatch(/border-(top|right|bottom|left):/);
+    });
+
+    /* The name, image, and ability sections are one treatment: they take the
+       same rule from the same custom property rather than three that happen to
+       look alike, and none of them carries an edge of its own. */
+    it('rules the name and image sections exactly as it rules the ability', () => {
+      render();
+      const css = componentCss();
+      for (const section of ['cf-name', 'cf-img']) {
+        const body = ruleBody(css, section);
+        expect(body).toMatch(/(^|;)\s*border:\s*var\(--section-rule\)/);
+        expect(body).not.toMatch(/border-(top|right|bottom|left):/);
+      }
     });
 
     it('draws no border below the gate, where the section is hidden', () => {
