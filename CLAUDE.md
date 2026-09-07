@@ -48,11 +48,9 @@ That spec is the single authority: aspect ratio, sections, chevrons, stars, stat
 frame craft, rarity, and the card's minimum supported width all live there, and board
 tiles follow the card. Do not restate those constraints here — read the spec instead.
 
-The in-game screen has no spec of its own yet. Until the in-game rework writes one, these
-constraints are **provisional** and live here:
-
-- The theme needs to be Hollow Knight
-- The in-game UI needs to fit on the screen without clipping.
-- The in-game UI needs to take up as much space as possible.
-- The in-game UI player cards and opponent cards must always be visible. Do not let them be clipped.
-- The in-game UI board and all cards must always be visible.
+The in-game screen is specified in `openspec/specs/game/screen/spec.md` (its four-column
+arena, the standing panel and Retreat control, the card inspector, how the arena is fitted to
+the viewport, and the motion that carries a turn) and `openspec/specs/game/rules/spec.md`
+(the board's dimensions, the deal, turns, capture, score, and how a match ends). Those specs
+are the single authority for that screen the same way the card spec is for the card — read
+them rather than restating their constraints here.

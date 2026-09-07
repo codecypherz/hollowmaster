@@ -1,0 +1,81 @@
+/* ─── Hand rack ───────────────────────────────────────────────────────────────
+   Nine positions in `2cw + g` of width and the board's full height: five in the
+   outer sub-column, four in the inner one hung half a position lower. The
+   positions are placed rather than flowed, so a played position keeps its place
+   instead of the rest closing up over it.
+
+   Every length is a multiple of the arena's `--cw` / `--ch` / `--g`, inherited
+   from the arena, and the vertical inset matches the board's own edge so the
+   rack's rows line up with the board's rows.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  --step-y: calc(var(--ch) + var(--g));
+  --step-x: calc(var(--cw) + var(--g));
+
+  position: relative;
+  display: block;
+  width: var(--rack-w);
+  height: var(--board-h);
+}
+
+.slot {
+  position: absolute;
+  width: var(--cw);
+  height: var(--ch);
+  /* The inner sub-column hangs half a position lower, so the two interleave. */
+  top: calc(var(--g) + var(--row) * var(--step-y) + var(--col) * var(--step-y) / 2);
+  left: calc(var(--col) * var(--step-x));
+  border-radius: 4px;
+}
+
+/* Mirrored: the outer sub-column is always the one away from the board. */
+:host(.side-opponent) .slot {
+  left: auto;
+  right: calc(var(--col) * var(--step-x));
+}
+
+.slot-empty {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+/* The position whose card is being read. Quiet and gold — deliberately not the
+   selection's lit soul-blue, so a card that is selected and a card that is
+   merely being read are told apart at a glance. */
+.slot.is-reading {
+  outline: 1px solid var(--color-gold-dim);
+  outline-offset: 2px;
+}
+
+/* ─── The deal ────────────────────────────────────────────────────────────────
+   The cards are created once, when the hand is dealt, so the entrance plays
+   then and only then. Its delay is the position's own index times the one
+   stagger token — nothing here sets a pace of its own.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.slot app-card {
+  animation: dealIn var(--dur-entrance) var(--ease-out-soft) both;
+  /* The arena declares the pace; the token is the fallback for a rack
+     rendered outside one. */
+  animation-delay: calc(var(--index) * var(--stagger, var(--dur-stagger)));
+}
+
+@keyframes dealIn {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--ch) * -0.25)) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .slot app-card {
+    animation: none;
+  }
+}

@@ -55,8 +55,13 @@
 
   --rack-w: calc(2 * var(--cw) + var(--g));
   --board-edge: calc(var(--g) - 1px); /* padding + the 1px rule = one gutter */
-  --board-w: calc(5 * var(--cw) + 6 * var(--g));
-  --board-h: calc(5 * var(--ch) + 6 * var(--g));
+  --board-w: calc(var(--n) * var(--cw) + 6 * var(--g));
+  --board-h: calc(var(--n) * var(--ch) + 6 * var(--g));
+
+  /* The one pace on this screen. Every delay anywhere in the arena — the deal,
+     the capture chain — is an element's own index times this, so the whole
+     choreography retunes from here and from the duration tokens it borrows. */
+  --stagger: var(--dur-stagger);
 
   position: relative;
   z-index: 10;
@@ -85,87 +90,14 @@
   min-height: 0;
 }
 
-.standing {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.9rem 0.75rem;
-  border: 1px solid var(--color-gold-dim);
-  box-shadow: var(--elev-board);
-  flex-shrink: 0;
-}
+/* ─── Inspector ──────────────────────────────────────────────────────────────
+   The codex gives the inspector two card units of width — above the card
+   renderer's 200px ability gate at every unit the geometry can produce, and
+   twice the width of any card in a hand or on the board, so the card being read
+   is always the largest one on the screen. The slot holds that box whether or
+   not a card is in it; see `card-inspector`.
+   ──────────────────────────────────────────────────────────────────────────── */
 
-.standing-side {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.6rem;
-  width: 100%;
-  opacity: 0.55;
-}
-
-.standing-side.is-active {
-  opacity: 1;
-}
-
-.standing-name {
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-text-bright);
-}
-
-.standing-score {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.player-score {
-  color: var(--color-soul);
-  text-shadow: 0 0 14px var(--color-soul-glow);
-}
-
-.opponent-score {
-  color: var(--color-crimson);
-  text-shadow: 0 0 14px var(--color-crimson-glow);
-}
-
-.standing-status {
-  min-height: 1rem;
-  text-align: center;
-}
-
-.status-text {
-  font-size: 0.6rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--color-soul);
-  animation: statusPulse var(--dur-breathe) ease-in-out infinite;
-}
-
-.status-text.opponent-phase {
-  color: var(--color-crimson);
-}
-
-@keyframes statusPulse {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* ─── Inspector ──────────────────────────────────────────────────────────── */
-
-/* The slot holds the inspector's box whether or not a card is in it, so the
-   other three columns sit in the same place before and after the first
-   inspection. Two card units wide — comfortably above the renderer's 200px
-   ability gate at every unit the geometry can produce. */
 .inspector-slot {
   flex: 1;
   min-height: 0;
@@ -174,70 +106,15 @@
   justify-content: center;
 }
 
-.inspector {
+.inspector-slot app-card-inspector {
   width: calc(2 * var(--cw));
-  height: calc(2 * var(--ch));
-}
-
-.inspector-resting {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  border: 1px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.015);
-}
-
-.inspector-rune {
-  width: calc(var(--cw) / 4);
-  height: calc(var(--cw) / 4);
-  border: 1px solid var(--color-gold-dim);
-  transform: rotate(45deg);
-  opacity: 0.5;
-}
-
-.inspector-hint {
-  font-family: var(--font-flavor);
-  font-size: 0.7rem;
-  font-style: italic;
-  color: var(--color-text-dim);
-}
-
-/* ─── Hand racks ─────────────────────────────────────────────────────────── */
-
-/* Nine positions do not make a rectangle: five fill the outer sub-column and
-   four the inner one, so the rack spans exactly the board's five rows. */
-.rack {
-  display: grid;
-  grid-template-columns: repeat(2, var(--cw));
-  grid-template-rows: repeat(5, var(--ch));
-  grid-auto-flow: column;
-  gap: var(--g);
-  width: var(--rack-w);
-  height: calc(5 * var(--ch) + 4 * var(--g));
-  align-self: center;
-}
-
-.hand-slot {
-  width: var(--cw);
-  height: var(--ch);
-}
-
-.slot-empty {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
 }
 
 /* ─── Board ──────────────────────────────────────────────────────────────── */
 
 .board {
   display: grid;
-  grid-template: repeat(5, var(--ch)) / repeat(5, var(--cw));
+  grid-template: repeat(var(--n), var(--ch)) / repeat(var(--n), var(--cw));
   gap: var(--g);
   padding: var(--board-edge);
   width: var(--board-w);
@@ -273,6 +150,56 @@
   border-width: 0 1px 1px 0;
 }
 
+/* ─── Board cells ─────────────────────────────────────────────────────────────
+   Every cell is a button: an empty one is where a card is played, an occupied
+   one is a card to read, and both have to be reachable by keyboard. The tile's
+   look is the `board-cell` primitive's; all that is needed here is to undo what
+   the button element brings with it.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.board-cell {
+  appearance: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+}
+
+.cell-occupied {
+  cursor: pointer;
+}
+
+.board-cell:focus-visible {
+  outline: 2px solid var(--color-soul);
+  outline-offset: 2px;
+  z-index: 3;
+}
+
+/* Placement travel. The offset from the hand slot the card was played out of is
+   measured and written here by the component; the cell animates from there back
+   to zero, carrying the real card — which is therefore interactive the whole
+   way. */
+.board-cell.is-flying {
+  z-index: 4;
+  animation: flyIn var(--dur-slow) var(--ease-out-soft) both;
+}
+
+@keyframes flyIn {
+  from {
+    transform: translate(var(--fly-x, 0), var(--fly-y, 0));
+  }
+  to {
+    transform: translate(0, 0);
+  }
+}
+
+/* Capture chains turn in the order they fell: each captured cell hands the card
+   its place in the chain, and the card's own flip waits that many staggers. */
+.cell-occupied {
+  --flip-delay: calc(var(--flip-index, 0) * var(--stagger));
+}
+
 /* ─── Board logo background ──────────────────────────────────────────────── */
 
 .board-logo {
@@ -286,13 +213,16 @@
   z-index: 0;
   gap: 0;
   user-select: none;
-  opacity: 0.5;
+  /* Held low: the board is five cards wide now, so the mark spans much more of
+     it than it did, and anything brighter reads through the cards that sit on
+     top of it. */
+  opacity: 0.14;
 }
 
 .board-logo-hollow {
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: calc(var(--cw) * 0.55);
+  font-size: calc(var(--board-w) * 0.115);
   color: var(--color-soul);
   text-shadow: 0 0 24px var(--color-soul-glow);
   letter-spacing: 0.18em;
@@ -303,7 +233,7 @@
 .board-logo-master {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: calc(var(--cw) * 0.66);
+  font-size: calc(var(--board-w) * 0.138);
   color: var(--color-gold);
   text-shadow: 0 0 20px rgba(224, 144, 48, 0.6);
   letter-spacing: 0.18em;
@@ -311,8 +241,6 @@
   line-height: 1.1;
 }
 
-/* Owner colors on board cells */
-/* Flip animation when card is captured */
 /* ─── Game Over overlay ──────────────────────────────────────────────────── */
 
 .overlay {
@@ -430,4 +358,20 @@
   gap: 1rem;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────────────────────
+   Every state the choreography carries has to survive the choreography being
+   taken away: the placed card is simply in its cell, the captured cards are
+   simply their new owner's, the overlay is simply there. The ambient field and
+   the mist are already stilled by the primitives; the screen's own motion is
+   stilled here, and each component stills its own.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .board-cell.is-flying,
+  .overlay,
+  .overlay-inner {
+    animation: none;
+  }
 }

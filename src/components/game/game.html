@@ -23,64 +23,36 @@
     [class.arena-scaled]="arenaScale() < 1"
     [style.--cw.px]="cardUnit()"
     [style.--arena-scale]="arenaScale()"
+    [style.--n]="boardSize"
   >
     <!-- ── Column 1: the codex ── -->
     <aside class="codex">
-      <section class="standing" aria-label="Standing">
-        <div class="standing-side" [class.is-active]="s.phase === 'player-turn'">
-          <span class="standing-name">Player 1</span>
-          <span class="standing-score player-score">{{ scores().player }}</span>
-        </div>
-
-        <div class="standing-status">
-          @if (s.phase !== 'game-over') {
-            <span class="status-text" [class.opponent-phase]="s.phase === 'opponent-turn'">
-              {{ statusText() }}
-            </span>
-          }
-        </div>
-
-        <div class="standing-side" [class.is-active]="s.phase === 'opponent-turn'">
-          <span class="standing-name">Player 2</span>
-          <span class="standing-score opponent-score">{{ scores().opponent }}</span>
-        </div>
-
-        <button class="hk-btn" (click)="exitGame()">Retreat</button>
-      </section>
+      <app-scoreboard
+        [playerScore]="scores().player"
+        [opponentScore]="scores().opponent"
+        [activeSide]="activeSide()"
+        [status]="statusText()"
+        (retreat)="exitGame()"
+      />
 
       <!-- The inspected card, rendered above the card renderer's 200px ability
-           gate. The resting state holds the same box, so the columns do not
-           shift when the first card is inspected. -->
+           gate. The inspector holds its box whether or not a card is in it, so
+           the columns do not shift when the first card is inspected. -->
       <div class="inspector-slot">
-        <div class="inspector" aria-live="polite">
-          @if (s.inspected; as card) {
-            <app-card [card]="card" />
-          } @else {
-            <div class="inspector-resting">
-              <span class="inspector-rune" aria-hidden="true"></span>
-              <span class="inspector-hint">Touch a card to read it</span>
-            </div>
-          }
-        </div>
+        <app-card-inspector [card]="s.inspected" />
       </div>
     </aside>
 
     <!-- ── Column 2: Player 1's hand ── -->
-    <div class="rack rack-player" aria-label="Your hand">
-      @for (card of s.player.hand; track $index; let i = $index) {
-        <div class="hand-slot" [class.slot-empty]="!card" [style.--i]="i">
-          @if (card) {
-            <app-card
-              [card]="card"
-              interactive
-              [selected]="s.selectedCardIndex === i"
-              [selectable]="s.phase === 'player-turn'"
-              (select)="onCardSelect(i)"
-            />
-          }
-        </div>
-      }
-    </div>
+    <app-hand-rack
+      class="rack-player"
+      aria-label="Your hand"
+      [cards]="s.player.hand"
+      side="player"
+      [selectedIndex]="s.selectedCardIndex"
+      [inspected]="s.inspected"
+      (activate)="onHandActivate($event)"
+    />
 
     <!-- ── Column 3: the board ── -->
     <div class="board" aria-label="Game board">
@@ -92,34 +64,39 @@
 
       @for (row of s.board; track $index; let ri = $index) {
         @for (cell of row; track $index; let ci = $index) {
-          <div
+          <!-- One control per cell, whether it holds a card or not: an empty
+               cell is where a card is played and an occupied one is a card to
+               read, and both have to be reachable by keyboard. An occupied
+               cell takes its accessible name from the card inside it. -->
+          <button
+            type="button"
             class="board-cell"
+            [attr.data-cell]="ri + '-' + ci"
             [class.cell-occupied]="!!cell"
             [class.cell-empty]="!cell"
             [class.cell-placeable]="isPlaceable(ri, ci)"
-            (click)="onCellClick(ri, ci)"
-            [attr.aria-label]="cell ? null : 'Empty cell'"
+            [style.--flip-index]="flipIndex(ri, ci)"
+            (click)="onCellActivate(ri, ci)"
+            [attr.aria-label]="cell ? null : cellLabel(ri, ci)"
           >
             @if (cell) {
               <app-card [card]="cell.card" [owner]="cell.owner" [flipped]="isFlipped(ri, ci)" />
             } @else {
-              <div class="cell-rune" aria-hidden="true"></div>
+              <span class="cell-rune" aria-hidden="true"></span>
             }
-          </div>
+          </button>
         }
       }
     </div>
 
     <!-- ── Column 4: Player 2's hand (face-down) ── -->
-    <div class="rack rack-opponent" aria-label="Opponent hand">
-      @for (card of s.opponent.hand; track $index; let i = $index) {
-        <div class="hand-slot" [class.slot-empty]="!card" [style.--i]="i">
-          @if (card) {
-            <app-card faceDown />
-          }
-        </div>
-      }
-    </div>
+    <app-hand-rack
+      class="rack-opponent"
+      aria-label="Opponent hand"
+      [cards]="s.opponent.hand"
+      side="opponent"
+      faceDown
+    />
   </div>
   <!-- /arena -->
 

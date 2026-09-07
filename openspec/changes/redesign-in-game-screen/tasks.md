@@ -24,59 +24,59 @@
 
 ## 4. Scoreboard
 
-- [ ] 4.1 Create `src/components/scoreboard/` rendering both players' names and scores plus the Retreat control, taking the scores and the active side as inputs and emitting a retreat event. Verify it renders 9 and 9 at the start of a match and both values update after a capture.
-- [ ] 4.2 Mark the active player with a non-colour cue alongside the colour (a pip, a rule, or a mark). Verify in a greyscale screenshot that the active side is still identifiable.
-- [ ] 4.3 Wire Retreat to `GameService.exitGame()` and navigation back to `/battle`. Verify retreating mid-match returns to Battle and that navigating directly to `/game` afterwards redirects to `/battle`.
-- [ ] 4.4 Add the score count-up stepper, snapping instead of stepping under `prefers-reduced-motion`. Verify a capture of three cards visibly counts rather than jumping, and that with reduced motion requested the new value appears immediately.
+- [x] 4.1 Create `src/components/scoreboard/` rendering both players' names and scores plus the Retreat control, taking the scores and the active side as inputs and emitting a retreat event. Verify it renders 9 and 9 at the start of a match and both values update after a capture.
+- [x] 4.2 Mark the active player with a non-colour cue alongside the colour (a pip, a rule, or a mark). Verify in a greyscale screenshot that the active side is still identifiable.
+- [x] 4.3 Wire Retreat to `GameService.exitGame()` and navigation back to `/battle`. Verify retreating mid-match returns to Battle and that navigating directly to `/game` afterwards redirects to `/battle`.
+- [x] 4.4 Add the score count-up stepper, snapping instead of stepping under `prefers-reduced-motion`. Verify a capture of three cards visibly counts rather than jumping, and that with reduced motion requested the new value appears immediately.
 
 ## 5. Card inspector
 
-- [ ] 5.1 Create `src/components/card-inspector/` rendering the inspected card through `app-card` at a width the geometry guarantees is ≥200px. Verify the inspected card shows its ability text, set, and number, and that it is visibly larger than any hand or board card.
-- [ ] 5.2 Give the inspector a resting state for "nothing inspected yet" that occupies the same box as a rendered card. Verify the other three columns sit in identical positions before and after the first inspection.
-- [ ] 5.3 Make hand cards and board cards inspectable: a hand card's activation calls both `selectCard` and `inspect`, a board card's calls `inspect` only. Verify that inspecting a board card while a hand card is selected leaves the hand selection intact and visibly selected.
-- [ ] 5.4 Verify a face-down opponent card reveals nothing: activating one renders nothing about it anywhere and leaves the inspector showing its previous card.
-- [ ] 5.5 Verify inspection is available out of turn and after the match: inspect a board card while the opponent is moving, and again once the result overlay is showing.
-- [ ] 5.6 Verify keyboard reach: tab to a hand card and to a board card, activate each with Enter and Space, and confirm the inspector updates both times.
+- [x] 5.1 Create `src/components/card-inspector/` rendering the inspected card through `app-card` at a width the geometry guarantees is ≥200px. Verify the inspected card shows its ability text, set, and number, and that it is visibly larger than any hand or board card.
+- [x] 5.2 Give the inspector a resting state for "nothing inspected yet" that occupies the same box as a rendered card. Verify the other three columns sit in identical positions before and after the first inspection.
+- [x] 5.3 Make hand cards and board cards inspectable: a hand card's activation calls both `selectCard` and `inspect`, a board card's calls `inspect` only. Verify that inspecting a board card while a hand card is selected leaves the hand selection intact and visibly selected.
+- [x] 5.4 Verify a face-down opponent card reveals nothing: activating one renders nothing about it anywhere and leaves the inspector showing its previous card.
+- [x] 5.5 Verify inspection is available out of turn and after the match: inspect a board card while the opponent is moving, and again once the result overlay is showing.
+- [x] 5.6 Verify keyboard reach: tab to a hand card and to a board card, activate each with Enter and Space, and confirm the inspector updates both times.
 
 ## 6. Hand racks
 
-- [ ] 6.1 Create `src/components/hand-rack/` taking the nine hand slots and a `side` input, laying them out as 5 outer + 4 inner positions with the inner column offset by half a position, mirrored for the opponent. Verify both hands render nine positions in the same arrangement and that the rack's height matches the board's.
-- [ ] 6.2 Use the rack for both hands in `game.html` and delete the two divergent hand treatments (`.player-hand` grid and the absolutely positioned `.opponent-hand`) from `game.css`. Verify a repo search finds no remaining per-side hand layout rules.
-- [ ] 6.3 Render the opponent's rack face-down via `app-card`'s `faceDown` input. Verify no opponent card's name, art, stars, stats, chevrons, ability, or set appears in the DOM.
-- [ ] 6.4 Verify a played position stays in place: play three cards and confirm the remaining six have not moved and the three emptied positions still occupy their slots.
+- [x] 6.1 Create `src/components/hand-rack/` taking the nine hand slots and a `side` input, laying them out as 5 outer + 4 inner positions with the inner column offset by half a position, mirrored for the opponent. Verify both hands render nine positions in the same arrangement and that the rack's height matches the board's.
+- [x] 6.2 Use the rack for both hands in `game.html` and delete the two divergent hand treatments (`.player-hand` grid and the absolutely positioned `.opponent-hand`) from `game.css`. Verify a repo search finds no remaining per-side hand layout rules.
+- [x] 6.3 Render the opponent's rack face-down via `app-card`'s `faceDown` input. Verify no opponent card's name, art, stars, stats, chevrons, ability, or set appears in the DOM.
+- [x] 6.4 Verify a played position stays in place: play three cards and confirm the remaining six have not moved and the three emptied positions still occupy their slots.
 
 ## 7. Board
 
-- [ ] 7.1 Expand the board to a 5×5 grid of `--cw` × `--ch` cells reading `BOARD_SIZE` rather than a hardcoded template. Verify 25 cells render and the board's outer dimensions are `5cw` by `5ch` plus gaps and padding.
-- [ ] 7.2 Keep empty cells as the lightweight rune element rather than an `app-card`, and confirm placement still targets them. Verify the DOM holds at most 19 `app-card` elements in the board area during a match, and that clicking an empty cell with a card selected places it.
-- [ ] 7.3 Retune the board's ornament and the `HOLLOW MASTER` watermark for the 5×5 footprint. Verify the watermark sits behind the cells at low emphasis and never overlaps a placed card's content.
+- [x] 7.1 Expand the board to a 5×5 grid of `--cw` × `--ch` cells reading `BOARD_SIZE` rather than a hardcoded template. Verify 25 cells render and the board's outer dimensions are `5cw` by `5ch` plus gaps and padding.
+- [x] 7.2 Keep empty cells as the lightweight rune element rather than an `app-card`, and confirm placement still targets them. Verify the DOM holds at most 19 `app-card` elements in the board area during a match, and that clicking an empty cell with a card selected places it.
+- [x] 7.3 Retune the board's ornament and the `HOLLOW MASTER` watermark for the 5×5 footprint. Verify the watermark sits behind the cells at low emphasis and never overlaps a placed card's content.
 
 ## 8. Motion
 
-- [ ] 8.1 Declare one local `--stagger` and drive every delay as `calc(var(--index) * var(--stagger))`, taking durations and easings from the existing `--dur-*` / `--ease-*` tokens. Verify a repo search of `game.css` and the three new components' stylesheets finds no literal `ms`/`s` duration or inline cubic-bezier.
-- [ ] 8.2 Animate the deal: both hands' cards arrive into their positions staggered by slot index. Verify the cards arrive in sequence rather than at once, and that a card is selectable the moment it is visible mid-deal.
-- [ ] 8.3 Animate selection: the selected hand card rises out of the rack with a lit treatment distinguishable from the merely inspected card. Verify a selected card and a different inspected card are simultaneously distinguishable on screen.
-- [ ] 8.4 Animate placement travel: on placement, measure the source slot and destination cell, write `--fly-x` / `--fly-y` to the destination, and animate the landed card from that offset to zero. Verify the card is seen moving from hand to cell, and that the landed card is immediately interactive (inspectable) while the animation is still running.
-- [ ] 8.5 Animate captures in chain order using each flipped cell's index in `lastFlipped` as its delay index. Verify a placement that captures three cards in a chain turns them in capture order rather than simultaneously.
-- [ ] 8.6 Animate the inspector transition by keying the rendered node on the inspected card's identity so the enter animation restarts. Verify switching between two cards cross-fades and that neither the codex column nor the other three columns shift during the transition.
-- [ ] 8.7 Animate the turn hand-off in the scoreboard. Verify a visible state change occurs when the turn passes in each direction.
-- [ ] 8.8 Verify motion never gates interaction: select and place a card while deal animations are still playing, place the next card while capture animations from the previous placement are still running, and activate Retreat mid-animation — all three must be accepted.
+- [x] 8.1 Declare one local `--stagger` and drive every delay as `calc(var(--index) * var(--stagger))`, taking durations and easings from the existing `--dur-*` / `--ease-*` tokens. Verify a repo search of `game.css` and the three new components' stylesheets finds no literal `ms`/`s` duration or inline cubic-bezier.
+- [x] 8.2 Animate the deal: both hands' cards arrive into their positions staggered by slot index. Verify the cards arrive in sequence rather than at once, and that a card is selectable the moment it is visible mid-deal.
+- [x] 8.3 Animate selection: the selected hand card rises out of the rack with a lit treatment distinguishable from the merely inspected card. Verify a selected card and a different inspected card are simultaneously distinguishable on screen.
+- [x] 8.4 Animate placement travel: on placement, measure the source slot and destination cell, write `--fly-x` / `--fly-y` to the destination, and animate the landed card from that offset to zero. Verify the card is seen moving from hand to cell, and that the landed card is immediately interactive (inspectable) while the animation is still running.
+- [x] 8.5 Animate captures in chain order using each flipped cell's index in `lastFlipped` as its delay index. Verify a placement that captures three cards in a chain turns them in capture order rather than simultaneously.
+- [x] 8.6 Animate the inspector transition by keying the rendered node on the inspected card's identity so the enter animation restarts. Verify switching between two cards cross-fades and that neither the codex column nor the other three columns shift during the transition.
+- [x] 8.7 Animate the turn hand-off in the scoreboard. Verify a visible state change occurs when the turn passes in each direction.
+- [x] 8.8 Verify motion never gates interaction: select and place a card while deal animations are still playing, place the next card while capture animations from the previous placement are still running, and activate Retreat mid-animation — all three must be accepted.
 
 ## 9. Reduced motion and accessibility
 
-- [ ] 9.1 Add a `prefers-reduced-motion` block covering the deal, selection, travel, capture, inspector, hand-off, score, and ambient particles for this screen. Verify with the preference set that the screen renders finished immediately, every column and control is present and interactive, and no scrollbar appears.
-- [ ] 9.2 Verify state changes stay perceivable without motion: with reduced motion set, confirm a placement, a capture, and a turn hand-off are each still noticeable from the resulting static state.
-- [ ] 9.3 Verify the screen's accessible names and roles: the board cells, both hands, the scoreboard, the Retreat control, and the inspector each announce sensibly, and the opponent's face-down cards expose nothing about their cards.
+- [x] 9.1 Add a `prefers-reduced-motion` block covering the deal, selection, travel, capture, inspector, hand-off, score, and ambient particles for this screen. Verify with the preference set that the screen renders finished immediately, every column and control is present and interactive, and no scrollbar appears.
+- [x] 9.2 Verify state changes stay perceivable without motion: with reduced motion set, confirm a placement, a capture, and a turn hand-off are each still noticeable from the resulting static state.
+- [x] 9.3 Verify the screen's accessible names and roles: the board cells, both hands, the scoreboard, the Retreat control, and the inspector each announce sensibly, and the opponent's face-down cards expose nothing about their cards.
 
 ## 10. Documentation
 
-- [ ] 10.1 Delete the provisional "in-game screen" bullet list from `CLAUDE.md` and point at `openspec/specs/game/screen/spec.md` and `openspec/specs/game/rules/spec.md` the way the card bullets already point at the card spec. Verify `CLAUDE.md` no longer states any in-game constraint of its own.
-- [ ] 10.2 Add the in-game screen's new pieces to the style guide if it enumerates components; otherwise confirm it needs no change. Verify the style guide still builds and renders.
+- [x] 10.1 Delete the provisional "in-game screen" bullet list from `CLAUDE.md` and point at `openspec/specs/game/screen/spec.md` and `openspec/specs/game/rules/spec.md` the way the card bullets already point at the card spec. Verify `CLAUDE.md` no longer states any in-game constraint of its own.
+- [x] 10.2 Add the in-game screen's new pieces to the style guide if it enumerates components; otherwise confirm it needs no change. Verify the style guide still builds and renders.
 
 ## 11. Verification
 
-- [ ] 11.1 Run `ng test` and confirm the whole suite passes, including the new geometry, service, and inspector tests.
-- [ ] 11.2 Run `ng build` and confirm it succeeds with no new warnings.
-- [ ] 11.3 Play a full match end to end at 1920×1080: verify 9/9 at the start, scores summing to 18 throughout, 18 cards placed, 7 cells empty at the end, a correct result, and no clipping or scrollbar at any point.
-- [ ] 11.4 Repeat the full match at 1366×768 with the arena scaled, and confirm every column, hand position, and cell stays visible and interactive under the scale.
-- [ ] 11.5 Verify against `specs/design-system/card/spec.md`: every card on the screen is laid out at ≥120px, the inspector's card is laid out at ≥200px and shows its ability section, and the scaled arena has not changed any card's internal gate decisions.
+- [x] 11.1 Run `ng test` and confirm the whole suite passes, including the new geometry, service, and inspector tests.
+- [x] 11.2 Run `ng build` and confirm it succeeds with no new warnings.
+- [x] 11.3 Play a full match end to end at 1920×1080: verify 9/9 at the start, scores summing to 18 throughout, 18 cards placed, 7 cells empty at the end, a correct result, and no clipping or scrollbar at any point.
+- [x] 11.4 Repeat the full match at 1366×768 with the arena scaled, and confirm every column, hand position, and cell stays visible and interactive under the scale.
+- [x] 11.5 Verify against `specs/design-system/card/spec.md`: every card on the screen is laid out at ≥120px, the inspector's card is laid out at ≥200px and shows its ability section, and the scaled arena has not changed any card's internal gate decisions.

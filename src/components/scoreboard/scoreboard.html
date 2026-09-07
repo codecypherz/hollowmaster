@@ -1,0 +1,32 @@
+<section class="standing" aria-label="Standing">
+  <!-- The active side is marked three ways — the pip is drawn, the rule is
+       lit, and the row comes to full strength — so the turn survives being
+       read without colour. -->
+  <div class="side" [class.is-active]="activeSide() === 'player'">
+    <span class="pip" aria-hidden="true"></span>
+    <span class="name">Player 1</span>
+    @if (activeSide() === 'player') {
+      <span class="sr-only">, to play</span>
+    }
+    <span class="score score-player">{{ playerShown() }}</span>
+  </div>
+
+  <div class="status" aria-live="polite">
+    @if (status()) {
+      <span class="status-text" [class.status-opponent]="activeSide() === 'opponent'">
+        {{ status() }}
+      </span>
+    }
+  </div>
+
+  <div class="side" [class.is-active]="activeSide() === 'opponent'">
+    <span class="pip" aria-hidden="true"></span>
+    <span class="name">Player 2</span>
+    @if (activeSide() === 'opponent') {
+      <span class="sr-only">, to play</span>
+    }
+    <span class="score score-opponent">{{ opponentShown() }}</span>
+  </div>
+
+  <button class="hk-btn" type="button" (click)="retreat.emit()">Retreat</button>
+</section>

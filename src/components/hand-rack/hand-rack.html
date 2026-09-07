@@ -1,0 +1,24 @@
+@for (slot of slots(); track slot.index) {
+  <div
+    class="slot"
+    [class.slot-empty]="!slot.card"
+    [class.is-reading]="!!slot.card && slot.card === inspected()"
+    [style.--col]="slot.col"
+    [style.--row]="slot.row"
+    [style.--index]="slot.index"
+  >
+    @if (slot.card) {
+      @if (faceDown()) {
+        <app-card faceDown />
+      } @else {
+        <app-card
+          [card]="slot.card"
+          interactive
+          selectable
+          [selected]="selectedIndex() === slot.index"
+          (select)="activate.emit(slot.index)"
+        />
+      }
+    }
+  </div>
+}

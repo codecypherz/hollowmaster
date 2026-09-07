@@ -1,0 +1,134 @@
+/* ─── Standing panel ───────────────────────────────────────────────────────
+   Sized from the codex column it sits in, so it takes no length of its own
+   beyond its own padding. Every duration and easing comes from the project's
+   motion tokens — nothing here declares its own pace. */
+
+:host {
+  display: block;
+}
+
+.standing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 0.75rem;
+  border: 1px solid var(--color-gold-dim);
+  box-shadow: var(--elev-board);
+}
+
+.side {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  padding-bottom: 0.2rem;
+  opacity: 0.5;
+  border-bottom: 1px solid transparent;
+  transition:
+    opacity var(--dur-base) ease,
+    border-color var(--dur-base) ease;
+}
+
+/* The hand-off: the class arriving is what starts the animation, so the turn
+   passing in either direction plays it on the side that has just taken it. */
+.side.is-active {
+  opacity: 1;
+  border-bottom-color: var(--color-gold-dim);
+  animation: handoff var(--dur-base) var(--ease-out-soft) both;
+}
+
+@keyframes handoff {
+  from {
+    transform: translateX(-4px);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* The non-colour half of the cue: an unlit socket that fills in for the side
+   whose turn it is. Shape, not hue. */
+.pip {
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  border: 1px solid var(--color-gold-dim);
+  background: transparent;
+  transition:
+    background var(--dur-base) ease,
+    box-shadow var(--dur-base) ease;
+}
+
+.side.is-active .pip {
+  background: var(--color-gold-light);
+  box-shadow: 0 0 8px var(--color-gold-glow);
+}
+
+.name {
+  flex: 1;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-bright);
+}
+
+.score {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-player {
+  color: var(--color-soul);
+  text-shadow: 0 0 14px var(--color-soul-glow);
+}
+
+.score-opponent {
+  color: var(--color-crimson);
+  text-shadow: 0 0 14px var(--color-crimson-glow);
+}
+
+.status {
+  min-height: 1rem;
+  text-align: center;
+}
+
+.status-text {
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-soul);
+  animation: statusPulse var(--dur-breathe) ease-in-out infinite;
+}
+
+.status-text.status-opponent {
+  color: var(--color-crimson);
+}
+
+@keyframes statusPulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .side,
+  .side.is-active,
+  .pip,
+  .status-text {
+    animation: none;
+    transition: none;
+  }
+}

@@ -736,9 +736,13 @@ button.frame {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
-/* Capture */
+/* Capture. The delay is the surface's to set: a chain of captures resolves in
+   the order it fell, and the surface that knows that order hands each card its
+   place in it through `--flip-delay`. Filling backwards holds the card blanked
+   until its turn comes, so the chain reads as one thing propagating rather than
+   as several cards turning at once. */
 :host(.is-flipped) .frame {
-  animation: cardFlip var(--dur-slow) ease-out;
+  animation: cardFlip var(--dur-slow) ease-out var(--flip-delay, 0s) both;
 }
 
 @keyframes cardFlip {

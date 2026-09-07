@@ -1,0 +1,14 @@
+<div class="inspector" aria-live="polite">
+  @for (card of reading(); track card) {
+    <div class="reading">
+      <app-card [card]="card" />
+    </div>
+  } @empty {
+    <!-- The resting state fills the same box a card would, so the columns
+         beside the codex sit where they will sit for the rest of the match. -->
+    <div class="resting">
+      <span class="resting-rune" aria-hidden="true"></span>
+      <span class="resting-hint">Touch a card to read it</span>
+    </div>
+  }
+</div>
