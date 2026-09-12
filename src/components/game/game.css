@@ -35,25 +35,30 @@
    multiple of `--cw` and `--g`; no length on this screen is chosen by eye.
 
    The gutter is fixed pixels rather than a fraction of `--cw` on purpose. The
-   geometry reserves a *constant* 48px of chrome (`CHROME_W` / `CHROME_H` in
-   `arena.ts`) before dividing the viewport into 11 × 7 card units, so the sum
-   of the gutters has to be constant too — a gutter that grew with the unit
-   would outgrow that reservation and push the arena past the viewport edge
-   exactly where the fit is tightest. The arithmetic that has to hold:
+   geometry reserves a *constant* 52px of chrome (`CHROME_W`, and 48px for
+   `CHROME_H`, in `arena.ts`) before dividing the viewport into 12 × 7 card
+   units, so the sum of the gutters has to be constant too — a gutter that grew
+   with the unit would outgrow that reservation and push the arena past the
+   viewport edge exactly where the fit is tightest. The arithmetic that has to
+   hold:
 
-     width  = codex(2cw + g) + g + rack(2cw + g) + g
-            + board(5cw + 6g) + g + rack(2cw + g)   = 11cw + 12g = 11cw + 48px
+     width  = codex(3cw + 2g) + g + rack(2cw + g) + g
+            + board(5cw + 6g) + g + rack(2cw + g)   = 12cw + 13g = 12cw + 52px
      height = board(5ch + 6g) = 7cw + 6g            = 7cw + 24px  ≤ 7cw + 48px
 
    so the width consumes the reservation exactly and the height leaves 24px of
-   slack for the arena to breathe in vertically. The board's 1px rule is drawn
-   inside its own gutter (`--board-edge`) rather than outside it, so the frame
-   costs the arithmetic above nothing. */
+   slack for the arena to breathe in vertically. The codex is the one column
+   that is three units wide rather than two: it is what the inspector and the
+   standing panel are both sized from, and a card being *read* wants more width
+   than a card being picked out of a rack. The board's 1px rule is drawn inside
+   its own gutter (`--board-edge`) rather than outside it, so the frame costs
+   the arithmetic above nothing. */
 .arena {
   --ch: calc(var(--cw) * 1.4); /* 2.5:3.5 trading-card ratio */
   --g: 4px; /* the one gutter: between cards, columns, and board edge */
 
   --rack-w: calc(2 * var(--cw) + var(--g));
+  --codex-w: calc(3 * var(--cw) + 2 * var(--g));
   --board-edge: calc(var(--g) - 1px); /* padding + the 1px rule = one gutter */
   --board-w: calc(var(--n) * var(--cw) + 6 * var(--g));
   --board-h: calc(var(--n) * var(--ch) + 6 * var(--g));
@@ -66,7 +71,7 @@
   position: relative;
   z-index: 10;
   display: grid;
-  grid-template-columns: var(--rack-w) var(--rack-w) var(--board-w) var(--rack-w);
+  grid-template-columns: var(--codex-w) var(--rack-w) var(--board-w) var(--rack-w);
   gap: var(--g);
   align-items: center;
   height: var(--board-h);
@@ -91,11 +96,12 @@
 }
 
 /* ─── Inspector ──────────────────────────────────────────────────────────────
-   The codex gives the inspector two card units of width — above the card
-   renderer's 200px ability gate at every unit the geometry can produce, and
-   twice the width of any card in a hand or on the board, so the card being read
-   is always the largest one on the screen. The slot holds that box whether or
-   not a card is in it; see `card-inspector`.
+   The inspector takes the codex column whole — three card units and the two
+   gutters between them. That is far above the card renderer's 200px ability
+   gate at every unit the geometry can produce, and three times the width of any
+   card in a hand or on the board, so the card being read is always by some
+   margin the largest one on the screen. The slot holds that box whether or not
+   a card is in it; see `card-inspector`.
    ──────────────────────────────────────────────────────────────────────────── */
 
 .inspector-slot {
@@ -107,7 +113,7 @@
 }
 
 .inspector-slot app-card-inspector {
-  width: calc(2 * var(--cw));
+  width: var(--codex-w);
 }
 
 /* ─── Board ──────────────────────────────────────────────────────────────── */

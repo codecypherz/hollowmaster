@@ -86,9 +86,9 @@ describe('fitArena', () => {
         for (let h = 240; h <= 2160; h += 47) {
           const { unit, scale } = fitArena(w, h);
 
-          /* 11 units wide by 7 units tall is the arena's extent; scaled, it
+          /* 12 units wide by 7 units tall is the arena's extent; scaled, it
              must still sit inside the viewport with the chrome allowed for. */
-          expect(11 * unit * scale).toBeLessThanOrEqual(Math.max(w - 48, 0) + 0.001);
+          expect(12 * unit * scale).toBeLessThanOrEqual(Math.max(w - 52, 0) + 0.001);
           expect(7 * unit * scale).toBeLessThanOrEqual(Math.max(h - 48, 0) + 0.001);
         }
       }

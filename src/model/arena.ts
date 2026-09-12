@@ -31,13 +31,18 @@ export const MIN_CARD_WIDTH = 120;
  *
  * | Column       | Width      |
  * | ------------ | ---------- |
- * | Codex        | `2cw + g`  |
+ * | Codex        | `3cw + 2g` |
  * | Hand rack ×2 | `2cw + g`  |
  * | Board        | `5cw + 4g` |
  *
  * and a height of five cells at the 2.5:3.5 ratio — `5 × 1.4cw = 7cw`.
+ *
+ * The codex is the wide column. It carries the two things on this screen that
+ * are read rather than glanced at — the standing panel and the inspected card
+ * — and both are sized from its width, so the unit it costs the rest of the
+ * arena buys a card face that can actually be read.
  */
-const ARENA_UNITS_W = 11;
+const ARENA_UNITS_W = 12;
 const ARENA_UNITS_H = 7;
 
 /**
@@ -45,7 +50,7 @@ const ARENA_UNITS_H = 7;
  * corner filigree, and the breathing room around the columns. Subtracted from
  * the viewport before it is divided into units.
  */
-const CHROME_W = 48;
+const CHROME_W = 52;
 const CHROME_H = 48;
 
 /**
