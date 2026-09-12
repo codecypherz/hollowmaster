@@ -290,8 +290,12 @@ button.frame {
   min-height: 0;
   overflow: hidden;
   margin: var(--section-gap) var(--section-inset);
-  border: var(--section-rule);
+  border: 1px solid var(--color-card-window-rule);
   border-radius: var(--section-radius);
+  /* The artwork is this element's own background, and a background paints under
+     its border: clipped to the padding box so the art stops at the rule instead
+     of showing through it. */
+  background-clip: padding-box;
   /* The depth is drawn by the element itself, so the window still reads as
      inset when the artwork fails to load. */
   box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.6);
@@ -684,9 +688,12 @@ button.frame {
 }
 
 :host(.owner-opponent) .cf-name,
-:host(.owner-opponent) .cf-img,
 :host(.owner-opponent) .cf-ability {
   border-color: var(--color-section-border-crimson);
+}
+
+:host(.owner-opponent) .cf-img {
+  border-color: var(--color-card-window-rule-crimson);
 }
 
 /* ─── Interaction ─────────────────────────────────────────────────────────── */

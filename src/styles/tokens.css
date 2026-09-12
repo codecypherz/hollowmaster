@@ -71,6 +71,14 @@
   --color-section-border: rgba(96, 132, 196, 0.5);
   --color-section-border-crimson: rgba(146, 40, 34, 0.55);
 
+  /* The art window's rule is opaque where the other section rules are not: it
+     is the only rule with artwork behind it, and a translucent one lets the art
+     through so the window loses its edge wherever the art is bright. These are
+     the section rules resolved over the card's face, so the window's edge reads
+     the same as every other section's. */
+  --color-card-window-rule: #2b364f;
+  --color-card-window-rule-crimson: #561e1f;
+
   /* ── Stat bars ───────────────────────────────────────────────────────── */
   --color-attack: #f0a030;
   --color-defense: #60aacc;
