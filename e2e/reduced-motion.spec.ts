@@ -3,9 +3,15 @@ import {
   PACK_SIZE,
   buyPack,
   collected,
+  collectionTiles,
+  deckCards,
+  deckSlots,
+  deckTabs,
   expectNoScroll,
   expectNothingClipped,
   grantGeo,
+  openCardMenu,
+  openCards,
   openShop,
   revealedCards,
   revealedRarities,
@@ -142,4 +148,79 @@ test('a pack keeps a still foil highlight with the travel taken away', async ({ 
     expect(sheen.onFace).toBe(true);
     expect(sheen.highlight).toContain('gradient');
   }
+});
+
+test('the Cards page presents its cards, menus, and reader without animation', async ({ page }) => {
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
+    true,
+  );
+
+  await page.setViewportSize(VIEWPORT);
+  await openCards(page);
+  await page.getByRole('button', { name: '+ New deck' }).click();
+  await expect(deckTabs(page)).toHaveCount(2);
+
+  // The collection is present at once rather than arriving over a stagger.
+  const arriving = await collectionTiles(page).evaluateAll((els) =>
+    els.map((el) => {
+      const style = getComputedStyle(el);
+      return { animation: style.animationName, opacity: style.opacity };
+    }),
+  );
+  expect(arriving.length).toBeGreaterThan(0);
+  for (const tile of arriving) {
+    expect(tile.animation).toBe('none');
+    expect(tile.opacity).toBe('1');
+  }
+
+  // The card takes its place in the deck without travelling there.
+  const tile = collectionTiles(page).first();
+  await openCardMenu(tile);
+  const menu = await page.locator('app-card-menu .menu').evaluate((el) => ({
+    animation: getComputedStyle(el).animationName,
+    opacity: getComputedStyle(el).opacity,
+  }));
+  expect(menu.animation).toBe('none');
+  expect(menu.opacity).toBe('1');
+
+  await page.getByRole('button', { name: 'Add to Deck 2' }).click();
+  await expect(deckCards(page)).toHaveCount(1);
+  const placed = await deckSlots(page)
+    .first()
+    .evaluate((el) => ({
+      animation: getComputedStyle(el).animationName,
+      opacity: getComputedStyle(el).opacity,
+    }));
+  expect(placed.animation).toBe('none');
+  expect(placed.opacity).toBe('1');
+
+  // The reader opens without animation, and still reads.
+  await openCardMenu(deckSlots(page).first());
+  await page.getByRole('button', { name: 'Read' }).click();
+  const reader = page.locator('app-card-reader');
+  await expect(reader).toBeVisible();
+  expect(
+    await reader.locator('.reader-panel').evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe('none');
+  await expect(reader.locator('.cf-ability-text')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // And every state the motion would have carried is still distinguishable:
+  // the selected tab, the selected card, and the card's place in the deck.
+  const marks = await deckTabs(page).evaluateAll((els) =>
+    els.map((el) => ({
+      selected: el.getAttribute('aria-selected'),
+      markOpacity: getComputedStyle(el.querySelector('.tab-mark')!).opacity,
+    })),
+  );
+  for (const mark of marks) {
+    expect(Number(mark.markOpacity)).toBe(mark.selected === 'true' ? 1 : 0);
+  }
+
+  await openCardMenu(tile);
+  await expect(tile.locator('app-card button')).toHaveAttribute('aria-pressed', 'true');
+  await expect(deckCards(page)).toHaveCount(1);
+  await expect(page.locator('app-deck-bar .slot-empty')).toHaveCount(8);
+
+  await expectNoScroll(page);
 });

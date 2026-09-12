@@ -1,0 +1,21 @@
+<div class="menu" role="group" [attr.aria-label]="'Actions for ' + cardName()">
+  @if (available()) {
+    <button #primaryControl type="button" class="action action-primary" (click)="primary.emit()">
+      {{ label() }}
+    </button>
+  } @else {
+    <!-- Stated rather than offered-and-refused: a control that cannot be
+         activated is still a focus stop that does nothing. -->
+    <p class="reason">{{ reason() }}</p>
+  }
+
+  <button
+    #readControl
+    type="button"
+    class="action action-read"
+    [class.action-only]="!available()"
+    (click)="read.emit()"
+  >
+    Read
+  </button>
+</div>

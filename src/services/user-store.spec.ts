@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { LocalStorageUserStore, STORAGE_KEY, USER_STORE, UserStore } from './user-store';
 import { UserService } from './user.service';
-import { CARD_BY_KEY, cardKeyOf } from '../model/card';
+import { CARD_BY_KEY, cardKey, cardKeyOf } from '../model/card';
+import { DECK_SIZE, MAX_DECKS, emptyDeck } from '../model/deck';
 import {
   PersistedUser,
   SCHEMA_VERSION,
@@ -53,6 +54,7 @@ describe('the persisted shape', () => {
     const original = {
       geo: 350,
       collection: grantAll(seedUser().collection, [crawlid, crawlid, goam]),
+      decks: [],
     };
     const restored = fromPersisted(
       parsePersistedUser(JSON.parse(JSON.stringify(toPersisted(original))))!,
@@ -67,11 +69,16 @@ describe('the persisted shape', () => {
   });
 
   it('states a set, a number, and a quantity, and nothing else about a card', () => {
-    const persisted = toPersisted({ geo: 12, collection: grantAll(new Map(), [goam, goam]) });
+    const persisted = toPersisted({
+      geo: 12,
+      collection: grantAll(new Map(), [goam, goam]),
+      decks: [],
+    });
     expect(persisted).toEqual({
       version: SCHEMA_VERSION,
       geo: 12,
       collection: [{ set: 'FC', number: 6, quantity: 2 }],
+      decks: [],
     });
 
     const json = JSON.stringify(toPersisted(seedUser()));
@@ -88,7 +95,11 @@ describe('the persisted shape', () => {
   it("survives a catalogued card's properties being edited", () => {
     // The record names FC#6 only; whatever FC#6 says about itself today is
     // resolved at load time, never stored.
-    const persisted = toPersisted({ geo: 0, collection: new Map([[cardKeyOf('FC', 6), 3]]) });
+    const persisted = toPersisted({
+      geo: 0,
+      collection: new Map([[cardKeyOf('FC', 6), 3]]),
+      decks: [],
+    });
     expect(persisted.collection).toEqual([{ set: 'FC', number: 6, quantity: 3 }]);
     expect(fromPersisted(persisted).collection.get(cardKeyOf('FC', 6))).toBe(3);
   });
@@ -103,6 +114,7 @@ describe('parsePersistedUser', () => {
     version: SCHEMA_VERSION,
     geo: 100,
     collection: [{ set: 'FC', number: 1, quantity: 2 }],
+    decks: [],
   });
 
   it('accepts a well-formed record', () => {
@@ -110,6 +122,7 @@ describe('parsePersistedUser', () => {
       version: SCHEMA_VERSION,
       geo: 100,
       collection: [{ set: 'FC', number: 1, quantity: 2 }],
+      decks: [],
     });
   });
 
@@ -160,6 +173,7 @@ describe('parsePersistedUser', () => {
 
     expect(parsed.geo).toBe(42);
     expect(parsed.collection).toEqual([{ set: 'FC', number: 1, quantity: 1 }]);
+    expect(parsed.decks).toEqual([]);
   });
 
   it('restores five known cards and the full balance when one card is unknown', () => {
@@ -184,6 +198,208 @@ describe('parsePersistedUser', () => {
   });
 });
 
+// ─── Decks in the persisted record ──────────────────────────────────────────
+
+describe('persisted decks', () => {
+  const three = [
+    { cards: [] },
+    { cards: [cardKey(crawlid), cardKey(crawlid), cardKey(goam)] },
+    { cards: Array<ReturnType<typeof cardKey>>(DECK_SIZE).fill(cardKey(goam)) },
+  ];
+  const holdings = new Map([
+    [cardKey(crawlid), 2],
+    [cardKey(goam), 1],
+  ]);
+
+  it('writes a version 2 record carrying its decks', () => {
+    const persisted = toPersisted({ geo: 0, collection: holdings, decks: three });
+    expect(persisted.version).toBe(2);
+    expect(persisted.decks).toHaveLength(3);
+    expect(persisted.decks[0]).toEqual([]);
+    expect(persisted.decks[1]).toEqual([
+      { set: 'FC', number: 1 },
+      { set: 'FC', number: 1 },
+      { set: 'FC', number: 6 },
+    ]);
+  });
+
+  it("names a deck's cards and nothing else about them", () => {
+    const json = JSON.stringify(toPersisted({ geo: 0, collection: holdings, decks: three }));
+    for (const card of CARD_BY_KEY.values()) {
+      expect(json).not.toContain(card.name);
+      expect(json).not.toContain(card.image);
+      expect(json).not.toContain(card.ability);
+    }
+    for (const leak of ['stars', 'arrows', 'attack', 'defense', 'ability']) {
+      expect(json).not.toContain(leak);
+    }
+  });
+
+  it('round-trips three decks in order, contents, and positions', () => {
+    const original = { geo: 40, collection: holdings, decks: three };
+    const restored = fromPersisted(
+      parsePersistedUser(JSON.parse(JSON.stringify(toPersisted(original))))!,
+    );
+
+    expect(restored.decks).toEqual(three);
+  });
+
+  it('drops a deck card the catalogue has lost, keeping the rest in order', () => {
+    const parsed = parsePersistedUser({
+      version: 2,
+      geo: 0,
+      collection: [
+        { set: 'FC', number: 1, quantity: 1 },
+        { set: 'FC', number: 6, quantity: 1 },
+      ],
+      decks: [
+        [
+          { set: 'FC', number: 1 },
+          { set: 'GONE', number: 99 },
+          { set: 'FC', number: 6 },
+        ],
+      ],
+    })!;
+
+    expect(fromPersisted(parsed).decks[0].cards).toEqual([cardKey(crawlid), cardKey(goam)]);
+  });
+
+  it('drops a deck position the restored collection does not hold', () => {
+    const parsed = parsePersistedUser({
+      version: 2,
+      geo: 0,
+      collection: [{ set: 'FC', number: 1, quantity: 1 }],
+      decks: [
+        [
+          { set: 'FC', number: 6 },
+          { set: 'FC', number: 1 },
+        ],
+      ],
+    })!;
+
+    expect(fromPersisted(parsed).decks[0].cards).toEqual([cardKey(crawlid)]);
+  });
+
+  it('never restores a deck card the collection does not hold', () => {
+    const state = fromPersisted(
+      parsePersistedUser({
+        version: 2,
+        geo: 0,
+        collection: [{ set: 'FC', number: 1, quantity: 1 }],
+        decks: [
+          [{ set: 'FC', number: 6 }],
+          [
+            { set: 'FC', number: 1 },
+            { set: 'GONE', number: 1 },
+          ],
+          'not a deck',
+        ],
+      })!,
+    );
+
+    for (const deck of state.decks) {
+      for (const key of deck.cards) {
+        expect(state.collection.get(key) ?? 0).toBeGreaterThanOrEqual(1);
+      }
+    }
+  });
+
+  it('drops a deck that is not a list of card identities, costing only itself', () => {
+    const parsed = parsePersistedUser({
+      version: 2,
+      geo: 99,
+      collection: [{ set: 'FC', number: 1, quantity: 1 }],
+      decks: [[{ set: 'FC', number: 1 }], 'nonsense', [{ set: 'FC', number: 1 }]],
+    })!;
+
+    const state = fromPersisted(parsed);
+    expect(state.decks).toHaveLength(2);
+    expect(state.geo).toBe(99);
+    expect(state.collection.get(cardKey(crawlid))).toBe(1);
+  });
+
+  it('keeps the first nine decks and the first nine positions of a deck', () => {
+    const parsed = parsePersistedUser({
+      version: 2,
+      geo: 0,
+      collection: [{ set: 'FC', number: 1, quantity: 1 }],
+      decks: Array.from({ length: MAX_DECKS + 3 }, () =>
+        Array.from({ length: DECK_SIZE + 4 }, () => ({ set: 'FC', number: 1 })),
+      ),
+    })!;
+
+    const state = fromPersisted(parsed);
+    expect(state.decks).toHaveLength(MAX_DECKS);
+    for (const deck of state.decks) expect(deck.cards).toHaveLength(DECK_SIZE);
+  });
+
+  it('loses only the decks when the field is not an array at all', () => {
+    const parsed = parsePersistedUser({
+      version: 2,
+      geo: 7,
+      collection: [{ set: 'FC', number: 1, quantity: 1 }],
+      decks: 'nonsense',
+    })!;
+
+    expect(parsed.decks).toEqual([]);
+    expect(parsed.geo).toBe(7);
+  });
+
+  it('rejects a version the application does not know', () => {
+    const record = {
+      version: 3,
+      geo: 0,
+      collection: [{ set: 'FC', number: 1, quantity: 1 }],
+      decks: [],
+    };
+    expect(parsePersistedUser(record)).toBeNull();
+  });
+});
+
+describe('a version 1 record', () => {
+  const v1 = (collection: unknown[]) => ({ version: 1, geo: 480, collection });
+
+  it('restores its collection and its balance in full', () => {
+    const state = fromPersisted(
+      parsePersistedUser(
+        v1([
+          { set: 'FC', number: 1, quantity: 2 },
+          { set: 'FC', number: 6, quantity: 1 },
+        ]),
+      )!,
+    );
+
+    expect(state.geo).toBe(480);
+    expect(totalCards(state.collection)).toBe(3);
+    expect(state.collection.get(cardKey(crawlid))).toBe(2);
+  });
+
+  it('upgrades to a user holding no decks', () => {
+    const parsed = parsePersistedUser(v1([{ set: 'FC', number: 1, quantity: 1 }]))!;
+    expect(parsed.decks).toEqual([]);
+    expect(fromPersisted(parsed).decks).toEqual([]);
+  });
+
+  it('still drops only the unknown card', () => {
+    const state = fromPersisted(
+      parsePersistedUser(
+        v1([
+          { set: 'FC', number: 1, quantity: 1 },
+          { set: 'GONE', number: 99, quantity: 5 },
+          { set: 'FC', number: 6, quantity: 1 },
+        ]),
+      )!,
+    );
+
+    expect(distinctCards(state.collection)).toBe(2);
+    expect(state.geo).toBe(480);
+  });
+
+  it('reports the version it was read at, not the one it will be written at', () => {
+    expect(parsePersistedUser(v1([]))!.version).toBe(1);
+  });
+});
+
 // ─── 4.4 The localStorage implementation ────────────────────────────────────
 
 describe('LocalStorageUserStore', () => {
@@ -194,13 +410,14 @@ describe('LocalStorageUserStore', () => {
   });
 
   it('round-trips through one named key', async () => {
-    await store.save(toPersisted({ geo: 25, collection: grantAll(new Map(), [goam]) }));
+    await store.save(toPersisted({ geo: 25, collection: grantAll(new Map(), [goam]), decks: [] }));
     expect(localStorage.getItem(STORAGE_KEY)).toBeTruthy();
     expect(Object.keys(localStorage)).toEqual([STORAGE_KEY]);
     expect(await store.load()).toEqual({
       version: SCHEMA_VERSION,
       geo: 25,
       collection: [{ set: 'FC', number: 6, quantity: 1 }],
+      decks: [],
     });
   });
 
@@ -247,6 +464,7 @@ describe('UserService persistence', () => {
         version: SCHEMA_VERSION,
         geo: 640,
         collection: [{ set: 'FC', number: 6, quantity: 2 }],
+        decks: [],
       }),
     );
     await us.load();
@@ -294,6 +512,58 @@ describe('UserService persistence', () => {
     expect(us.purchase(100, [crawlid, crawlid])).toBe(true);
     expect(store.saved).toHaveLength(3);
     expect(store.saved[2].geo).toBe(400);
+  });
+
+  it('writes a version 2 record back after upgrading a version 1 one', async () => {
+    // What a real store hands back for a stored version 1 record: the reader
+    // has already upgraded it to hold no decks, and it still reports the
+    // version it was read at.
+    const store = new InMemoryUserStore({
+      version: 1,
+      geo: 300,
+      collection: [{ set: 'FC', number: 1, quantity: 2 }],
+      decks: [],
+    });
+    const us = withStore(store);
+
+    await us.load();
+
+    expect(us.geo()).toBe(300);
+    expect(us.decks()).toEqual([]);
+    expect(store.saved).toHaveLength(1);
+    expect(store.saved[0].version).toBe(SCHEMA_VERSION);
+
+    // The upgraded record is now current, so a second load restores it
+    // directly and writes nothing further.
+    await us.load();
+    expect(store.saved).toHaveLength(1);
+    expect(us.geo()).toBe(300);
+  });
+
+  it('writes once per successful deck command and not at all for a refused one', async () => {
+    const store = new InMemoryUserStore(null);
+    const us = withStore(store);
+    await us.load();
+    store.saved = [];
+
+    expect(us.createDeck()).toBe(true);
+    expect(store.saved).toHaveLength(1);
+
+    expect(us.addCardToDeck(1, crawlid)).toBe(true);
+    expect(store.saved).toHaveLength(2);
+    expect(store.saved[1].decks[1]).toEqual([{ set: 'FC', number: 1 }]);
+
+    expect(us.removeCardFromDeck(1, 0)).toBe(true);
+    expect(store.saved).toHaveLength(3);
+
+    expect(us.deleteDeck(1)).toBe(true);
+    expect(store.saved).toHaveLength(4);
+
+    expect(us.addCardToDeck(9, crawlid)).toBe(false);
+    expect(us.removeCardFromDeck(0, 0)).toBe(false);
+    expect(us.deleteDeck(7)).toBe(false);
+    expect(us.addCardToDeck(0, goam)).toBe(false);
+    expect(store.saved).toHaveLength(4);
   });
 
   it('issues no write for a refused credit or a failed purchase', async () => {

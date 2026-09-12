@@ -96,4 +96,18 @@ describe('seedUser', () => {
       expect(CARD_DB.some((c) => cardKey(c) === key)).toBe(true);
     }
   });
+
+  it('holds exactly one deck, and it is empty', () => {
+    const seeded = seedUser();
+    expect(seeded.decks).toHaveLength(1);
+    expect(seeded.decks[0].cards).toEqual([]);
+  });
+
+  it('gives every new user the same one empty deck', () => {
+    const a = seedUser();
+    const b = seedUser();
+    expect(a.decks).toEqual(b.decks);
+    expect(a.decks).not.toBe(b.decks);
+    expect(a.geo).toBe(b.geo);
+  });
 });

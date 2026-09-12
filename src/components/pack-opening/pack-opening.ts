@@ -12,6 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Card } from '../../model/card';
+import { fitOverlay } from '../../model/fit';
 import { PACK_SIZE, PackDefinition } from '../../model/pack';
 import { CardComponent } from '../card/card';
 import { PackComponent } from '../pack/pack';
@@ -43,15 +44,6 @@ const DWELL_PER_STAR_MS = 260;
  */
 export const SEAL_DWELL_MS = 700;
 export const TEAR_MS = 500;
-
-/** Never scale to nothing, however degenerate the measurement. */
-const MIN_SCALE = 0.2;
-
-/** A rectangle, in CSS pixels. */
-export interface Extent {
-  readonly width: number;
-  readonly height: number;
-}
 
 /**
  * The opening.
@@ -226,21 +218,6 @@ export class PackOpening implements OnInit {
 /** How long a card of this rarity holds in the hero slot, in milliseconds. */
 export function dwellFor(card: Card): number {
   return DWELL_BASE_MS + card.stars * DWELL_PER_STAR_MS;
-}
-
-/**
- * The uniform factor the overlay is viewed through: 1 wherever the available
- * space can host the laid-out surface, and the tighter of the two ratios where
- * it cannot. One factor on both axes, so the layout itself never changes and a
- * card is never re-fitted below the width its renderer's guarantees hold at.
- */
-export function fitOverlay(available: Extent, needed: Extent): number {
-  if (available.width <= 0 || available.height <= 0) return 1;
-  if (needed.width <= 0 || needed.height <= 0) return 1;
-  return Math.max(
-    MIN_SCALE,
-    Math.min(1, available.width / needed.width, available.height / needed.height),
-  );
 }
 
 /** How many cards an opening presents. The pack's size, not the overlay's. */

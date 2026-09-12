@@ -1,0 +1,34 @@
+<div class="grid">
+  @for (entry of owned(); track entry.card) {
+    <div class="tile" [style.--index]="$index">
+      <app-card
+        [card]="entry.card"
+        interactive
+        selectable
+        [selected]="openIndex() === $index"
+        (select)="selectCard.emit($index)"
+      />
+
+      <!-- Straddling the card's lower rim in the gap between the S and SE
+           chevrons, so nothing the renderer drew is covered. Shown for every
+           tile, a card held once included. -->
+      <span class="badge" [attr.aria-label]="entry.quantity + ' held'">
+        <span aria-hidden="true">×{{ entry.quantity }}</span>
+      </span>
+
+      @if (openIndex() === $index) {
+        <app-card-menu
+          [label]="addLabel()"
+          [available]="addAvailable()"
+          [reason]="addReason()"
+          [cardName]="entry.card.name"
+          (primary)="addCard.emit($index)"
+          (read)="readCard.emit($index)"
+          (dismiss)="dismissMenu.emit()"
+        />
+      }
+    </div>
+  } @empty {
+    <p class="grid-empty">Your collection is empty.</p>
+  }
+</div>

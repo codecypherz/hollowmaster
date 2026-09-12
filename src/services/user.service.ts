@@ -1,6 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Card } from '../model/card';
+import { addCardToDeck, createDeck, deleteDeck, removeCardFromDeck } from '../model/deck';
 import {
+  SCHEMA_VERSION,
   UserState,
   distinctCards,
   fromPersisted,
@@ -29,6 +31,9 @@ export class UserService {
   readonly geo = computed(() => this._state().geo);
   readonly collection = computed(() => this._state().collection);
 
+  /** The decks the player has built, in their own order. */
+  readonly decks = computed(() => this._state().decks);
+
   /** Every copy of every card held. */
   readonly totalCards = computed(() => countTotal(this._state().collection));
 
@@ -53,6 +58,10 @@ export class UserService {
     const persisted = await this.store.load().catch(() => null);
     if (persisted) {
       this._state.set(fromPersisted(persisted));
+      // A record read at an earlier version was upgraded on the way in. Write
+      // it straight back so the shape settles without the player taking an
+      // action, and so a read-only session leaves a current record behind.
+      if (persisted.version !== SCHEMA_VERSION) this.persist();
       return;
     }
     this._state.set(seedUser());
@@ -89,11 +98,61 @@ export class UserService {
     if (this._state().geo < price) return false;
 
     this._state.update((s) => ({
+      ...s,
       geo: s.geo - price,
       collection: grantAll(s.collection, cards),
     }));
     this.persist();
     return true;
+  }
+
+  // ─── Decks ────────────────────────────────────────────────────────────────
+  //
+  // Each command applies the matching pure function from `deck.ts` and does
+  // nothing else: every rule — the deck limit, the deck size, the unlocked
+  // gate, the position bounds — lives there, and `null` from there is a
+  // refusal that must cost no write. Each returns whether the change happened.
+
+  /** Appends an empty deck. Refused at the deck limit. */
+  createDeck(): boolean {
+    return this.apply((s) => createDeck(s));
+  }
+
+  /** Removes that deck and the cards it held. Refused for a deck not held. */
+  deleteDeck(deckIndex: number): boolean {
+    return this.apply((s) => deleteDeck(s, deckIndex));
+  }
+
+  /**
+   * Puts `card` in that deck's first free position. Refused for a deck not
+   * held, a full deck, or a card the collection does not hold. The collection
+   * is not touched: a card added to a deck is not spent.
+   */
+  addCardToDeck(deckIndex: number, card: Card): boolean {
+    return this.apply((s) => addCardToDeck(s, deckIndex, card));
+  }
+
+  /** Takes out the card at that position. Refused for a position not occupied. */
+  removeCardFromDeck(deckIndex: number, position: number): boolean {
+    return this.apply((s) => removeCardFromDeck(s, deckIndex, position));
+  }
+
+  /**
+   * Commits a deck operation's result, or reports that it did not happen.
+   *
+   * A refusal persists nothing: the state is unchanged, so a write would be a
+   * no-op that still costs a round trip to the store.
+   */
+  private apply(operation: (state: UserState) => UserState | null): boolean {
+    let applied = false;
+    this._state.update((s) => {
+      const next = operation(s);
+      if (!next) return s;
+      applied = true;
+      return next;
+    });
+    if (applied) this.persist();
+    return applied;
   }
 
   /**

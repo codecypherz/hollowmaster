@@ -245,3 +245,104 @@ export async function expectPartsOnScreen(
     }
   }
 }
+
+// ─── The Cards page ─────────────────────────────────────────────────────────
+
+/** The card renderer's two width constants, as the card spec states them. */
+export const CARD_MIN_WIDTH = 120;
+export const CARD_ABILITY_GATE = 200;
+
+/** A deck's positions, and the decks a player may hold. */
+export const DECK_SIZE = 9;
+export const MAX_DECKS = 9;
+
+/** Navigates to the Cards page and waits for the collection to be on screen. */
+export async function openCards(page: Page): Promise<void> {
+  await page.goto('/cards');
+  await expect(page.locator('app-collection-grid').first()).toBeVisible();
+  await expect(collectionTiles(page).first()).toBeVisible();
+}
+
+/** The deck tabs, in the order the strip lays them out. */
+export function deckTabs(page: Page): Locator {
+  return page.locator('app-deck-bar .deck-tab');
+}
+
+/** The selected deck's nine positions, filled or free. */
+export function deckSlots(page: Page): Locator {
+  return page.locator('app-deck-bar .slot');
+}
+
+/** Only the positions a card occupies. */
+export function deckCards(page: Page): Locator {
+  return page.locator('app-deck-bar .slot app-card');
+}
+
+/** How many of the nine positions the region says are filled. */
+export async function filledCount(page: Page): Promise<number> {
+  const text = await page.locator('app-deck-bar .count').innerText();
+  return Number(text.trim().split(/\s+/)[0]);
+}
+
+/** One tile per distinct card the collection holds. */
+export function collectionTiles(page: Page): Locator {
+  return page.locator('app-collection-grid .tile');
+}
+
+/** The count a tile's badge states. */
+export async function badgeCount(tile: Locator): Promise<number> {
+  const text = await tile.locator('.badge').innerText();
+  return Number(text.replace(/\D/g, ''));
+}
+
+/** The one open action menu, if any. */
+export function openMenu(page: Page): Locator {
+  return page.locator('app-card-menu');
+}
+
+/** Selects a card and waits for its menu, which is where its actions live. */
+export async function openCardMenu(holder: Locator): Promise<Locator> {
+  await holder.locator('app-card button').click();
+  const menu = holder.locator('app-card-menu');
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
+/**
+ * Waits out the staggered entrances so a measurement or a screenshot reads the
+ * screen at rest. Every tile and every position fades in; all of them at full
+ * opacity is the whole page having arrived.
+ */
+export async function cardsSettled(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page
+        .locator('app-collection-grid .tile, app-deck-bar .slot')
+        .evaluateAll((els) => els.every((el) => getComputedStyle(el).opacity === '1')),
+    )
+    .toBe(true);
+}
+
+/** The measured width of the card a holder renders, not its declared track. */
+export async function cardWidth(holder: Locator): Promise<number> {
+  const box = await holder.locator('app-card').boundingBox();
+  return box?.width ?? 0;
+}
+
+/**
+ * The width a card is *laid out* at, which a viewing transform does not change.
+ *
+ * The deck region lays its positions out above the renderer's minimum and then
+ * scales the whole region to fit, so the rendered box is smaller than the
+ * layout on a narrow viewport. It is the layout the renderer's guarantees are
+ * stated against — see the card spec — so that is what this reads.
+ */
+export async function laidOutCardWidth(holder: Locator): Promise<number> {
+  return holder.locator('app-card').evaluate((el) => (el as HTMLElement).offsetWidth);
+}
+
+/** How much of the card the ability section occupies — zero below the gate. */
+export async function abilitySectionWidth(holder: Locator): Promise<number> {
+  const box = await holder.locator('app-card .cf-ability').boundingBox();
+  return box?.width ?? 0;
+}

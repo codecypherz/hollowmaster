@@ -1,18 +1,26 @@
 /* ─── Cards screen ────────────────────────────────────────────────────────────
-   A themed skeleton: the atmosphere, ornament, and frame all come from the
-   global primitives, so the collection and deck builder can be dropped into
-   `.content` later without rebuilding the page around it. What is local here
-   is only this screen's layout and its type scale.
+   Two rows: the pinned deck region and the scrolling collection. The page
+   itself never scrolls — `overflow: hidden` on the wrapper and `1fr` on the
+   lower row mean the collection is the only thing with anywhere to go.
+
+   The atmosphere, ornament, and corner frame come from the global primitives,
+   unchanged from the themed page this replaced.
    ──────────────────────────────────────────────────────────────────────────── */
 
 :host {
-  display: flex;
-  flex-direction: column;
+  /* Takes the whole column above the nav shell, so the atmosphere and the
+     corner frame reach the viewport edges rather than stopping at the
+     content's natural height.
+     ── The page is laid out *inside* the space it is given rather than asking
+     for the space its content wants: `.page-wrap` is taken out of flow, so the
+     collection's full height is never handed back up the flex chain and the
+     document can never be grown past the viewport by a large collection. That
+     is what makes "only the collection scrolls" true by construction. */
+  display: block;
+  position: relative;
   width: 100%;
-  /* Takes the whole column above the nav shell, and hands that height on to
-     .page-wrap, so the atmosphere and the corner frame reach the viewport
-     edges rather than stopping at the content's natural height. */
   flex: 1;
+  min-height: 0;
 }
 
 .page-wrap {
@@ -20,13 +28,9 @@
   --corner-size: 48px;
   --corner-inset: 20px;
 
-  position: relative;
-  flex: 1;
-  width: 100%;
+  position: absolute;
+  inset: 0;
   background: var(--color-void);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
   font-family: var(--font-ui);
 }
@@ -34,59 +38,119 @@
 .content {
   position: relative;
   z-index: 10;
+  height: 100%;
+  display: grid;
+  /* `minmax(0, 1fr)` rather than a bare `1fr`: a track's automatic minimum is
+     its content, so the collection's full height would be handed back up the
+     flex chain and the page would grow past the viewport instead of the
+     collection scrolling inside it. */
+  grid-template-rows: auto minmax(0, 1fr);
+  /* And one column no wider than the page: a grid item's automatic minimum is
+     its content, so the deck row — which is laid out wider than a narrow
+     viewport on purpose, to be scaled — would otherwise widen the whole page
+     rather than be fitted into it. */
+  grid-template-columns: minmax(0, 1fr);
+  /* The page's own scrolling is off: the collection region below does it. */
+  overflow: hidden;
+}
+
+/* ─── The pinned region ───────────────────────────────────────────────────── */
+
+.pinned {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.page-head {
+  display: flex;
   align-items: center;
-  gap: 2.5rem;
-  padding: 4rem 2rem;
-  max-width: 720px;
-  width: 100%;
-}
-
-.ornament {
-  max-width: 420px;
-}
-
-.header-block {
-  text-align: center;
-}
-
-.eyebrow {
-  font-family: var(--font-ui);
-  font-size: 0.6rem;
-  letter-spacing: 0.4em;
-  color: var(--color-text-dim);
-  text-transform: uppercase;
-  margin-bottom: 1.5rem;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 16px 0;
 }
 
 .page-title {
   font-family: var(--font-display);
-  font-size: clamp(2.2rem, 7vw, 4rem);
+  font-size: 1.35rem;
   font-weight: 900;
   color: var(--color-soul);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  text-shadow: 0 0 25px var(--color-soul-glow-sm);
+  margin: 0;
+}
+
+.page-head .ornament {
+  max-width: 260px;
+}
+
+.sort-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-section-border);
+}
+
+.sort-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.sort-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sort-option {
+  padding: 4px 10px;
+  font-family: var(--font-ui);
+  font-size: 0.58rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  margin-bottom: 1.25rem;
-  text-shadow: 0 0 25px var(--color-soul-glow-sm);
-}
-
-.purpose {
-  font-family: var(--font-flavor);
-  font-size: 0.95rem;
+  cursor: pointer;
   color: var(--color-text-muted);
-  letter-spacing: 0.08em;
-  font-style: italic;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition:
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
 }
 
-/* The forthcoming-content marker: gold, so it reads as structure rather than
-   as something the player can act on. */
-.coming-soon {
-  font-family: var(--font-ui);
-  font-size: 0.65rem;
-  letter-spacing: 0.42em;
-  text-transform: uppercase;
-  color: var(--color-gold-dim);
-  border: 1px solid var(--color-gold-dim);
-  padding: 0.8rem 2.2rem;
+.sort-option:hover {
+  color: var(--color-text-bright);
+}
+
+.sort-option:focus-visible {
+  outline: 2px solid var(--color-soul);
+  outline-offset: 2px;
+}
+
+/* The order in effect, marked by its rule and its lit text as well as by
+   `aria-pressed`. */
+.sort-option.is-active {
+  color: var(--color-gold-light);
+  border-color: var(--color-gold-dim);
+  background: var(--color-surface);
+}
+
+/* ─── The collection ──────────────────────────────────────────────────────── */
+
+.collection-region {
+  min-width: 0;
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sort-option {
+    transition: none;
+  }
 }

@@ -1,0 +1,115 @@
+<div class="bar">
+  <!-- ─── The tabs ──────────────────────────────────────────────────────────
+       One tab per deck, named by its position. The roving tabindex is what
+       makes the strip one tab stop: arrow keys move between decks inside it,
+       so the whole strip does not stand between the player and the deck. -->
+  <div class="tab-row">
+    @if (decks().length > 0) {
+      <div class="tabs" role="tablist" aria-label="Your decks">
+        @for (name of names(); track $index) {
+          <button
+            type="button"
+            class="deck-tab"
+            role="tab"
+            [class.is-selected]="selectedIndex() === $index"
+            [attr.aria-selected]="selectedIndex() === $index"
+            [tabindex]="focusedTab() === $index ? 0 : -1"
+            (click)="focusedTab.set($index); selectDeck.emit($index)"
+            (keydown)="onTabKeydown($event, $index)"
+          >
+            <!-- The mark is the non-colour cue: present on the selected tab
+                 and absent on the others, so the selection survives with
+                 colour removed. -->
+            <span class="tab-mark" aria-hidden="true"></span>
+            {{ name }}
+          </button>
+        }
+      </div>
+    }
+
+    @if (canCreate()) {
+      <button type="button" class="bar-control create-deck" (click)="createDeck.emit()">
+        + New deck
+      </button>
+    } @else {
+      <p class="bar-note">{{ maxDecks }} decks is the limit.</p>
+    }
+
+    @if (selectedIndex() !== null) {
+      <button type="button" class="bar-control delete-deck" (click)="askToDelete()">
+        Delete {{ selectedName() }}
+      </button>
+    }
+  </div>
+
+  @if (selectedIndex() === null) {
+    <!-- No decks: the page says so plainly and the collection below is still
+         shown in full. -->
+    <p class="empty-state">
+      You have no decks. Create one to start building from the collection below.
+    </p>
+  } @else {
+    <!-- The row lays out at a fixed unit and the whole region is scaled, so no
+         card is ever laid out below the renderer's minimum width. The wrapper
+         takes its height from the same factor, so the collection below starts
+         where the scaled row actually ends. -->
+    <div #regionWrap class="deck-region">
+      <div #region class="deck-row">
+        @for (position of positions(); track position.index) {
+          <div class="slot" [class.slot-empty]="!position.card" [style.--index]="position.index">
+            @if (position.card) {
+              <app-card
+                [card]="position.card"
+                interactive
+                selectable
+                [selected]="openPosition() === position.index"
+                (select)="selectCard.emit(position.index)"
+              />
+
+              @if (openPosition() === position.index) {
+                <app-card-menu
+                  label="Remove"
+                  [available]="true"
+                  [cardName]="position.card.name"
+                  (primary)="removeCard.emit(position.index)"
+                  (read)="readCard.emit(position.index)"
+                  (dismiss)="dismissMenu.emit()"
+                />
+              }
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <p class="deck-count" aria-live="polite">
+      @if (filledCount() === 0) {
+        <span class="count">0 of {{ deckSize }} positions filled</span>
+        <span class="count-note">This deck is empty — fill it from the collection below.</span>
+      } @else {
+        <span class="count">{{ filledCount() }} of {{ deckSize }} positions filled</span>
+        @if (isFull()) {
+          <span class="count-note">This deck is full.</span>
+        }
+      }
+    </p>
+  }
+</div>
+
+@if (confirming()) {
+  <div class="confirm-scrim" aria-hidden="true" (click)="confirming.set(false)"></div>
+  <div
+    class="confirm"
+    role="alertdialog"
+    aria-modal="true"
+    [attr.aria-label]="'Delete ' + selectedName()"
+  >
+    <p class="confirm-text">Delete {{ selectedName() }}? Its cards stay in your collection.</p>
+    <div class="confirm-actions">
+      <button type="button" class="bar-control confirm-yes" (click)="confirmDelete()">
+        Delete {{ selectedName() }}
+      </button>
+      <button type="button" class="bar-control" (click)="confirming.set(false)">Keep it</button>
+    </div>
+  </div>
+}

@@ -1,0 +1,122 @@
+/* ─── Card reader ─────────────────────────────────────────────────────────────
+   The reading overlay, in the same idiom as the pack opening's: a scrim, a
+   panel over it, and everything drawn from the existing ramps.
+
+   The card's width is stated once here, comfortably above the renderer's 200px
+   ability gate, so the ability text, the set, and the number are what the
+   player came for and not what the layout happens to allow.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  --reader-cw: 300px;
+
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+}
+
+.reader-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--color-scrim);
+  backdrop-filter: blur(2px);
+}
+
+.reader-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(180deg, var(--color-deep) 0%, var(--color-void) 100%);
+  border: 1px solid var(--color-gold-dim);
+  box-shadow: var(--elev-overlay);
+  animation: readerIn var(--dur-base) var(--ease-out-soft) both;
+}
+
+@keyframes readerIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.reader-card {
+  width: var(--reader-cw);
+}
+
+.reader-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.action {
+  flex: 1;
+  padding: 8px 12px;
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: var(--color-surface);
+  color: var(--color-text-bright);
+  border: 1px solid var(--color-section-border);
+  border-radius: 2px;
+  transition:
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+}
+
+.action:hover {
+  color: var(--color-soul-bright);
+  border-color: var(--color-soul-dim);
+  box-shadow: var(--elev-glow-soul);
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--color-soul);
+  outline-offset: 2px;
+}
+
+.action-primary {
+  color: var(--color-gold-light);
+  border-color: var(--color-gold-dim);
+}
+
+.action-primary:hover {
+  color: var(--color-gold-shimmer);
+  border-color: var(--color-gold);
+  box-shadow: var(--elev-glow-gold);
+}
+
+.reason {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-flavor);
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-panel {
+    animation: none;
+  }
+
+  .action {
+    transition: none;
+  }
+}

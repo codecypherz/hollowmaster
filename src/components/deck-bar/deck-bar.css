@@ -1,0 +1,281 @@
+/* ─── The pinned deck region ──────────────────────────────────────────────────
+   The deck's nine positions lay out at one fixed unit, `--deck-cw`, which the
+   component states; the whole region is then scaled by `--deck-scale`, which
+   the component measures. Nothing here computes a ratio, because CSS cannot.
+
+   The wrapper's height is the row's laid-out height times that same factor: a
+   scaled element still occupies its unscaled box, so without this the
+   collection below would start at the row's full height and leave a gap.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  --deck-cw: 128px;
+  --deck-scale: 1;
+  --deck-gap: 10px;
+  /* The card's own ratio, so the row's height follows its unit. */
+  --deck-ch: calc(var(--deck-cw) * 3.5 / 2.5);
+
+  display: block;
+  width: 100%;
+  font-family: var(--font-ui);
+}
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--color-section-border);
+  background: linear-gradient(180deg, var(--color-deep) 0%, transparent 100%);
+}
+
+/* ─── Tabs and controls ───────────────────────────────────────────────────── */
+
+.tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.deck-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-ui);
+  font-size: 0.64rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-section-border);
+  border-bottom-color: transparent;
+  border-radius: 2px 2px 0 0;
+  transition:
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+
+.deck-tab:hover {
+  color: var(--color-text-bright);
+}
+
+.deck-tab:focus-visible {
+  outline: 2px solid var(--color-soul);
+  outline-offset: 2px;
+}
+
+/* The selected tab is told apart by three things at once — its gold rule, its
+   lit text, and the mark below — so removing colour removes none of them. */
+.deck-tab.is-selected {
+  color: var(--color-gold-light);
+  border-color: var(--color-gold-dim);
+  background: var(--color-surface);
+}
+
+.tab-mark {
+  width: 6px;
+  height: 6px;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0;
+}
+
+.deck-tab.is-selected .tab-mark {
+  opacity: 1;
+  background: currentColor;
+}
+
+.bar-control {
+  padding: 6px 12px;
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--color-text-bright);
+  background: var(--color-surface);
+  border: 1px solid var(--color-section-border);
+  border-radius: 2px;
+  transition:
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+}
+
+.bar-control:hover {
+  color: var(--color-soul-bright);
+  border-color: var(--color-soul-dim);
+  box-shadow: var(--elev-glow-soul);
+}
+
+.bar-control:focus-visible {
+  outline: 2px solid var(--color-soul);
+  outline-offset: 2px;
+}
+
+.create-deck {
+  color: var(--color-gold-light);
+  border-color: var(--color-gold-dim);
+}
+
+.delete-deck:hover,
+.confirm-yes:hover {
+  color: var(--color-crimson);
+  border-color: var(--color-crimson-dim);
+  box-shadow: none;
+}
+
+.bar-note {
+  margin: 0;
+  font-family: var(--font-flavor);
+  font-size: 0.66rem;
+  color: var(--color-text-dim);
+}
+
+/* ─── The nine positions ──────────────────────────────────────────────────── */
+
+.deck-region {
+  /* The scaled height, so the collection below begins where the row ends. */
+  height: calc(var(--deck-ch) * var(--deck-scale));
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.deck-row {
+  display: flex;
+  gap: var(--deck-gap);
+  /* Laid out at its natural width and *viewed* smaller, never shrunk: a
+     shrunken row would put its cards below the renderer's minimum width rather
+     than scale them, which is the one thing the fit exists to prevent. */
+  flex: none;
+  width: max-content;
+  transform: scale(var(--deck-scale));
+  transform-origin: top center;
+}
+
+.slot {
+  position: relative;
+  flex: none;
+  width: var(--deck-cw);
+  height: var(--deck-ch);
+  border-radius: 4px;
+  animation: slotIn var(--dur-entrance) var(--ease-out-soft) both;
+  animation-delay: calc(var(--index) * var(--dur-stagger));
+}
+
+/* A free position is drawn, not omitted: the deck's remaining capacity is
+   legible without counting. The hand rack's `slot` / `slot-empty` vocabulary,
+   at the contrast this page's ground needs — the rack's own values are set
+   against the lit arena, and against the void they read as nothing at all. */
+.slot-empty {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px dashed var(--color-section-border);
+}
+
+@keyframes slotIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.deck-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.count {
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.count-note {
+  font-family: var(--font-flavor);
+  font-size: 0.68rem;
+  color: var(--color-text-dim);
+}
+
+.empty-state {
+  margin: 0;
+  padding: 18px 0;
+  font-family: var(--font-flavor);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* ─── The delete confirmation ─────────────────────────────────────────────── */
+
+.confirm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--color-scrim);
+}
+
+/* An overlay rather than an inline two-step control: an inline confirm changes
+   the pinned region's height, which moves the collection under the player
+   mid-decision. */
+.confirm {
+  position: fixed;
+  z-index: 71;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 420px;
+  padding: 20px 24px;
+  background: linear-gradient(180deg, var(--color-deep) 0%, var(--color-void) 100%);
+  border: 1px solid var(--color-crimson-dim);
+  box-shadow: var(--elev-overlay);
+}
+
+.confirm-text {
+  margin: 0;
+  font-family: var(--font-flavor);
+  font-size: 0.9rem;
+  color: var(--color-text-bright);
+  text-align: center;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot {
+    animation: none;
+  }
+
+  .deck-tab,
+  .bar-control {
+    transition: none;
+  }
+}

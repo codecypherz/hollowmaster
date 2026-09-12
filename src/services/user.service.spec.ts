@@ -1,12 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { effect } from '@angular/core';
 import { UserService } from './user.service';
-import { CARD_BY_KEY, Card, cardKeyOf } from '../model/card';
+import { CARD_BY_KEY, Card, cardKey, cardKeyOf } from '../model/card';
+import { DECK_SIZE, MAX_DECKS } from '../model/deck';
 import { STARTER_CARD_KEYS, quantityOf, seedUser, totalCards } from '../model/user';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
 const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
 const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 2))!;
+/** A starter card, so a freshly seeded user holds one. */
+const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
 
 /** Five cards to stand in for a pack. */
 const pack: Card[] = [crawlid, crawlid, goam, gruzMother, crawlid];
@@ -151,6 +154,94 @@ describe('UserService', () => {
       for (const bad of [-1, -100, 0.5]) {
         expect(us.purchase(bad, pack)).toBe(false);
       }
+      expect(us.geo()).toBe(500);
+      expect(us.totalCards()).toBe(9);
+    });
+  });
+
+  // ─── 5.1 / 5.2 / 5.3 The deck commands ────────────────────────────────────
+
+  describe('the deck commands', () => {
+    it('exposes the one seeded empty deck', () => {
+      expect(us.decks()).toHaveLength(1);
+      expect(us.decks()[0].cards).toEqual([]);
+      expect(us.decks()).toBe(us.state().decks);
+    });
+
+    it('creates a deck and refuses the tenth', () => {
+      for (let i = 1; i < MAX_DECKS; i++) expect(us.createDeck()).toBe(true);
+      expect(us.decks()).toHaveLength(MAX_DECKS);
+      expect(us.createDeck()).toBe(false);
+      expect(us.decks()).toHaveLength(MAX_DECKS);
+    });
+
+    it('adds a held card and refuses one the collection does not hold', () => {
+      expect(us.addCardToDeck(0, crawlid)).toBe(true);
+      expect(us.decks()[0].cards).toEqual([cardKey(crawlid)]);
+      expect(us.addCardToDeck(0, goam)).toBe(false);
+      expect(us.decks()[0].cards).toEqual([cardKey(crawlid)]);
+    });
+
+    it('fills a deck from one held copy and refuses the tenth card', () => {
+      for (let i = 0; i < DECK_SIZE; i++) expect(us.addCardToDeck(0, crawlid)).toBe(true);
+      expect(us.decks()[0].cards).toHaveLength(DECK_SIZE);
+      expect(us.addCardToDeck(0, crawlid)).toBe(false);
+      expect(quantityOf(us.collection(), crawlid)).toBe(1);
+    });
+
+    it('removes the card at a position and refuses one no card occupies', () => {
+      us.addCardToDeck(0, crawlid);
+      us.addCardToDeck(0, vengefly);
+      us.addCardToDeck(0, crawlid);
+
+      expect(us.removeCardFromDeck(0, 1)).toBe(true);
+      expect(us.decks()[0].cards).toEqual([cardKey(crawlid), cardKey(crawlid)]);
+      expect(us.removeCardFromDeck(0, 5)).toBe(false);
+    });
+
+    it('deletes a deck and refuses an index no deck occupies', () => {
+      us.createDeck();
+      expect(us.deleteDeck(0)).toBe(true);
+      expect(us.decks()).toHaveLength(1);
+      expect(us.deleteDeck(3)).toBe(false);
+    });
+
+    it('emits from the decks signal after every successful command', () => {
+      const seen: number[] = [];
+      TestBed.runInInjectionContext(() => {
+        effect(() => seen.push(us.decks().length));
+      });
+      TestBed.tick();
+
+      us.createDeck();
+      TestBed.tick();
+      us.deleteDeck(1);
+      TestBed.tick();
+
+      expect(seen).toEqual([1, 2, 1]);
+    });
+
+    it('never changes the collection or the balance', () => {
+      us.creditGeo(500);
+
+      const geoSeen: number[] = [];
+      const collectionSeen: unknown[] = [];
+      TestBed.runInInjectionContext(() => {
+        effect(() => geoSeen.push(us.geo()));
+        effect(() => collectionSeen.push(us.collection()));
+      });
+      TestBed.tick();
+
+      us.createDeck();
+      us.addCardToDeck(0, crawlid);
+      us.addCardToDeck(1, crawlid);
+      us.removeCardFromDeck(0, 0);
+      us.deleteDeck(1);
+      us.addCardToDeck(0, goam); // refused
+      TestBed.tick();
+
+      expect(geoSeen).toEqual([500]);
+      expect(collectionSeen).toHaveLength(1);
       expect(us.geo()).toBe(500);
       expect(us.totalCards()).toBe(9);
     });

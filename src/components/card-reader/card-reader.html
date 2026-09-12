@@ -1,0 +1,21 @@
+<div class="reader-scrim" aria-hidden="true" (click)="close.emit()"></div>
+
+<div #panel class="reader-panel">
+  <!-- Above the renderer's ability gate: the same component the tiles use,
+       given the width at which it draws its ability section. -->
+  <div class="reader-card">
+    <app-card [card]="card()" />
+  </div>
+
+  <div class="reader-actions">
+    @if (actionAvailable()) {
+      <button #firstControl type="button" class="action action-primary" (click)="action.emit()">
+        {{ actionLabel() }}
+      </button>
+    } @else if (actionReason()) {
+      <p class="reason">{{ actionReason() }}</p>
+    }
+
+    <button #closeControl type="button" class="action" (click)="close.emit()">Close</button>
+  </div>
+</div>

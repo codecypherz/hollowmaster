@@ -17,32 +17,76 @@
   <div class="corner corner-br" aria-hidden="true"><span></span><span></span></div>
 
   <main class="content">
-    <div class="ornament">
-      <span class="orn-line"></span>
-      <span class="orn-node"></span>
-      <span class="orn-line short"></span>
-      <span class="orn-gem"></span>
-      <span class="orn-line short"></span>
-      <span class="orn-node"></span>
-      <span class="orn-line"></span>
-    </div>
+    <!-- ─── The pinned region ───────────────────────────────────────────────
+         A grid row that does not scroll, rather than a sticky element inside
+         the scroller. Every control the page offers lives here, so none of
+         them can be scrolled out of reach. -->
+    <section class="pinned" aria-label="Your decks">
+      <header class="page-head">
+        <h1 class="page-title">Cards</h1>
+        <div class="ornament">
+          <span class="orn-line"></span>
+          <span class="orn-node"></span>
+          <span class="orn-gem"></span>
+          <span class="orn-node"></span>
+          <span class="orn-line"></span>
+        </div>
+      </header>
 
-    <header class="header-block">
-      <p class="eyebrow">What Hallownest has yielded</p>
-      <h1 class="page-title">Cards</h1>
-      <p class="purpose">This is where you will view your collection and build your decks.</p>
-    </header>
+      <app-deck-bar
+        [decks]="decks()"
+        [selectedIndex]="selectedDeck()"
+        [openPosition]="openDeckPosition()"
+        (selectDeck)="onSelectDeck($event)"
+        (createDeck)="onCreateDeck()"
+        (deleteDeck)="onDeleteDeck($event)"
+        (selectCard)="onSelectDeckCard($event)"
+        (removeCard)="onRemoveFromDeck($event)"
+        (readCard)="onRead('deck', $event)"
+        (dismissMenu)="dismissMenu()"
+      />
 
-    <p class="coming-soon">Coming soon</p>
+      <div class="sort-row">
+        <span class="sort-label" id="sort-label">Order by</span>
+        <div class="sort-options" role="group" aria-labelledby="sort-label">
+          @for (order of sorts; track order.key) {
+            <button
+              type="button"
+              class="sort-option"
+              [class.is-active]="sort() === order.key"
+              [attr.aria-pressed]="sort() === order.key"
+              (click)="onSort(order.key)"
+            >
+              {{ order.label }}
+            </button>
+          }
+        </div>
+      </div>
+    </section>
 
-    <div class="ornament">
-      <span class="orn-line"></span>
-      <span class="orn-node"></span>
-      <span class="orn-line short"></span>
-      <span class="orn-gem"></span>
-      <span class="orn-line short"></span>
-      <span class="orn-node"></span>
-      <span class="orn-line"></span>
-    </div>
+    <!-- ─── The scrolling collection ────────────────────────────────────── -->
+    <app-collection-grid
+      class="collection-region"
+      [owned]="owned()"
+      [openIndex]="openCollectionIndex()"
+      [addLabel]="addLabel()"
+      [addAvailable]="canAdd()"
+      [addReason]="addReason()"
+      (selectCard)="onSelectCollectionCard($event)"
+      (addCard)="onAddToDeck($event)"
+      (readCard)="onRead('collection', $event)"
+      (dismissMenu)="dismissMenu()"
+    />
   </main>
 </div>
+
+@if (readingCard(); as card) {
+  <app-card-reader
+    [card]="card"
+    [actionLabel]="readingFromDeck() ? 'Remove' : addLabel()"
+    [actionAvailable]="readingFromDeck() || canAdd()"
+    [actionReason]="readingFromDeck() ? '' : addReason()"
+    (action)="onReaderAction()"
+    (close)="closeReader()"
+  />
+}
