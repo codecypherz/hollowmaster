@@ -73,29 +73,30 @@ describe('GameService', () => {
   // ─── 1.3 Derived score ────────────────────────────────────────────────────
 
   describe('score', () => {
-    it('starts at nine apiece', () => {
+    it('starts at nothing apiece: a card in hand is not a card owned', () => {
       gs.startGame();
-      expect(gs.scores()).toEqual({ player: HAND_SIZE, opponent: HAND_SIZE });
+      expect(gs.scores()).toEqual({ player: 0, opponent: 0 });
     });
 
-    it('always sums to eighteen through a whole match', () => {
+    it('always sums to the cards on the board, reaching eighteen at the end', () => {
       vi.useFakeTimers();
       try {
         gs.startGame();
         while (gs.state()!.phase !== 'game-over') {
           const { player, opponent } = gs.scores();
-          expect(player + opponent).toBe(2 * HAND_SIZE);
+          expect(player + opponent).toBe(placedCount(gs.state()!));
           playOneCard(gs);
           vi.runOnlyPendingTimers();
         }
         const { player, opponent } = gs.scores();
+        expect(player + opponent).toBe(placedCount(gs.state()!));
         expect(player + opponent).toBe(2 * HAND_SIZE);
       } finally {
         vi.useRealTimers();
       }
     });
 
-    it('leaves both scores unchanged when a placement captures nothing', () => {
+    it('moves only the placed card when a placement captures nothing', () => {
       vi.useFakeTimers();
       try {
         gs.startGame();
@@ -103,7 +104,7 @@ describe('GameService', () => {
         gs.selectCard(0);
         gs.placeCard(0, 0); // an empty board: nothing to contest
         expect(gs.state()!.lastFlipped).toEqual([]);
-        expect(gs.scores()).toEqual(before);
+        expect(gs.scores()).toEqual({ player: before.player + 1, opponent: before.opponent });
       } finally {
         vi.useRealTimers();
       }

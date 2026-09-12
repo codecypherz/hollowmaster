@@ -74,21 +74,21 @@ SHALL succeed for any card database holding at least one card.
 - **WHEN** two matches are dealt in succession
 - **THEN** the hands are not required to be identical between them
 
-### Requirement: A player's score is the number of cards they own
+### Requirement: A player's score is the number of cards they own on the board
 
-A player's score SHALL be the count of cards that player owns, counting both the cards remaining in
-their hand and the cards they own on the board. The two players' scores SHALL therefore always sum
-to eighteen, at every point in the match.
+A player's score SHALL be the count of cards that player owns on the board. Cards remaining in that
+player's hand SHALL NOT count towards their score. The two players' scores SHALL therefore always
+sum to the number of cards placed on the board, reaching eighteen only once both hands are empty.
 
-#### Scenario: Scores start at nine apiece
+#### Scenario: Scores start at nothing apiece
 
 - **WHEN** a match begins and no card has been played
-- **THEN** each player's score is nine
+- **THEN** each player's score is zero
 
-#### Scenario: Playing a card does not change the player's score
+#### Scenario: Playing a card raises the player's score by one
 
 - **WHEN** a player plays a card from hand to the board and captures nothing
-- **THEN** their score is unchanged
+- **THEN** their score rises by one
 - **AND** the opponent's score is unchanged
 
 #### Scenario: A capture moves one point
@@ -97,10 +97,10 @@ to eighteen, at every point in the match.
 - **THEN** the capturing player's score rises by one
 - **AND** the captured player's score falls by one
 
-#### Scenario: The scores always sum to eighteen
+#### Scenario: The scores sum to the cards played
 
 - **WHEN** the score is read at any point in a match
-- **THEN** the two scores sum to eighteen
+- **THEN** the two scores sum to the number of cards on the board
 
 ### Requirement: Turns alternate, beginning with the player
 
@@ -225,7 +225,7 @@ The final board SHALL remain visible with the result.
 
 #### Scenario: Equal scores draw
 
-- **WHEN** the match ends with both scores at nine
+- **WHEN** the match ends with both players owning nine cards on the board
 - **THEN** the result is a draw
 
 #### Scenario: The board remains visible at the end
@@ -255,4 +255,4 @@ started.
 
 - **WHEN** the player starts a match after retreating from one
 - **THEN** both hands are dealt anew at nine cards
-- **AND** the board is empty and both scores are nine
+- **AND** the board is empty and both scores are zero

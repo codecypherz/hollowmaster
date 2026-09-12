@@ -36,12 +36,12 @@ describe('Scoreboard', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows the opening nine apiece without counting up to it', () => {
-    fixture.componentRef.setInput('playerScore', 9);
-    fixture.componentRef.setInput('opponentScore', 9);
+  it('shows a standing it is handed first without counting up to it', () => {
+    fixture.componentRef.setInput('playerScore', 4);
+    fixture.componentRef.setInput('opponentScore', 3);
     fixture.detectChanges();
 
-    expect(scores()).toEqual(['9', '9']);
+    expect(scores()).toEqual(['4', '3']);
   });
 
   it('counts a capture through its intermediate values rather than jumping', () => {

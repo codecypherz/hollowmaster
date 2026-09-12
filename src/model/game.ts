@@ -35,8 +35,8 @@ export interface PlayerState {
  * A match in progress.
  *
  * Score is deliberately absent: a player's score is the number of cards they
- * own, in hand plus on the board, so it is derived from this state rather than
- * stored alongside it and cannot drift out of sync with the board.
+ * own on the board, so it is derived from this state rather than stored
+ * alongside it and cannot drift out of sync with the board.
  */
 export interface GameState {
   board: (PlacedCard | null)[][];

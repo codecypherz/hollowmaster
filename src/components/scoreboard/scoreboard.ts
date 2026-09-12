@@ -22,9 +22,9 @@ function prefersReducedMotion(): boolean {
  * A signal that walks toward `target` one whole point per step, so a capture
  * reads as a count rather than a jump.
  *
- * The first value is taken as-is — a match opening on nine apiece is a starting
- * position, not a change to animate — as is every value once the user has asked
- * for reduced motion. Must be called from an injection context.
+ * The first value is taken as-is — a match opening on nothing apiece is a
+ * starting position, not a change to animate — as is every value once the user
+ * has asked for reduced motion. Must be called from an injection context.
  */
 function countTo(target: () => number): Signal<number> {
   const shown = signal(0);

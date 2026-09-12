@@ -11,8 +11,8 @@ export class GameService {
 
   /**
    * Both players' scores, derived rather than stored: a player's score is the
-   * number of cards they own, in hand plus on the board. The pair therefore
-   * always sums to the number of cards dealt.
+   * number of cards they own on the board. Cards still in hand count for
+   * nothing, so the pair sums to the number of cards played so far.
    */
   readonly scores = computed(() => countOwned(this._state()));
 
@@ -228,14 +228,14 @@ function roll(base: number): number {
 }
 
 /**
- * A player's score: the cards left in their hand plus the cards they own on the
- * board. Counting both halves is what makes the two scores sum to the number of
- * cards dealt at every point in the match.
+ * A player's score: the cards they own on the board, and nothing else. A card
+ * in hand is not yet a claim on the board, so it scores nothing until it is
+ * played; the two scores therefore sum to the number of cards placed so far.
  */
 export function countOwned(s: GameState | null): { player: number; opponent: number } {
   if (!s) return { player: 0, opponent: 0 };
-  let player = s.player.hand.filter(Boolean).length;
-  let opponent = s.opponent.hand.filter(Boolean).length;
+  let player = 0;
+  let opponent = 0;
   for (const cell of s.board.flat()) {
     if (cell?.owner === 'player') player++;
     else if (cell?.owner === 'opponent') opponent++;
