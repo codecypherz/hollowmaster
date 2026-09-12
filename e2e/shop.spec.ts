@@ -39,8 +39,8 @@ test.describe('the storefront', () => {
     await expect(purse(page)).toHaveText('0');
     await expect(page.locator('app-shop .purse')).toContainText('Geo');
 
-    // Three packs, in ascending price order, each naming itself, its price,
-    // that it holds five cards, and the character of its odds.
+    // Three packs, in ascending price order, each a name, a poster, and a
+    // price — and no copy about what is inside.
     const wares = page.locator('app-shop .ware');
     await expect(wares).toHaveCount(3);
 
@@ -49,16 +49,15 @@ test.describe('the storefront', () => {
       await expect(ware.locator('.ware-name')).toHaveText(pack.name);
       await expect(ware.locator('.price-amount')).toHaveText(String(pack.price));
       await expect(ware.locator('.price-currency')).toHaveText('Geo');
-      await expect(ware.locator('.ware-contents')).toHaveText(`${PACK_SIZE} cards`);
-      await expect(ware.locator('.ware-odds')).not.toBeEmpty();
+
+      // The poster is rendered, not merely referenced.
+      const art = ware.locator('img.ware-art');
+      await expect(art).toBeVisible();
+      expect(await art.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
     }
 
-    // The odds text tells the tiers apart.
-    const odds = await wares.locator('.ware-odds').allInnerTexts();
-    expect(new Set(odds).size).toBe(3);
-    const rare = odds.map((o) => Number(o.match(/^(\d+)%/)![1]));
-    expect(rare[0]).toBeLessThan(rare[1]);
-    expect(rare[1]).toBeLessThan(rare[2]);
+    await expect(page.locator('app-shop .ware-contents, app-shop .ware-odds')).toHaveCount(0);
+    await expect(page.locator('app-shop .wares')).not.toContainText(`${PACK_SIZE} cards`);
 
     // Both forthcoming sections, marked as such and claiming no price.
     for (const id of ['power-ups', 'cosmetics']) {

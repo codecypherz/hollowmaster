@@ -1,15 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { createParticleField, particleVars } from '../../model/particle';
 import { Card, CARD_DB } from '../../model/card';
-import {
-  PACKS,
-  PACK_SIZE,
-  PackDefinition,
-  chanceOfAtLeast,
-  drawPack,
-  revealOrder,
-  totalWeight,
-} from '../../model/pack';
+import { PACKS, PackDefinition, drawPack, revealOrder } from '../../model/pack';
 import { UserService } from '../../services/user.service';
 import { PackOpening } from '../pack-opening/pack-opening';
 
@@ -18,12 +10,6 @@ import { PackOpening } from '../pack-opening/pack-opening';
  * reaches the most interesting odds in a single click.
  */
 const DEV_GRANT_GEO = 500;
-
-/** A pack as the storefront presents it: the definition, plus what it costs today. */
-interface Ware {
-  readonly def: PackDefinition;
-  readonly odds: string;
-}
 
 /**
  * The Shop.
@@ -48,17 +34,13 @@ export class Shop {
   /** The player's purse. Named Geo on the page; zero shows as zero. */
   readonly geo = this.user.geo;
 
-  readonly packSize = PACK_SIZE;
   readonly grantAmount = DEV_GRANT_GEO;
 
   /**
-   * The three tiers in ascending price order, each carrying the sentence that
-   * tells it apart from its neighbours. The order comes from the price rather
-   * than from the order they happen to be declared in.
+   * The three tiers in ascending price order. The order comes from the price
+   * rather than from the order they happen to be declared in.
    */
-  readonly wares: readonly Ware[] = [...PACKS]
-    .sort((a, b) => a.price - b.price)
-    .map((def) => ({ def, odds: oddsFor(def) }));
+  readonly wares: readonly PackDefinition[] = [...PACKS].sort((a, b) => a.price - b.price);
 
   /** The cards of the pack being opened, or null when the storefront is at rest. */
   readonly opening = signal<readonly Card[] | null>(null);
@@ -66,7 +48,7 @@ export class Shop {
   /** Every pack the purse cannot currently reach. */
   readonly unaffordable = computed(() => {
     const geo = this.user.geo();
-    return new Set(this.wares.filter((w) => w.def.price > geo).map((w) => w.def.id));
+    return new Set(this.wares.filter((w) => w.price > geo).map((w) => w.id));
   });
 
   canAfford(def: PackDefinition): boolean {
@@ -96,17 +78,4 @@ export class Shop {
   grantGeo(): void {
     this.user.creditGeo(DEV_GRANT_GEO);
   }
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-/**
- * How a tier describes its own odds, derived from its weight table rather than
- * written out beside it — so retuning the table retunes the sentence, and the
- * three can never claim to differ in a way they no longer do.
- */
-export function oddsFor(def: PackDefinition): string {
-  const rare = Math.round(chanceOfAtLeast(def, 4) * 100);
-  const common = Math.round((def.weights[1] / totalWeight(def)) * 100);
-  return `${rare}% four-star or better, ${common}% one-star`;
 }

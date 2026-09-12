@@ -44,30 +44,27 @@
       <h2 class="section-title">Packs</h2>
 
       <ul class="ware-list">
-        @for (ware of wares; track ware.def.id) {
-          <li class="ware" [class.is-unaffordable]="!canAfford(ware.def)">
-            <h3 class="ware-name">{{ ware.def.name }}</h3>
-            <p class="ware-contents">{{ packSize }} cards</p>
-            <p class="ware-odds">{{ ware.odds }}</p>
+        @for (ware of wares; track ware.id) {
+          <li class="ware" [class.is-unaffordable]="!canAfford(ware)">
+            <h3 class="ware-name">{{ ware.name }}</h3>
+
+            <!-- Decorative: the pack names itself on the line above. -->
+            <img class="ware-art" [src]="ware.art" alt="" />
+
             <p class="ware-price">
-              <span class="price-amount">{{ ware.def.price }}</span>
+              <span class="price-amount">{{ ware.price }}</span>
               <span class="price-currency">Geo</span>
             </p>
 
-            @if (canAfford(ware.def)) {
-              <button
-                type="button"
-                class="hk-btn"
-                [attr.data-buy]="ware.def.id"
-                (click)="buy(ware.def)"
-              >
+            @if (canAfford(ware)) {
+              <button type="button" class="hk-btn" [attr.data-buy]="ware.id" (click)="buy(ware)">
                 Buy
               </button>
             } @else {
               <!-- Not a disabled button but no button at all: there is nothing
                    here to reach by pointer or by keyboard, and the reason is
                    on the face of the ware rather than only on trying it. -->
-              <p class="ware-locked" [attr.data-locked]="ware.def.id">Not enough Geo</p>
+              <p class="ware-locked" [attr.data-locked]="ware.id">Not enough Geo</p>
             }
           </li>
         }

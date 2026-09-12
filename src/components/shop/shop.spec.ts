@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Shop, oddsFor } from './shop';
+import { Shop } from './shop';
 import { UserService } from '../../services/user.service';
 import { USER_STORE, UserStore } from '../../services/user-store';
 import { PACKS, PACK_SIZE } from '../../model/pack';
@@ -78,8 +78,8 @@ describe('Shop', () => {
 
   describe('the pack wares', () => {
     it('presents all three tiers in ascending price order', () => {
-      expect(shop.wares.map((w) => w.def.name)).toEqual(['Level 1', 'Level 2', 'Level 3']);
-      expect(shop.wares.map((w) => w.def.price)).toEqual([100, 250, 500]);
+      expect(shop.wares.map((w) => w.name)).toEqual(['Level 1', 'Level 2', 'Level 3']);
+      expect(shop.wares.map((w) => w.price)).toEqual([100, 250, 500]);
 
       const rendered = wares().map((el) => el.querySelector('.ware-name')!.textContent!.trim());
       expect(rendered).toEqual(['Level 1', 'Level 2', 'Level 3']);
@@ -90,28 +90,31 @@ describe('Shop', () => {
       expect(prices).toEqual([...prices].sort((a, b) => a - b));
     });
 
-    it('states each price in Geo and that a pack holds five cards', () => {
+    it('states each price in Geo', () => {
       for (const [i, el] of wares().entries()) {
         expect(el.querySelector('.price-amount')!.textContent!.trim()).toBe(
-          String(shop.wares[i].def.price),
+          String(shop.wares[i].price),
         );
         expect(el.querySelector('.price-currency')!.textContent!.trim()).toBe('Geo');
-        expect(el.querySelector('.ware-contents')!.textContent!.trim()).toBe(`${PACK_SIZE} cards`);
       }
     });
 
-    it('tells the tiers apart by their odds', () => {
-      const odds = wares().map((el) => el.querySelector('.ware-odds')!.textContent!.trim());
-      expect(new Set(odds).size).toBe(3);
-      const rare = odds.map((o) => Number(o.match(/^(\d+)%/)![1]));
-      expect(rare[0]).toBeLessThan(rare[1]);
-      expect(rare[1]).toBeLessThan(rare[2]);
+    it('shows each pack as its poster, and nothing else', () => {
+      for (const [i, el] of wares().entries()) {
+        const art = el.querySelector('img.ware-art') as HTMLImageElement;
+        expect(art).not.toBeNull();
+        expect(art.getAttribute('src')).toBe(shop.wares[i].art);
+        // Decorative: the pack names itself on the line above.
+        expect(art.getAttribute('alt')).toBe('');
+      }
     });
 
-    it('derives the odds sentence from the weight table', () => {
-      for (const def of PACKS) expect(oddsFor(def)).toBe(oddsFor(def));
-      expect(oddsFor(PACKS[0])).toContain('4%');
-      expect(oddsFor(PACKS[2])).toContain('53%');
+    it('carries no card count and no odds copy', () => {
+      expect(fixture.nativeElement.querySelectorAll('.ware-contents')).toHaveLength(0);
+      expect(fixture.nativeElement.querySelectorAll('.ware-odds')).toHaveLength(0);
+      const copy = text().toLowerCase();
+      expect(copy).not.toContain(`${PACK_SIZE} cards`);
+      expect(copy).not.toMatch(/\d+%/);
     });
   });
 

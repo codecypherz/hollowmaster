@@ -30,20 +30,30 @@ soon as that balance changes.
 
 ### Requirement: All three pack tiers are presented as wares
 
-The Shop SHALL present each of the three pack tiers, each naming itself, stating its price in Geo,
-stating that it contains five cards, and conveying the character of its odds so a player can tell
-the tiers apart before buying. The three SHALL be presented together, in ascending order of price.
+The Shop SHALL present each of the three pack tiers as a single vertical column — its name, then its
+pack artwork, then its price in Geo and the control that buys it — with no frame or border drawn
+around that column. The three SHALL be presented together, in ascending order of price.
+
+A ware MUST NOT carry explanatory copy about what the pack contains: not how many cards it holds,
+and not its rarity odds. The artwork and the name are what distinguish one tier from another on the
+storefront.
 
 #### Scenario: The three tiers are on offer
 
 - **WHEN** the player views the Shop
 - **THEN** Level 1, Level 2, and Level 3 packs are all presented
-- **AND** each states its Geo price and that it holds five cards
+- **AND** each shows its name, its pack artwork, and its Geo price
 
-#### Scenario: The tiers are distinguishable before purchase
+#### Scenario: A ware is a bare column
 
-- **WHEN** the player compares two pack tiers
-- **THEN** each conveys how its odds differ — that the higher tier favours rarer cards
+- **WHEN** a pack tier is presented
+- **THEN** its name, artwork, price, and control read as one vertical column
+- **AND** no border or frame is drawn around them
+
+#### Scenario: The wares carry no explanatory copy
+
+- **WHEN** the player views the Shop
+- **THEN** no ware states how many cards a pack holds, nor the probability of any rarity
 
 #### Scenario: The tiers read in price order
 

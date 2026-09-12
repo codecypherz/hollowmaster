@@ -18,11 +18,20 @@ export interface PackDefinition {
   readonly name: string;
   /** Price in Geo. */
   readonly price: number;
+  /** The pack's poster, as the storefront shows it. Served from `public/images/`. */
+  readonly art: string;
   readonly weights: RarityWeights;
 }
 
 /** How many cards every pack of every tier yields. */
 export const PACK_SIZE = 5;
+
+/**
+ * The poster every tier currently shows. One piece of art stands for all three
+ * until each tier has its own; the field is per-tier so giving one its own
+ * poster is a one-line edit here and nothing else.
+ */
+const PACK_ART = '/images/card-pack-fc.png';
 
 /**
  * The three tiers.
@@ -43,18 +52,21 @@ export const PACKS: readonly PackDefinition[] = Object.freeze([
     id: 'level-1',
     name: 'Level 1',
     price: 100,
+    art: PACK_ART,
     weights: Object.freeze({ 1: 55, 2: 30, 3: 11, 4: 2, 5: 1, 6: 1 }),
   },
   {
     id: 'level-2',
     name: 'Level 2',
     price: 250,
+    art: PACK_ART,
     weights: Object.freeze({ 1: 30, 2: 28, 3: 21, 4: 13, 5: 5, 6: 3 }),
   },
   {
     id: 'level-3',
     name: 'Level 3',
     price: 500,
+    art: PACK_ART,
     weights: Object.freeze({ 1: 10, 2: 15, 3: 22, 4: 25, 5: 18, 6: 10 }),
   },
 ] as const);
