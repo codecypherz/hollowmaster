@@ -11,9 +11,9 @@
 }
 
 .game-wrap {
-  /* Primitive parameters for this screen: a tighter frame. */
-  --corner-size: 48px;
-  --corner-inset: 20px;
+  /* Primitive parameters for this screen. The corner frame ornament is
+     deliberately absent here: the arena is fitted to the viewport, so the
+     screen's edges stay bare and every pixel goes to the board. */
   --btn-font-size: 0.6rem;
   --btn-padding: 0.5rem 1.4rem;
 
