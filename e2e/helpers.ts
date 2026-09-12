@@ -132,9 +132,46 @@ export async function openShop(page: Page): Promise<void> {
   await expect(purse(page)).toBeVisible();
 }
 
-/** The Geo purse, as a number. */
+/** The Geo purse: the amount, with the currency's mark beside it. */
 export function purse(page: Page): Locator {
   return page.locator('[data-testid="purse"]');
+}
+
+/** The Geo mark inside a rendered amount — the icon that names the currency. */
+export function geoMark(scope: Locator): Locator {
+  return scope.locator('img.geo-mark');
+}
+
+/** The bought pack, sealed, in the opening's hero slot. */
+export function sealedPack(page: Page): Locator {
+  return page.locator('app-pack-opening [data-testid="sealed-pack"]');
+}
+
+/** The pack's declared minimum supported width, in CSS pixels. */
+export const PACK_MIN_WIDTH = 120;
+
+/**
+ * One atomic reading of the opening's stage, so "the pack is shown before any
+ * card" is checked as a single state rather than as two assertions the reveal
+ * could run between.
+ */
+export async function openingStage(page: Page): Promise<{
+  pack: boolean;
+  packWidth: number;
+  packName: string;
+  heroCard: boolean;
+  revealed: number;
+}> {
+  return page.evaluate(() => {
+    const pack = document.querySelector('app-pack-opening [data-testid="sealed-pack"]');
+    return {
+      pack: pack !== null,
+      packWidth: pack ? pack.getBoundingClientRect().width : 0,
+      packName: pack?.querySelector('.pack-name')?.textContent?.trim() ?? '',
+      heroCard: document.querySelector('app-pack-opening .hero-card') !== null,
+      revealed: document.querySelectorAll('app-pack-opening .collected-card.is-revealed').length,
+    };
+  });
 }
 
 export async function purseValue(page: Page): Promise<number> {
@@ -148,7 +185,10 @@ export async function grantGeo(page: Page): Promise<void> {
   await expect(purse(page)).toHaveText(String(before + GRANT_GEO));
 }
 
-/** Buys a pack and waits for the opening overlay. */
+/**
+ * Buys a pack and waits for the opening overlay. The overlay opens on the
+ * sealed pack, so what is up when this returns is the wrapper, not a card.
+ */
 export async function buyPack(page: Page, id: string): Promise<void> {
   await page.locator(`[data-buy="${id}"]`).click();
   await expect(page.locator('app-pack-opening')).toBeVisible();

@@ -342,6 +342,34 @@
   pointer-events: none;
 }
 
+/* ─── Currency: the Geo amount ────────────────────────────────────────────────
+   An amount of Geo is the numeral followed by the currency's mark, and the two
+   are one word: they never break apart, and the mark is sized in `em` so it is
+   drawn from whatever type it sits in — a small price and the purse's display
+   numeral both get a proportionate mark with no size passed in.
+
+   `vertical-align` rather than a baseline-aligned flex row: an image in such a
+   row sits on its own bottom edge, which leaves the mark hanging below the
+   numeral. Inline layout is what puts it on the numeral's own baseline.
+
+   The arrangement itself is not something a surface assembles — `<app-geo>` in
+   src/components/geo/ is the only thing that writes these two classes, so the
+   order of amount and mark, and the mark's accessible name, have one definition.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.geo-amount {
+  white-space: nowrap;
+}
+
+.geo-mark {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  margin-left: 0.3em;
+  vertical-align: -0.18em;
+  object-fit: contain;
+}
+
 /* ─── Reduced motion ──────────────────────────────────────────────────────────
    Ambient looping animation is suppressed, but every element stays visible in
    its resting state — particles hold at full opacity rather than at the 0%

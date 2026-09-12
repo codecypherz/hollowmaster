@@ -1,6 +1,9 @@
 import { Component, computed, signal } from '@angular/core';
 import { CardComponent } from '../card/card';
+import { Geo } from '../geo/geo';
+import { PackComponent } from '../pack/pack';
 import { Card, CardOptions, CARD_DB } from '../../model/card';
+import { PACKS } from '../../model/pack';
 import { createParticleField, particleVars } from '../../model/particle';
 
 export interface Token {
@@ -23,6 +26,14 @@ export interface RatingSample {
 const CARD_MIN_WIDTH = 120;
 const ABILITY_GATE = 200;
 
+/**
+ * The pack's declared minimum supported width, and the width the guide shows a
+ * pack at otherwise. The minimum is read from the same contract the renderer
+ * states, so the narrowest example on the page cannot drift below it.
+ */
+const PACK_MIN_WIDTH = 120;
+const PACK_DEMO_WIDTH = 190;
+
 /** Prefixes the guide groups tokens by. Anything else lands in "other". */
 const GROUPS = [
   { key: 'color', prefix: '--color-', title: 'Colour' },
@@ -43,7 +54,7 @@ const GROUPS = [
  */
 @Component({
   selector: 'app-style-guide',
-  imports: [CardComponent],
+  imports: [CardComponent, Geo, PackComponent],
   templateUrl: './style-guide.html',
   styleUrl: './style-guide.css',
 })
@@ -152,6 +163,14 @@ export class StyleGuide {
   readonly vars = particleVars;
 
   readonly buttonStates = ['resting', 'is-hover', 'is-focus', 'disabled'] as const;
+
+  /**
+   * Every tier the catalogue offers, so each wrapper's printed name is on the
+   * page, plus the two widths the pack's contract is stated at.
+   */
+  readonly packs = PACKS;
+  readonly packMinWidth = PACK_MIN_WIDTH;
+  readonly packDemoWidth = PACK_DEMO_WIDTH;
 
   /** Floored at the minimum and straddling the ability gate, one pixel apart. */
   readonly sizeLadder = [CARD_MIN_WIDTH, 160, ABILITY_GATE - 1, ABILITY_GATE, 260] as const;

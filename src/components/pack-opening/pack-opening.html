@@ -9,11 +9,22 @@
     }
   </p>
 
-  <!-- Hero slot: the card currently arriving, laid out well above the card
-       renderer's ability gate so its text can actually be read. -->
+  <!-- Hero slot: first the pack the player bought, sealed and then torn, and
+       after it the card currently arriving — laid out well above the card
+       renderer's ability gate so its text can actually be read. The pack is
+       laid out to the hero card's own height, so the slot does not change size
+       when its occupant does. -->
   <div class="hero-slot">
-    @if (hero(); as card) {
-      <div class="hero-card rarity-{{ card.stars }}" [attr.data-stars]="card.stars">
+    @if (showPack()) {
+      <div class="hero-pack" [class.is-tearing]="tearing()" data-testid="sealed-pack">
+        <app-pack [pack]="pack()" [torn]="tearing()" />
+      </div>
+    } @else if (hero(); as card) {
+      <div
+        class="hero-card rarity-{{ card.stars }}"
+        [class.from-pack]="revealed() === 0"
+        [attr.data-stars]="card.stars"
+      >
         <div class="card-reveal">
           <app-card [card]="card" />
           <p class="rarity-label">{{ card.stars }}-star</p>

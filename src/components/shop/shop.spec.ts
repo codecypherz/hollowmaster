@@ -62,7 +62,17 @@ describe('Shop', () => {
     it('shows a new player zero rather than a blank', () => {
       const purse = fixture.nativeElement.querySelector('[data-testid="purse"]')!;
       expect(purse.textContent!.trim()).toBe('0');
-      expect(text()).toContain('Geo');
+      // The mark names the currency, so the balance is a number and a mark.
+      expect(purse.querySelector('img.geo-mark')!.getAttribute('alt')).toBe('Geo');
+    });
+
+    it('spells the currency nowhere on the page', () => {
+      user.creditGeo(500);
+      fixture.detectChanges();
+      expect(text()).not.toContain('Geo');
+      expect(text().toLowerCase()).not.toContain('geo');
+      // Every amount on the page goes through the primitive.
+      expect(fixture.nativeElement.querySelectorAll('app-geo').length).toBeGreaterThan(0);
     });
 
     it('follows the balance without a reload', () => {
@@ -81,31 +91,38 @@ describe('Shop', () => {
       expect(shop.wares.map((w) => w.name)).toEqual(['Level 1', 'Level 2', 'Level 3']);
       expect(shop.wares.map((w) => w.price)).toEqual([100, 250, 500]);
 
-      const rendered = wares().map((el) => el.querySelector('.ware-name')!.textContent!.trim());
-      expect(rendered).toEqual(['Level 1', 'Level 2', 'Level 3']);
-
-      const prices = wares().map((el) =>
-        Number(el.querySelector('.price-amount')!.textContent!.trim()),
+      // The name a ware carries is the one printed on its wrapper.
+      const rendered = wares().map((el) =>
+        el.querySelector('app-pack .pack-name')!.textContent!.trim(),
       );
-      expect(prices).toEqual([...prices].sort((a, b) => a - b));
+      expect(rendered).toEqual(['Level 1', 'Level 2', 'Level 3']);
     });
 
-    it('states each price in Geo', () => {
+    it('shows each ware as one sealed pack, with no name set outside it', () => {
       for (const [i, el] of wares().entries()) {
-        expect(el.querySelector('.price-amount')!.textContent!.trim()).toBe(
-          String(shop.wares[i].price),
-        );
-        expect(el.querySelector('.price-currency')!.textContent!.trim()).toBe('Geo');
+        const packs = el.querySelectorAll('app-pack');
+        expect(packs).toHaveLength(1);
+
+        const art = packs[0].querySelector('img.pack-art') as HTMLImageElement;
+        expect(art.getAttribute('src')).toBe(shop.wares[i].art);
+
+        // Nothing captions the pack: the only place the tier's name appears on
+        // the ware is inside the wrapper.
+        expect(el.querySelector('.ware-name')).toBeNull();
+        const outside = el.textContent!.replace(packs[0].textContent!, '');
+        expect(outside).not.toContain(shop.wares[i].name);
       }
     });
 
-    it('shows each pack as its poster, and nothing else', () => {
+    it('states each price exactly once, as a Geo amount', () => {
+      user.creditGeo(1000);
+      fixture.detectChanges();
+
       for (const [i, el] of wares().entries()) {
-        const art = el.querySelector('img.ware-art') as HTMLImageElement;
-        expect(art).not.toBeNull();
-        expect(art.getAttribute('src')).toBe(shop.wares[i].art);
-        // Decorative: the pack names itself on the line above.
-        expect(art.getAttribute('alt')).toBe('');
+        const amounts = [...el.querySelectorAll('app-geo')];
+        expect(amounts).toHaveLength(1);
+        expect(amounts[0].textContent!.trim()).toBe(String(shop.wares[i].price));
+        expect(amounts[0].querySelector('img.geo-mark')).not.toBeNull();
       }
     });
 
@@ -127,6 +144,20 @@ describe('Shop', () => {
       expect(fixture.nativeElement.querySelectorAll('[data-buy]')).toHaveLength(0);
       expect(fixture.nativeElement.querySelectorAll('[data-locked]')).toHaveLength(3);
       expect(fixture.nativeElement.querySelectorAll('.ware button')).toHaveLength(0);
+    });
+
+    it('keeps the price on an unaffordable ware, on a plate that is not a control', () => {
+      for (const [i, el] of wares().entries()) {
+        const plate = el.querySelector('[data-locked]')!;
+        const amount = plate.querySelector('app-geo')!;
+        expect(amount.textContent!.trim()).toBe(String(shop.wares[i].price));
+        expect(amount.querySelector('img.geo-mark')).not.toBeNull();
+        expect(plate.textContent!.toLowerCase()).toContain('not enough');
+
+        // Nothing on the plate, or anywhere else in the ware, can be reached.
+        expect(plate.querySelectorAll('button, a')).toHaveLength(0);
+        expect(el.querySelectorAll('button, a')).toHaveLength(0);
+      }
     });
 
     it('refuses a buy that reaches it anyway', () => {
@@ -155,6 +186,41 @@ describe('Shop', () => {
     });
   });
 
+  // ─── 7.4b The control that buys a pack ──────────────────────────────────
+
+  describe('the buy control', () => {
+    beforeEach(() => {
+      user.creditGeo(1000);
+      fixture.detectChanges();
+    });
+
+    it('is labelled with the price and nothing else', () => {
+      for (const [i, el] of wares().entries()) {
+        const button = el.querySelector('[data-buy]') as HTMLButtonElement;
+        expect(button.tagName).toBe('BUTTON');
+        expect(button.getAttribute('data-buy')).toBe(shop.wares[i].id);
+        expect(button.textContent!.trim()).toBe(String(shop.wares[i].price));
+        expect(button.querySelector('app-geo img.geo-mark')).not.toBeNull();
+      }
+    });
+
+    it('presents no separate purchase label', () => {
+      expect(text().toLowerCase()).not.toContain('buy');
+      const controls = [...fixture.nativeElement.querySelectorAll('button')] as HTMLElement[];
+      for (const control of controls) {
+        expect(control.textContent!.toLowerCase()).not.toContain('buy');
+      }
+    });
+
+    it('buys that pack when it is activated', () => {
+      const button = fixture.nativeElement.querySelector('[data-buy="level-2"]') as HTMLElement;
+      button.click();
+      fixture.detectChanges();
+      expect(user.geo()).toBe(750);
+      expect(shop.opening()).not.toBeNull();
+    });
+  });
+
   // ─── 7.5 The purchase ───────────────────────────────────────────────────
 
   describe('buying a pack', () => {
@@ -169,9 +235,18 @@ describe('Shop', () => {
       expect(user.totalCards()).toBe(14);
     });
 
+    it('opens the overlay on the pack that was bought', () => {
+      shop.buy(PACKS[2]);
+      fixture.detectChanges();
+
+      expect(shop.opening()!.pack).toBe(PACKS[2]);
+      const overlay = fixture.nativeElement.querySelector('app-pack-opening')!;
+      expect(overlay.querySelector('app-pack .pack-name')!.textContent!.trim()).toBe(PACKS[2].name);
+    });
+
     it('opens the overlay on the cards that were granted, in reveal order', () => {
       shop.buy(PACKS[2]);
-      const revealed = shop.opening()!;
+      const revealed = shop.opening()!.cards;
       expect(revealed).toHaveLength(PACK_SIZE);
 
       const rarities = revealed.map((c) => c.stars);
@@ -186,7 +261,7 @@ describe('Shop', () => {
     it('raises the quantity of a card already held rather than discarding it', () => {
       const before = user.totalCards();
       shop.buy(PACKS[0]);
-      const revealed = shop.opening()!;
+      const revealed = shop.opening()!.cards;
       const counts = new Map<ReturnType<typeof cardKey>, number>();
       for (const c of revealed) {
         counts.set(cardKey(c), (counts.get(cardKey(c)) ?? 0) + 1);
@@ -213,6 +288,14 @@ describe('Shop', () => {
   // ─── 7.6 The development aid ────────────────────────────────────────────
 
   describe('the Geo grant', () => {
+    it('states its amount as a Geo amount rather than in words', () => {
+      const button = fixture.nativeElement.querySelector('[data-testid="grant"]')!;
+      const amount = button.querySelector('app-geo')!;
+      expect(amount.textContent!.trim()).toBe(String(shop.grantAmount));
+      expect(amount.querySelector('img.geo-mark')).not.toBeNull();
+      expect(button.textContent!.toLowerCase()).not.toContain('geo');
+    });
+
     it('credits the purse', () => {
       const button = fixture.nativeElement.querySelector('[data-testid="grant"]')!;
       button.click();

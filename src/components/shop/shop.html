@@ -33,8 +33,7 @@
 
       <!-- The purse. Always shown, and zero is a number like any other. -->
       <p class="purse" aria-label="Your Geo">
-        <span class="purse-amount" data-testid="purse">{{ geo() }}</span>
-        <span class="purse-currency">Geo</span>
+        <app-geo class="purse-amount" data-testid="purse" [amount]="geo()" />
       </p>
     </header>
 
@@ -46,25 +45,25 @@
       <ul class="ware-list">
         @for (ware of wares; track ware.id) {
           <li class="ware" [class.is-unaffordable]="!canAfford(ware)">
-            <h3 class="ware-name">{{ ware.name }}</h3>
-
-            <!-- Decorative: the pack names itself on the line above. -->
-            <img class="ware-art" [src]="ware.art" alt="" />
-
-            <p class="ware-price">
-              <span class="price-amount">{{ ware.price }}</span>
-              <span class="price-currency">Geo</span>
-            </p>
+            <!-- The ware is the sealed pack itself: it carries its own name,
+                 printed on the wrapper, so nothing here captions it. -->
+            <app-pack [pack]="ware" />
 
             @if (canAfford(ware)) {
+              <!-- The control is the price. There is no second purchase label
+                   and no second statement of the cost. -->
               <button type="button" class="hk-btn" [attr.data-buy]="ware.id" (click)="buy(ware)">
-                Buy
+                <app-geo [amount]="ware.price" />
               </button>
             } @else {
               <!-- Not a disabled button but no button at all: there is nothing
                    here to reach by pointer or by keyboard, and the reason is
-                   on the face of the ware rather than only on trying it. -->
-              <p class="ware-locked" [attr.data-locked]="ware.id">Not enough Geo</p>
+                   on the face of the ware rather than only on trying it. The
+                   price stays on screen without becoming reachable. -->
+              <p class="ware-locked" [attr.data-locked]="ware.id">
+                <app-geo [amount]="ware.price" />
+                <span class="locked-reason">Not enough</span>
+              </p>
             }
           </li>
         }
@@ -88,10 +87,11 @@
 
     <section class="dev-grant" aria-label="Development aid">
       <button type="button" class="hk-btn dev-btn" data-testid="grant" (click)="grantGeo()">
-        Grant {{ grantAmount }} Geo
+        Grant <app-geo [amount]="grantAmount" />
       </button>
       <p class="dev-note">
-        Temporary development aid — Geo is not yet earned through play, and this is not a purchase.
+        Temporary development aid — the purse is not yet filled through play, and this is not a
+        purchase.
       </p>
     </section>
 
@@ -107,6 +107,6 @@
   </main>
 </div>
 
-@if (opening(); as cards) {
-  <app-pack-opening [cards]="cards" (done)="closeOpening()" />
+@if (opening(); as open) {
+  <app-pack-opening [pack]="open.pack" [cards]="open.cards" (done)="closeOpening()" />
 }

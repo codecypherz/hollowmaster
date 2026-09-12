@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Card, CARD_BY_KEY, cardKeyOf } from '../../model/card';
-import { PACK_SIZE, revealOrder } from '../../model/pack';
+import { PACKS, PACK_SIZE, revealOrder } from '../../model/pack';
 import { PackOpening, OPENING_SIZE, dwellFor, fitOverlay } from './pack-opening';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // ★1
@@ -11,11 +11,23 @@ const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!; // ★4
 /** A pack already in reveal order: common first, rarest last. */
 const pack: Card[] = revealOrder([goam, crawlid, gruzMother, crawlid, huskWarrior]);
 
-function mount(cards: readonly Card[] = pack) {
+function mount(cards: readonly Card[] = pack, def = PACKS[0]) {
   const fixture = TestBed.createComponent(PackOpening);
   fixture.componentRef.setInput('cards', cards);
+  fixture.componentRef.setInput('pack', def);
   fixture.detectChanges();
   return fixture;
+}
+
+/**
+ * Runs the sealed stage out: the seal dwell, then the tear. Two ticks rather
+ * than one because the tear's timer is only started when the dwell's fires.
+ */
+function tearOpen(fixture: ReturnType<typeof mount>) {
+  vi.runOnlyPendingTimers();
+  fixture.detectChanges();
+  vi.runOnlyPendingTimers();
+  fixture.detectChanges();
 }
 
 describe('PackOpening', () => {
@@ -28,9 +40,9 @@ describe('PackOpening', () => {
     vi.useRealTimers();
   });
 
-  /** Runs the whole timer chain out. */
+  /** Runs the whole timer chain out, the sealed stage included. */
   function runSequence(fixture: ReturnType<typeof mount>) {
-    for (let i = 0; i < OPENING_SIZE + 1; i++) {
+    for (let i = 0; i < OPENING_SIZE + 3; i++) {
       vi.runOnlyPendingTimers();
       fixture.detectChanges();
     }
@@ -47,15 +59,101 @@ describe('PackOpening', () => {
 
   it('opens with the first card in the hero slot and none collected', () => {
     const fixture = mount();
+    tearOpen(fixture);
     expect(fixture.componentInstance.hero()).toBe(pack[0]);
     expect(fixture.componentInstance.revealed()).toBe(0);
     expect(fixture.nativeElement.querySelectorAll('.collected-card.is-revealed')).toHaveLength(0);
+  });
+
+  // ─── The sealed stage ───────────────────────────────────────────────────
+
+  describe('the sealed pack', () => {
+    it('shows the pack that was bought, sealed, before any card', () => {
+      const fixture = mount(pack, PACKS[2]);
+      const host = fixture.nativeElement as HTMLElement;
+
+      expect(fixture.componentInstance.sealed()).toBe(true);
+      expect(fixture.componentInstance.showPack()).toBe(true);
+
+      // The same wrapper the storefront sold: its tier's name, its art.
+      const wrapper = host.querySelector('.hero-pack app-pack')!;
+      expect(wrapper.querySelector('.pack-name')!.textContent!.trim()).toBe(PACKS[2].name);
+      expect(wrapper.classList.contains('is-torn')).toBe(false);
+
+      // And no card yet.
+      expect(host.querySelector('.hero-card')).toBeNull();
+      expect(fixture.componentInstance.revealed()).toBe(0);
+      expect(host.querySelectorAll('.collected-card.is-revealed')).toHaveLength(0);
+    });
+
+    it('tears the seal, and only then reveals the first card', () => {
+      const fixture = mount();
+      const host = fixture.nativeElement as HTMLElement;
+
+      // The dwell ends: the seal breaks, and still no card.
+      vi.runOnlyPendingTimers();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.tearing()).toBe(true);
+      expect(host.querySelector('.hero-pack app-pack')!.classList.contains('is-torn')).toBe(true);
+      expect(host.querySelector('.hero-card')).toBeNull();
+      expect(fixture.componentInstance.revealed()).toBe(0);
+
+      // The tear ends: the pack gives way to the first card rising out of it.
+      vi.runOnlyPendingTimers();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.showPack()).toBe(false);
+      expect(host.querySelector('.hero-pack')).toBeNull();
+      const hero = host.querySelector('.hero-card')!;
+      expect(hero.classList.contains('from-pack')).toBe(true);
+      expect(fixture.componentInstance.hero()).toBe(pack[0]);
+    });
+
+    it('leaves no stage behind when the sequence ends', () => {
+      const fixture = mount();
+      runSequence(fixture);
+      expect(fixture.componentInstance.sealed()).toBe(false);
+      expect(fixture.componentInstance.tearing()).toBe(false);
+      expect(fixture.componentInstance.showPack()).toBe(false);
+      expect(fixture.nativeElement.querySelector('.hero-pack')).toBeNull();
+    });
+
+    it('shows the whole result when skipped while still sealed', () => {
+      const fixture = mount();
+      expect(fixture.componentInstance.sealed()).toBe(true);
+
+      fixture.componentInstance.skip();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.revealed()).toBe(PACK_SIZE);
+      expect(fixture.componentInstance.isComplete()).toBe(true);
+      expect(fixture.componentInstance.showPack()).toBe(false);
+      expect(fixture.nativeElement.querySelectorAll('.collected-card.is-revealed')).toHaveLength(
+        PACK_SIZE,
+      );
+      // No further stage of the sequence plays.
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('plays no tear at all under reduced motion', () => {
+      vi.stubGlobal('matchMedia', () => ({ matches: true }) as MediaQueryList);
+      try {
+        const fixture = mount();
+        expect(fixture.componentInstance.sealed()).toBe(false);
+        expect(fixture.componentInstance.tearing()).toBe(false);
+        expect(fixture.nativeElement.querySelector('.hero-pack')).toBeNull();
+        expect(fixture.componentInstance.revealed()).toBe(PACK_SIZE);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
   });
 
   // ─── 6.3 The sequence ───────────────────────────────────────────────────
 
   it('collects the cards one at a time, in the order it was given them', () => {
     const fixture = mount();
+    tearOpen(fixture);
     const seen: (Card | null)[] = [];
 
     for (let i = 0; i < OPENING_SIZE; i++) {
@@ -73,6 +171,7 @@ describe('PackOpening', () => {
 
   it('reveals its cards in ascending rarity when given a pack in reveal order', () => {
     const fixture = mount();
+    tearOpen(fixture);
     const rarities: number[] = [];
     for (let i = 0; i < OPENING_SIZE; i++) {
       rarities.push(fixture.componentInstance.hero()!.stars);
@@ -125,6 +224,7 @@ describe('PackOpening', () => {
 
   it('shows every card immediately when skipped partway, in the same order', () => {
     const fixture = mount();
+    tearOpen(fixture);
     vi.runOnlyPendingTimers();
     fixture.detectChanges();
     expect(fixture.componentInstance.revealed()).toBe(1);

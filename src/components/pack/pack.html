@@ -1,0 +1,15 @@
+<div class="wrapper">
+  <!-- Decorative: the wrapper prints the pack's name itself, below. -->
+  <img class="pack-art" [src]="pack().art" alt="" />
+
+  <div class="pack-gloss" aria-hidden="true"></div>
+  <div class="pack-sheen" aria-hidden="true"></div>
+
+  <div class="crimp crimp-top" aria-hidden="true"></div>
+  <div class="crimp crimp-bottom" aria-hidden="true"></div>
+
+  <!-- The open interior, shown only once the seal is broken. -->
+  <div class="pack-interior" aria-hidden="true"></div>
+
+  <p class="pack-name">{{ pack().name }}</p>
+</div>

@@ -1,20 +1,24 @@
 import { expect, test } from '@playwright/test';
 import {
   GRANT_GEO,
+  PACK_MIN_WIDTH,
   PACK_PRICES,
   PACK_SIZE,
   buyPack,
   collected,
   expectNoScroll,
   expectPartsOnScreen,
+  geoMark,
   grantGeo,
   label,
   openShop,
   openingSettled,
+  openingStage,
   purse,
   purseValue,
   revealedCards,
   revealedRarities,
+  sealedPack,
   type Size,
 } from './helpers';
 
@@ -35,25 +39,40 @@ test.describe('the storefront', () => {
   }) => {
     await openShop(page);
 
-    // The purse: named as Geo, and zero for a new player rather than blank.
+    // The purse: zero for a new player rather than blank, and named by the
+    // mark rather than by the word.
     await expect(purse(page)).toHaveText('0');
-    await expect(page.locator('app-shop .purse')).toContainText('Geo');
+    await expect(page.locator('app-shop .purse')).not.toContainText('Geo');
+    await expect(geoMark(purse(page))).toHaveAttribute('alt', 'Geo');
 
-    // Three packs, in ascending price order, each a name, a poster, and a
-    // price — and no copy about what is inside.
+    // The word is nowhere on the storefront: every amount is a numeral and a
+    // mark, and no copy spells the currency out beside one.
+    await expect(page.locator('app-shop')).not.toContainText('Geo');
+
+    // Three packs, in ascending price order: each a sealed wrapper carrying its
+    // own name, with its price on the plate or control beside it, and no copy
+    // about what is inside.
     const wares = page.locator('app-shop .ware');
     await expect(wares).toHaveCount(3);
 
     for (const [i, pack] of PACK_PRICES.entries()) {
       const ware = wares.nth(i);
-      await expect(ware.locator('.ware-name')).toHaveText(pack.name);
-      await expect(ware.locator('.price-amount')).toHaveText(String(pack.price));
-      await expect(ware.locator('.price-currency')).toHaveText('Geo');
 
-      // The poster is rendered, not merely referenced.
-      const art = ware.locator('img.ware-art');
+      // One pack per ware, and the name printed on it rather than beside it.
+      await expect(ware.locator('app-pack')).toHaveCount(1);
+      await expect(ware.locator('app-pack .pack-name')).toHaveText(pack.name);
+      await expect(ware.locator('.ware-name')).toHaveCount(0);
+
+      // The wrapper's artwork is rendered, not merely referenced.
+      const art = ware.locator('app-pack img.pack-art');
       await expect(art).toBeVisible();
       expect(await art.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
+
+      // The price is stated exactly once on the ware, as a Geo amount.
+      const amounts = ware.locator('app-geo');
+      await expect(amounts).toHaveCount(1);
+      await expect(amounts).toHaveText(String(pack.price));
+      await expect(geoMark(amounts)).toHaveCount(1);
     }
 
     await expect(page.locator('app-shop .ware-contents, app-shop .ware-odds')).toHaveCount(0);
@@ -76,6 +95,17 @@ test.describe('the storefront', () => {
     await expect(page.locator('[data-buy]')).toHaveCount(0);
     await expect(page.locator('[data-locked]')).toHaveCount(3);
 
+    // The price stays on screen without becoming reachable: each inert plate
+    // still states what the pack costs.
+    for (const [i, pack] of PACK_PRICES.entries()) {
+      const plate = page.locator(`[data-locked="${pack.id}"]`);
+      await expect(plate.locator('app-geo')).toHaveText(String(pack.price));
+      await expect(geoMark(plate)).toHaveCount(1);
+      await expect(plate).toContainText('Not enough');
+      await expect(plate.locator('button, a')).toHaveCount(0);
+      expect(i).toBeGreaterThanOrEqual(0);
+    }
+
     // Nothing inside a ware is reachable by pointer or by keyboard.
     await expect(page.locator('app-shop .ware button, app-shop .ware a')).toHaveCount(0);
 
@@ -93,6 +123,15 @@ test.describe('the storefront', () => {
     await expect(page.locator('[data-buy="level-1"]')).toBeVisible();
     await expect(page.locator('[data-buy="level-3"]')).toBeVisible();
     await expect(page.locator('app-shop .ware.is-unaffordable')).toHaveCount(0);
+
+    // The control that buys a pack is its price, and there is no second label.
+    for (const pack of PACK_PRICES) {
+      const control = page.locator(`[data-buy="${pack.id}"]`);
+      await expect(control).toHaveText(String(pack.price));
+      await expect(geoMark(control)).toHaveCount(1);
+    }
+    await expect(page.getByRole('button', { name: 'Buy' })).toHaveCount(0);
+    await expect(page.locator('app-shop')).not.toContainText('Buy');
 
     // The grant says what it is, and the page offers no real-money purchase.
     await expect(page.locator('app-shop .dev-note')).toContainText('Temporary development aid');
@@ -155,6 +194,40 @@ test.describe('opening a pack', () => {
     await expect(purse(page)).toHaveText(String(before - 500));
   });
 
+  test('opens on the sealed pack that was bought, before any card', async ({ page }) => {
+    await openShop(page);
+    await grantGeo(page);
+    await buyPack(page, 'level-3');
+
+    await expect(sealedPack(page)).toBeVisible();
+
+    // One reading of the stage: while the pack is up, no card is.
+    const stage = await openingStage(page);
+    expect(stage.pack, 'the opening begins on the pack').toBe(true);
+    expect(stage.heroCard).toBe(false);
+    expect(stage.revealed).toBe(0);
+    // The pack shown is the pack bought, laid out at or above its minimum.
+    expect(stage.packName).toBe('Level 3');
+    expect(stage.packWidth).toBeGreaterThanOrEqual(PACK_MIN_WIDTH);
+
+    // The tear precedes the first reveal: the wrapper gives way to the cards.
+    await expect(revealedCards(page)).toHaveCount(1);
+    await expect(sealedPack(page)).toHaveCount(0);
+  });
+
+  test('shows the whole result when skipped while the pack is still sealed', async ({ page }) => {
+    await openShop(page);
+    await grantGeo(page);
+    await buyPack(page, 'level-1');
+
+    await expect(sealedPack(page)).toBeVisible();
+    await page.getByRole('button', { name: 'Skip' }).click();
+
+    await expect(revealedCards(page)).toHaveCount(PACK_SIZE);
+    await expect(sealedPack(page)).toHaveCount(0);
+    await openingSettled(page);
+  });
+
   test('lays the hero card out above the ability gate of the card renderer', async ({ page }) => {
     await openShop(page);
     await grantGeo(page);
@@ -163,8 +236,11 @@ test.describe('opening a pack', () => {
     const hero = page.locator('app-pack-opening .hero-card');
     await expect(hero).toBeVisible();
 
-    const box = (await hero.boundingBox())!;
-    expect(box.width, 'the hero card is above the 200px ability gate').toBeGreaterThanOrEqual(200);
+    // The laid-out width rather than the painted box: the first card rises out
+    // of the torn pack under a scaling entrance, and the ability gate is a
+    // container query on the card's own layout width, not on its transform.
+    const width = await hero.evaluate((el: HTMLElement) => el.offsetWidth);
+    expect(width, 'the hero card is above the 200px ability gate').toBeGreaterThanOrEqual(200);
 
     // The ability text, the set, and the number are all on the face and shown.
     const ability = hero.locator('app-card .cf-ability-text');
@@ -269,12 +345,27 @@ test.describe('the Shop and the opening fit the viewport', () => {
       await expectPartsOnScreen(page, size, {
         content: page.locator('app-shop .content'),
         ware: page.locator('app-shop .ware'),
+        pack: page.locator('app-shop app-pack'),
         purse: page.locator('app-shop .purse'),
         placeholder: page.locator('app-shop .placeholder'),
         grant: page.locator('app-shop .dev-grant'),
       });
 
+      // No storefront pack is laid out below the width its renderer vouches for.
+      const storefront = await page
+        .locator('app-shop app-pack')
+        .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width));
+      expect(storefront).toHaveLength(PACK_PRICES.length);
+      for (const width of storefront) expect(width).toBeGreaterThanOrEqual(PACK_MIN_WIDTH);
+
       await buyPack(page, 'level-3');
+
+      // The sealed stage fits too, and the pack is whole on screen.
+      await expect(sealedPack(page)).toBeVisible();
+      await expectNoScroll(page);
+      await expectPartsOnScreen(page, size, { sealedPack: sealedPack(page) });
+      expect((await openingStage(page)).packWidth).toBeGreaterThanOrEqual(PACK_MIN_WIDTH);
+
       await page.getByRole('button', { name: 'Skip' }).click();
       await openingSettled(page);
 
@@ -359,6 +450,9 @@ test('captures the storefront, a mid-reveal hero, and the summary', async ({ pag
   await shot('shop-storefront.png');
 
   await buyPack(page, 'level-3');
+  await expect(sealedPack(page)).toBeVisible();
+  await shot('shop-opening-sealed.png');
+
   await expect(page.locator('app-pack-opening .hero-card')).toBeVisible();
   await shot('shop-opening-hero.png');
 

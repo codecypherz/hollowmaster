@@ -12,8 +12,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { Card } from '../../model/card';
-import { PACK_SIZE } from '../../model/pack';
+import { PACK_SIZE, PackDefinition } from '../../model/pack';
 import { CardComponent } from '../card/card';
+import { PackComponent } from '../pack/pack';
 
 /**
  * How long a card holds in the hero slot before it travels down into the row,
@@ -28,6 +29,20 @@ import { CardComponent } from '../card/card';
  */
 const DWELL_BASE_MS = 620;
 const DWELL_PER_STAR_MS = 260;
+
+/**
+ * The stage before the first card: how long the bought pack is held sealed, and
+ * how long its tear takes. They sit beside the dwell constants so the whole
+ * sequence's pace is readable in one place, and they are the only two numbers
+ * to tune if the wait before the first card reads as slow.
+ *
+ * The tear is the `--dur-slow` token in milliseconds, because the pack's own
+ * tear animation runs for exactly that long: any longer here and the hero slot
+ * would stand empty between the wrapper falling away and the first card rising
+ * out of it, which is the "cards from nowhere" this stage exists to remove.
+ */
+export const SEAL_DWELL_MS = 700;
+export const TEAR_MS = 500;
 
 /** Never scale to nothing, however degenerate the measurement. */
 const MIN_SCALE = 0.2;
@@ -51,7 +66,7 @@ export interface Extent {
  */
 @Component({
   selector: 'app-pack-opening',
-  imports: [CardComponent],
+  imports: [CardComponent, PackComponent],
   templateUrl: './pack-opening.html',
   styleUrl: './pack-opening.css',
   host: {
@@ -61,6 +76,9 @@ export interface Extent {
 })
 export class PackOpening implements OnInit {
   readonly cards = input.required<readonly Card[]>();
+
+  /** The pack that was bought — the same wrapper the storefront sold. */
+  readonly pack = input.required<PackDefinition>();
 
   /** The player is finished with the result and wants the storefront back. */
   readonly done = output<void>();
@@ -79,6 +97,21 @@ export class PackOpening implements OnInit {
   private readonly revealedCount = signal(0);
 
   readonly revealed = this.revealedCount.asReadonly();
+
+  /**
+   * The stage before the reveal. `sealed` is the pack whole on screen and
+   * `tearing` the same pack with its seal broken, giving up its first card;
+   * both are false for the rest of the sequence, which is the state `finish()`
+   * leaves behind however the opening ends.
+   */
+  private readonly sealedState = signal(true);
+  private readonly tearingState = signal(false);
+
+  readonly sealed = this.sealedState.asReadonly();
+  readonly tearing = this.tearingState.asReadonly();
+
+  /** Whether the pack occupies the hero slot — sealed or mid-tear. */
+  readonly showPack = computed(() => this.sealedState() || this.tearingState());
 
   /** The card currently arriving, or null once every card has been revealed. */
   readonly hero = computed(() => this.cards()[this.revealedCount()] ?? null);
@@ -99,6 +132,7 @@ export class PackOpening implements OnInit {
     // measuring the thing being scaled cannot feed back into the measurement.
     effect(() => {
       this.revealedCount();
+      this.showPack();
       this.refit();
     });
 
@@ -120,7 +154,7 @@ export class PackOpening implements OnInit {
    */
   ngOnInit(): void {
     if (prefersReducedMotion()) this.finish();
-    else this.advance();
+    else this.openPack();
   }
 
   /** Whether the card at `index` has come to rest in the collected row. */
@@ -148,6 +182,22 @@ export class PackOpening implements OnInit {
     );
   }
 
+  /**
+   * The sealed stage: the pack is held whole, then torn, and only then does the
+   * first card begin its reveal. One timer chain, the same one the reveal runs
+   * on, so there is still a single thing to clear.
+   */
+  private openPack(): void {
+    this.timer = setTimeout(() => {
+      this.tearingState.set(true);
+      this.sealedState.set(false);
+      this.timer = setTimeout(() => {
+        this.tearingState.set(false);
+        this.advance();
+      }, TEAR_MS);
+    }, SEAL_DWELL_MS);
+  }
+
   private advance(): void {
     const card = this.hero();
     if (!card) return;
@@ -159,6 +209,8 @@ export class PackOpening implements OnInit {
 
   private finish(): void {
     this.clearTimer();
+    this.sealedState.set(false);
+    this.tearingState.set(false);
     this.revealedCount.set(this.cards().length);
   }
 

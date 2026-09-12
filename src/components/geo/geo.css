@@ -1,0 +1,14 @@
+/* ─── Geo amount ──────────────────────────────────────────────────────────────
+   The treatment itself is a primitive — `.geo-amount` and `.geo-mark` live in
+   src/styles/primitives.css, because the style guide enumerates primitives from
+   there and because component styles are encapsulated where these must not be.
+
+   What belongs here is only how the host sits in the line it is written into:
+   an inline-block, so an amount is one unbreakable object with the numeral's
+   baseline as its own, wherever it is used — in running text, in a flex row,
+   or as a button's whole label.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  display: inline-block;
+}

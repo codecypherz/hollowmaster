@@ -229,6 +229,71 @@
       </div>
     </section>
 
+    <!-- ─── Geo ────────────────────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-h2">Geo</h2>
+      <p class="sg-sub">
+        One primitive, composed rather than assembled: the amount then the mark, in that order, with
+        the mark sized in <code>em</code> off whatever type it sits in. The word "Geo" is never set
+        beside a number — the mark names the currency, and carries that name for assistive
+        technology, so an amount inside a control needs no label of its own.
+      </p>
+
+      <div class="state-grid">
+        <div class="state-item">
+          <span class="geo-demo geo-body"><app-geo [amount]="0" /></span>
+          <span class="state-label">zero · body type</span>
+        </div>
+        <div class="state-item">
+          <span class="geo-demo geo-price"><app-geo [amount]="100" /></span>
+          <span class="state-label">a price</span>
+        </div>
+        <div class="state-item">
+          <span class="geo-demo geo-purse"><app-geo [amount]="1250" /></span>
+          <span class="state-label">the purse</span>
+        </div>
+        <div class="state-item">
+          <button class="hk-btn"><app-geo [amount]="500" /></button>
+          <span class="state-label">as a control's whole label</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Packs ──────────────────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-h2">Sealed packs</h2>
+      <p class="sg-sub">
+        One renderer draws every pack the application shows. A wrapper is crimped top and bottom,
+        its artwork fills the face between the crimps centred and uncropped on one side more than
+        the other, a sheen travels across it, and a gold trim binds its edge. The tier name is
+        printed on the wrapper itself over a scrim band, never set beside it. Torn is the state an
+        opening leaves a pack in: the same wrapper, its top seal broken. The narrowest example is
+        the pack's minimum supported width of {{ packMinWidth }}px — nothing here renders one
+        narrower — where the ornament simplifies but every part is still drawn.
+      </p>
+
+      <div class="pack-row">
+        @for (p of packs; track p.id) {
+          <div class="pack-demo">
+            <div class="pack-slot" [style.width.px]="packDemoWidth"><app-pack [pack]="p" /></div>
+            <span class="state-label">{{ p.name }} · sealed</span>
+          </div>
+        }
+        <div class="pack-demo">
+          <div class="pack-slot" [style.width.px]="packDemoWidth">
+            <app-pack [pack]="packs[0]" torn />
+          </div>
+          <span class="state-label">{{ packs[0].name }} · torn</span>
+        </div>
+        <div class="pack-demo">
+          <div class="pack-slot" [style.width.px]="packMinWidth">
+            <app-pack [pack]="packs[2]" />
+          </div>
+          <span class="state-label">{{ packMinWidth }}px · minimum</span>
+        </div>
+      </div>
+    </section>
+
     <!-- ─── Cards ──────────────────────────────────────────────────────── -->
     <section class="sg-section">
       <h2 class="sg-h2">Card states</h2>

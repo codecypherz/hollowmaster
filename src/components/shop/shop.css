@@ -97,13 +97,6 @@
   text-shadow: 0 0 14px var(--color-gold-glow);
 }
 
-.purse-currency {
-  font-size: 0.6rem;
-  letter-spacing: 0.36em;
-  text-transform: uppercase;
-  color: var(--color-gold);
-}
-
 /* ─── Sections ───────────────────────────────────────────────────────────── */
 
 .section-title {
@@ -129,10 +122,16 @@
   margin: 0;
 }
 
-/* A single column — name, poster, price, control — and no frame of its own.
-   The poster is the ware's edge; a border around it would only draw a second
-   one. Hover lifts the poster rather than lighting a rule. */
+/* A single column — the sealed pack, then the control that buys it — and no
+   frame of its own. The pack is the ware's edge; a border around it would only
+   draw a second one. Hover lifts the pack rather than lighting a rule. */
 .ware {
+  /* The pack's height is what gives ground as the viewport shortens — the
+     storefront still clears a 768px-tall screen without scrolling. The pack
+     itself takes a width, so the height is converted through its own 2.5:4
+     ratio rather than set on it, which is what keeps the ratio the pack's. */
+  --pack-h: clamp(8rem, 26vh, 19rem);
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -140,61 +139,38 @@
   text-align: center;
 }
 
-/* The poster carries the whole of its art, so it is fitted rather than
-   cropped, and its height is what gives ground as the viewport shortens —
-   the storefront still clears a 768px-tall screen without scrolling. */
-.ware-art {
-  display: block;
-  width: auto;
-  max-width: 100%;
-  height: clamp(5.5rem, 16vh, 14rem);
-  object-fit: contain;
+.ware app-pack {
+  width: min(100%, calc(var(--pack-h) * 0.625));
   filter: drop-shadow(0 6px 18px rgb(0 0 0 / 0.55));
   transition:
     transform var(--dur-base) ease,
     filter var(--dur-base) ease;
 }
 
-.ware:hover:not(.is-unaffordable) .ware-art {
+.ware:hover:not(.is-unaffordable) app-pack {
   transform: translateY(-4px);
   filter: drop-shadow(0 10px 24px var(--color-gold-glow));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ware-art,
-  .ware:hover:not(.is-unaffordable) .ware-art {
+  .ware app-pack,
+  .ware:hover:not(.is-unaffordable) app-pack {
     transform: none;
     transition: none;
   }
 }
 
-.ware-name {
+/* The price is the control's whole label. Only the primitive's own size
+   parameters are set here — the treatment stays the button's. */
+.ware .hk-btn {
+  --btn-font-size: 0.85rem;
+  --btn-padding: 0.55rem 1.6rem;
   font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-soul);
-}
-
-.ware-price {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4rem;
-}
-
-.price-amount {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 900;
   color: var(--color-gold);
 }
 
-.price-currency {
-  font-size: 0.55rem;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--color-gold-dim);
+.ware .hk-btn:hover:not(:disabled) {
+  color: var(--color-gold-light);
 }
 
 /* A ware out of reach: dimmed, and carrying the reason on its face. There is
@@ -205,22 +181,33 @@
   opacity: 0.55;
 }
 
-.is-unaffordable .ware-art {
+.is-unaffordable app-pack {
   filter: grayscale(0.6) drop-shadow(0 4px 12px rgb(0 0 0 / 0.5));
 }
 
-.is-unaffordable .price-amount,
-.is-unaffordable .ware-name {
+/* The inert plate the price control would have stood in: the cost is still
+   stated, and still nothing to reach. */
+.ware-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-crimson-dim);
+  border: 1px solid var(--color-crimson-dim);
+  padding: 0.5rem 1.3rem;
+}
+
+.ware-locked app-geo {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 900;
   color: var(--color-text-dim);
 }
 
-.ware-locked {
+.locked-reason {
   font-size: 0.55rem;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--color-crimson-dim);
-  border: 1px solid var(--color-crimson-dim);
-  padding: 0.6rem 1.4rem;
 }
 
 /* ─── Forthcoming wares ──────────────────────────────────────────────────── */
@@ -290,6 +277,26 @@
   color: var(--color-text-dim);
   letter-spacing: 0.04em;
   max-width: 34rem;
+}
+
+/* ─── Short viewports ────────────────────────────────────────────────────────
+   The pack declares a minimum supported width and will not be laid out below
+   it, so where the screen is short it is the storefront's own rhythm that
+   gives way rather than the thing being sold: the column's gaps and padding
+   close up, and the page still clears a 768px-tall viewport under the nav
+   shell without scrolling.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@media (max-height: 820px) {
+  .content {
+    gap: 0.4rem;
+    padding-block: 0.5rem;
+  }
+
+  .eyebrow,
+  .page-title {
+    margin-bottom: 0.3rem;
+  }
 }
 
 /* ─── Narrow viewports ───────────────────────────────────────────────────── */

@@ -105,3 +105,41 @@ test('a pack opens without animated arrival, and still reads as rare', async ({ 
   // And the surface still fits.
   await expectNoScroll(page);
 });
+
+test('a pack keeps a still foil highlight with the travel taken away', async ({ page }) => {
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
+    true,
+  );
+
+  await page.setViewportSize(VIEWPORT);
+  await page.goto('/style-guide');
+  await expect(page.locator('app-pack').first()).toBeVisible();
+
+  // The sheen settles rather than disappearing: the face still reads as foil,
+  // it is simply no longer lit from a moving source.
+  const sheens = await page.locator('app-pack').evaluateAll((els) =>
+    els.map((el) => {
+      const sheen = el.querySelector('.pack-sheen') as HTMLElement;
+      const style = getComputedStyle(sheen);
+      const face = el.querySelector('.wrapper')!.getBoundingClientRect();
+      const box = sheen.getBoundingClientRect();
+      return {
+        animation: style.animationName,
+        opacity: Number.parseFloat(style.opacity),
+        highlight: style.backgroundImage,
+        width: box.width,
+        // The still highlight rests on the face rather than off its edge.
+        onFace: box.right > face.left && box.left < face.right,
+      };
+    }),
+  );
+
+  expect(sheens.length).toBeGreaterThan(0);
+  for (const sheen of sheens) {
+    expect(sheen.animation).toBe('none');
+    expect(sheen.opacity).toBeGreaterThan(0);
+    expect(sheen.width).toBeGreaterThan(0);
+    expect(sheen.onFace).toBe(true);
+    expect(sheen.highlight).toContain('gradient');
+  }
+});

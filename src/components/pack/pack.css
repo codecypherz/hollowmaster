@@ -1,0 +1,340 @@
+/* ─── Pack ────────────────────────────────────────────────────────────────────
+   The sealed pack: a foil wrapper crimped top and bottom, its artwork filling
+   the face between the crimps, a travelling sheen across it, and a gold trim
+   binding the edge.
+
+   Sizing contract: the pack fills the width it is given and derives its height
+   from the fixed 2.5:4 ratio — taller in proportion than the 2.5:3.5 card it
+   holds, so a pack is never mistaken for one. It is its own *named* query
+   container, so every metric below is a `clamp(px, cqw, px)` off the pack's own
+   width and one renderer works at every size without measurements passed in.
+
+   Minimum supported width: 120px, the card's minimum for the object that holds
+   cards. Near it the ornament simplifies rather than crowds — see the container
+   query at the foot of this file — but the crimps, the trim, the artwork, and
+   the printed name are all still there.
+
+   Nothing here depends on artwork the pack cannot supply: every part is CSS,
+   so a wrapper whose image fails to load is still a wrapper.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  /* The crimped seal's depth, and the sawtooth that serrates its inner edge.
+     A tooth is twice as wide as it is deep, which is what the conic mask below
+     draws; stating the width and halving it keeps the two in step. */
+  --crimp-h: clamp(9px, 8cqw, 26px);
+  --tooth-w: clamp(7px, 6cqw, 18px);
+  --tooth-h: calc(var(--tooth-w) / 2);
+
+  /* How far down the wrapper a tear reaches: the whole of the top seal and no
+     further, so a torn pack loses its crimp and keeps everything else. */
+  --tear-h: calc(var(--crimp-h) + var(--tooth-h));
+
+  --trim-w: clamp(2px, 1.5cqw, 5px);
+  --radius: clamp(2px, 1.6cqw, 6px);
+  --name-size: clamp(7px, 6.2cqw, 18px);
+
+  /* Wrapper material. The gold ramp for the trim, a bronzed run of it for the
+     crimped foil — the seal is broad and ridged where the trim is a hairline,
+     so the two read apart without a second hue. */
+  --trim-metal: linear-gradient(
+    150deg,
+    var(--color-gold) 0%,
+    var(--color-gold-dim) 32%,
+    var(--color-gold-shimmer) 52%,
+    var(--color-gold-dim) 74%,
+    var(--color-gold) 100%
+  );
+  --crimp-metal: linear-gradient(
+    180deg,
+    #d5a14b 0%,
+    #9a6c26 34%,
+    #5f4012 62%,
+    #8b6021 82%,
+    #c08e3c 100%
+  );
+  /* The ridging: fine vertical lines, bright then dark, so the band catches
+     light the way crimped foil does rather than reading as a stripe pattern. */
+  --crimp-ridges: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.28) 0 1px,
+    rgba(255, 236, 200, 0.08) 1px 2px,
+    rgba(0, 0, 0, 0.42) 2px 4px
+  );
+
+  display: block;
+  width: 100%;
+  min-width: 120px;
+  aspect-ratio: 2.5 / 4;
+  container: pack / inline-size;
+}
+
+/* The wrapper itself. The trim is a gradient, which a `border-color` cannot
+   carry, so the interior paints to the padding box and the metal to the border
+   box — the card's frame, built the same way. `overflow: hidden` is what keeps
+   the artwork inside the wrapper rather than past its edge. */
+.wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: var(--trim-w) solid transparent;
+  border-radius: var(--radius);
+  background:
+    linear-gradient(168deg, #151b2c 0%, #0a0e18 100%) padding-box,
+    var(--trim-metal) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    0 6px 18px rgb(0 0 0 / 0.55);
+}
+
+/* ─── The face ───────────────────────────────────────────────────────────── */
+
+/* Cover, centred: the face is filled whatever the artwork's proportions, the
+   crop is equal on both sides of whichever axis is long, and the artwork's own
+   proportions are never distorted to fit. */
+.pack-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Depth: the wrapper darkens toward both sides as if curving away, and catches
+   a little light along the top. This is the difference between a flat rectangle
+   and an object. */
+.pack-gloss {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(0, 0, 0, 0.12) 10%,
+      transparent 26%,
+      transparent 74%,
+      rgba(0, 0, 0, 0.12) 90%,
+      rgba(0, 0, 0, 0.5) 100%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 34%);
+}
+
+/* ─── The crimped seals ──────────────────────────────────────────────────────
+   A band of ridged foil at each end, with its inner edge serrated: the band is
+   the rectangle, its ::after the row of teeth. The serration is what sells the
+   crimp — a straight-edged band reads as a stripe of colour.
+
+   The teeth are one conic gradient tiled across the strip: each tile keeps the
+   45° wedge above its own bottom centre, which at a strip half a tile deep is
+   a full row of triangles meeting point to point.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.crimp {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--crimp-h);
+  background-image: var(--crimp-ridges), var(--crimp-metal);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.crimp::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--tooth-h);
+  background-image: inherit;
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% /
+    var(--tooth-w) 100% repeat-x;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% /
+    var(--tooth-w) 100% repeat-x;
+}
+
+.crimp-top {
+  top: 0;
+}
+
+.crimp-top::after {
+  top: 100%;
+}
+
+.crimp-bottom {
+  bottom: 0;
+}
+
+/* Mirrored: the bottom seal's teeth point up into the face. */
+.crimp-bottom::after {
+  bottom: 100%;
+  -webkit-mask: conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) 50% /
+    var(--tooth-w) 100% repeat-x;
+  mask: conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--tooth-w)
+    100% repeat-x;
+}
+
+/* ─── The foil sheen ─────────────────────────────────────────────────────────
+   Light moving over foil: a skewed highlight that travels the face and leaves.
+   Only `transform` and `opacity` animate, so it stays on the compositor.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.pack-sheen {
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -45%;
+  width: 34%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 30%,
+    rgba(255, 255, 255, 0.42) 50%,
+    rgba(255, 255, 255, 0.1) 70%,
+    transparent 100%
+  );
+  transform: skewX(-16deg);
+  animation: packSheen 5.5s ease-in-out infinite;
+}
+
+@keyframes packSheen {
+  0% {
+    opacity: 0;
+    transform: skewX(-16deg) translateX(0);
+  }
+  12% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: skewX(-16deg) translateX(430%);
+  }
+}
+
+/* ─── The printed name ───────────────────────────────────────────────────────
+   Across the top of the face, over the artwork, where a real pack prints its
+   set name. Its legibility is the wrapper's own: a scrim band under it and a
+   shadow around it, so the name reads over bright artwork as well as dark.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.pack-name {
+  position: absolute;
+  top: var(--tear-h);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: clamp(3px, 2.6cqw, 9px) clamp(3px, 2.4cqw, 8px) clamp(5px, 4cqw, 14px);
+  font-family: var(--font-display);
+  font-size: var(--name-size);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--color-gold-light);
+  background: linear-gradient(
+    to bottom,
+    var(--color-scrim) 0%,
+    color-mix(in srgb, var(--color-void) 62%, transparent) 55%,
+    transparent 100%
+  );
+  text-shadow:
+    0 1px 3px rgb(0 0 0 / 0.95),
+    0 0 10px var(--color-gold-glow);
+}
+
+/* ─── Torn open ──────────────────────────────────────────────────────────────
+   The same wrapper after the fact: the top seal broken along a ragged edge and
+   the interior open behind it. The artwork, the printed name, the trim, and the
+   bottom crimp are untouched, and a clip changes no layout, so a torn pack
+   occupies exactly the extent it occupied sealed.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host(.is-torn) .crimp-top,
+:host(.is-torn) .crimp-top::after {
+  display: none;
+}
+
+:host(.is-torn) .wrapper {
+  clip-path: polygon(
+    0% calc(var(--tear-h) * 0.5),
+    8% calc(var(--tear-h) * 0.08),
+    16% calc(var(--tear-h) * 0.72),
+    25% calc(var(--tear-h) * 0.2),
+    34% calc(var(--tear-h) * 0.86),
+    43% calc(var(--tear-h) * 0.26),
+    52% calc(var(--tear-h) * 0.8),
+    61% calc(var(--tear-h) * 0.14),
+    70% calc(var(--tear-h) * 0.76),
+    79% calc(var(--tear-h) * 0.22),
+    88% calc(var(--tear-h) * 0.66),
+    100% calc(var(--tear-h) * 0.3),
+    100% 100%,
+    0% 100%
+  );
+}
+
+/* The dark inside of the wrapper, seen through the broken seal. */
+.pack-interior {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--tear-h) * 1.5);
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    180deg,
+    #04060b 0%,
+    rgba(4, 6, 11, 0.92) 45%,
+    rgba(4, 6, 11, 0.55) 75%,
+    transparent 100%
+  );
+}
+
+:host(.is-torn) .pack-interior {
+  opacity: 1;
+}
+
+/* ─── Near the minimum supported width ───────────────────────────────────────
+   Fine detail gives way so the pack stays uncluttered at 120px: the name's
+   tracking closes up and the gloss's edge shading thins. Every part the spec
+   promises is still drawn — this is ornament simplifying, not parts leaving.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@container pack (max-width: 170px) {
+  .pack-name {
+    letter-spacing: 0.05em;
+  }
+
+  .pack-gloss {
+    background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.42) 0%,
+      transparent 22%,
+      transparent 78%,
+      rgba(0, 0, 0, 0.42) 100%
+    );
+  }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────────
+   The sheen settles rather than disappearing: a still highlight resting on the
+   face, so the wrapper still reads as foil with the travel taken away.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .pack-sheen {
+    animation: none;
+    left: 22%;
+    opacity: 0.7;
+  }
+}

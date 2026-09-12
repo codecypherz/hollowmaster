@@ -251,7 +251,8 @@
 }
 
 .state-item,
-.card-demo {
+.card-demo,
+.pack-demo {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -318,4 +319,45 @@
 
 .scale-row {
   align-items: flex-end;
+}
+
+/* ─── Geo and pack demos ──────────────────────────────────────────────────────
+   The type sizes the Geo amount is actually used at — running copy, a price,
+   and the purse's display numeral — so the mark can be judged proportionate
+   across the range rather than at one size. The pack takes its width from its
+   slot and derives its own height, exactly as the card does.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.geo-body {
+  font-size: 0.8rem;
+  color: var(--color-text-bright);
+}
+
+.geo-price {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--color-gold);
+}
+
+.geo-purse {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--color-gold-light);
+  text-shadow: 0 0 14px var(--color-gold-glow);
+}
+
+/* The pack ladder has its own row rather than borrowing the card ladder's:
+   they demonstrate different contracts, and a check that counts one should not
+   find the other. */
+.pack-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.75rem;
+  align-items: flex-end;
+}
+
+.pack-slot {
+  display: block;
 }
