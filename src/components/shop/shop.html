@@ -30,10 +30,73 @@
     <header class="header-block">
       <p class="eyebrow">Wares of the wandering merchant</p>
       <h1 class="page-title">Shop</h1>
-      <p class="purpose">This is where you will buy packs of cards.</p>
+
+      <!-- The purse. Always shown, and zero is a number like any other. -->
+      <p class="purse" aria-label="Your Geo">
+        <span class="purse-amount" data-testid="purse">{{ geo() }}</span>
+        <span class="purse-currency">Geo</span>
+      </p>
     </header>
 
-    <p class="coming-soon">Coming soon</p>
+    <!-- ─── Packs ─────────────────────────────────────────────────────── -->
+
+    <section class="wares" aria-label="Packs">
+      <h2 class="section-title">Packs</h2>
+
+      <ul class="ware-list">
+        @for (ware of wares; track ware.def.id) {
+          <li class="ware" [class.is-unaffordable]="!canAfford(ware.def)">
+            <h3 class="ware-name">{{ ware.def.name }}</h3>
+            <p class="ware-contents">{{ packSize }} cards</p>
+            <p class="ware-odds">{{ ware.odds }}</p>
+            <p class="ware-price">
+              <span class="price-amount">{{ ware.def.price }}</span>
+              <span class="price-currency">Geo</span>
+            </p>
+
+            @if (canAfford(ware.def)) {
+              <button
+                type="button"
+                class="hk-btn"
+                [attr.data-buy]="ware.def.id"
+                (click)="buy(ware.def)"
+              >
+                Buy
+              </button>
+            } @else {
+              <!-- Not a disabled button but no button at all: there is nothing
+                   here to reach by pointer or by keyboard, and the reason is
+                   on the face of the ware rather than only on trying it. -->
+              <p class="ware-locked" [attr.data-locked]="ware.def.id">Not enough Geo</p>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+
+    <!-- ─── Forthcoming ───────────────────────────────────────────────── -->
+
+    <section class="forthcoming" aria-label="Forthcoming wares">
+      <div class="placeholder" data-placeholder="power-ups" aria-disabled="true">
+        <h3 class="placeholder-name">Power-ups</h3>
+        <p class="coming-soon">Coming soon</p>
+      </div>
+      <div class="placeholder" data-placeholder="cosmetics" aria-disabled="true">
+        <h3 class="placeholder-name">Cosmetics</h3>
+        <p class="coming-soon">Coming soon</p>
+      </div>
+    </section>
+
+    <!-- ─── Development aid ───────────────────────────────────────────── -->
+
+    <section class="dev-grant" aria-label="Development aid">
+      <button type="button" class="hk-btn dev-btn" data-testid="grant" (click)="grantGeo()">
+        Grant {{ grantAmount }} Geo
+      </button>
+      <p class="dev-note">
+        Temporary development aid — Geo is not yet earned through play, and this is not a purchase.
+      </p>
+    </section>
 
     <div class="ornament">
       <span class="orn-line"></span>
@@ -46,3 +109,7 @@
     </div>
   </main>
 </div>
+
+@if (opening(); as cards) {
+  <app-pack-opening [cards]="cards" (done)="closeOpening()" />
+}

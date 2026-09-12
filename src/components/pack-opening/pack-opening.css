@@ -1,0 +1,286 @@
+/* ─── Pack opening ────────────────────────────────────────────────────────────
+   The overlay a bought pack is revealed through.
+
+   Two regions: a hero slot where the card currently arriving is shown large
+   enough to read, and a collected row beneath it where revealed cards come to
+   rest in order. After the fifth, the hero empties and the five sit in the row
+   together as the summary.
+
+   Every duration and every colour here is a token. Rarity emphasis is carried
+   by a rarity-keyed class — a glow and a label — rather than by an animation,
+   so removing the motion removes the travel and the staging and leaves the
+   emphasis intact.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  /* The one place the overlay's laid-out lengths are stated. `fitOverlay()` in
+     the component measures against the same numbers; the two are the width and
+     height of this layout, so a change here is a change there. */
+  --hero-w: 264px;
+  --row-w: 140px;
+  --slot-gap: 14px;
+  --region-gap: 20px;
+  --pad: 24px;
+
+  --overlay-scale: 1;
+
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--font-ui);
+}
+
+.overlay-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--color-scrim);
+  backdrop-filter: blur(2px);
+}
+
+/* The whole overlay is scaled as one, rather than re-laid-out, wherever the
+   viewport cannot host it — the same fit mechanism the in-game arena uses. At
+   scale 1 the transform is a no-op and the cards rasterise sharp. */
+.opening {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--region-gap);
+  width: calc(5 * var(--row-w) + 4 * var(--slot-gap) + 2 * var(--pad));
+  padding: var(--pad);
+  transform: scale(var(--overlay-scale));
+  transform-origin: center;
+  box-shadow: var(--elev-overlay);
+  background: linear-gradient(180deg, var(--color-deep) 0%, var(--color-void) 100%);
+  border: 1px solid var(--color-gold-dim);
+}
+
+.opening-eyebrow {
+  font-size: 0.6rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+/* ─── Hero slot ──────────────────────────────────────────────────────────── */
+
+/* Reserved at full height whether or not it holds a card, so the collected row
+   does not jump up the moment the last card lands. */
+.hero-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hero-w);
+  /* 2.5:3.5, plus the rarity label beneath the card. */
+  height: calc(var(--hero-w) * 1.4 + 1.4rem);
+}
+
+.hero-card {
+  width: var(--hero-w);
+  animation: heroArrive var(--dur-entrance) var(--ease-out-soft) both;
+}
+
+/* Once the last card has landed, the hero slot is not merely empty — it is
+   finished. Keeping its reserved height would leave the summary sitting under
+   a void; taking it away lets the five cards be the whole of the end state,
+   which is what the summary is. The reservation is only needed while cards are
+   still arriving, and that is exactly when it is still here. */
+:host(.is-complete) .hero-slot {
+  display: none;
+}
+
+/* ─── Collected row ──────────────────────────────────────────────────────── */
+
+.collected {
+  display: flex;
+  gap: var(--slot-gap);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* A position in the row, laid out at a width comfortably above the card
+   renderer's 120px minimum so every card in the summary is one the renderer
+   vouches for.
+
+   The position itself is always drawn — an empty setting waiting for its card
+   — and only the card inside it arrives. That is what makes the reveal read as
+   a row being filled rather than as cards materialising out of a void, and it
+   is why nothing shifts when a card lands. */
+.collected-card {
+  width: var(--row-w);
+  /* The card's own 2.5:3.5 frame, plus the rarity label beneath it. */
+  height: calc(var(--row-w) * 1.4 + 1.1rem);
+  border: 1px dashed var(--color-section-border);
+  transition: border-color var(--dur-base) var(--ease-out-soft);
+}
+
+.collected-card.is-revealed {
+  border-color: transparent;
+}
+
+/* The card inside a position. This is what arrives, and what carries the
+   rarity glow — an empty setting is not emphasised by the rarity of the card
+   that has yet to land in it. */
+.collected-card > .card-reveal {
+  opacity: 0;
+  /* Pointer events off while unrevealed: a card that is not visible yet is not
+     something to interact with. */
+  pointer-events: none;
+  transition:
+    opacity var(--dur-base) var(--ease-out-soft),
+    transform var(--dur-base) var(--ease-out-soft);
+  transform: translateY(calc(var(--region-gap) * -1)) scale(0.94);
+}
+
+.collected-card.is-revealed > .card-reveal {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+/* ─── Rarity emphasis ────────────────────────────────────────────────────────
+   Keyed off the card's star rating and carried by static properties — a glow
+   and a label — so it survives the motion being taken away. The ramp runs from
+   the soul accent at the common end to gold at the rare, which is the palette's
+   own reading of ordinary versus precious. */
+
+.rarity-label {
+  margin-top: 0.4rem;
+  text-align: center;
+  font-size: 0.55rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--rarity-ink);
+}
+
+.hero-card,
+.collected-card {
+  --rarity-ink: var(--color-text-dim);
+  --rarity-glow: transparent;
+}
+
+.card-reveal {
+  filter: drop-shadow(0 0 var(--rarity-spread, 0) var(--rarity-glow));
+}
+
+.rarity-1 {
+  --rarity-ink: var(--color-text-dim);
+  --rarity-glow: var(--color-soul-faint);
+  --rarity-spread: 4px;
+}
+
+.rarity-2 {
+  --rarity-ink: var(--color-text-muted);
+  --rarity-glow: var(--color-soul-glow-sm);
+  --rarity-spread: 7px;
+}
+
+.rarity-3 {
+  --rarity-ink: var(--color-text-bright);
+  --rarity-glow: var(--color-soul-glow);
+  --rarity-spread: 11px;
+}
+
+.rarity-4 {
+  --rarity-ink: var(--color-gold);
+  --rarity-glow: var(--color-gold-glow);
+  --rarity-spread: 15px;
+}
+
+.rarity-5 {
+  --rarity-ink: var(--color-gold-light);
+  --rarity-glow: var(--color-gold-glow);
+  --rarity-spread: 20px;
+}
+
+.rarity-6 {
+  --rarity-ink: var(--color-star-six);
+  --rarity-glow: var(--color-star-six-glow);
+  --rarity-spread: 26px;
+}
+
+/* The arrival's flourish scales with the rarity the same way its dwell does:
+   the rarer the card, the further it travels and the longer it takes to
+   settle. Both terms are tokens. */
+.hero-card.rarity-1,
+.hero-card.rarity-2 {
+  animation-duration: var(--dur-base);
+}
+
+.hero-card.rarity-3 {
+  animation-duration: var(--dur-entrance);
+}
+
+.hero-card.rarity-4,
+.hero-card.rarity-5,
+.hero-card.rarity-6 {
+  animation-duration: var(--dur-pulse);
+  animation-name: heroArriveRare;
+}
+
+@keyframes heroArrive {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* The rare arrival overshoots and settles, so a four-star card does not merely
+   appear — it lands. */
+@keyframes heroArriveRare {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.07);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─── Controls ───────────────────────────────────────────────────────────── */
+
+.opening-controls {
+  display: flex;
+  justify-content: center;
+  min-height: 2.6rem;
+  align-items: center;
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────────
+   Belt and braces with the component's own handling: the sequence is already
+   jumped to its end state when the preference is set, and this makes sure
+   nothing animates even if a card were to mount mid-preference-change. The
+   rarity glow and label are untouched — they are not animations. */
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-card,
+  .hero-card.rarity-1,
+  .hero-card.rarity-2,
+  .hero-card.rarity-3,
+  .hero-card.rarity-4,
+  .hero-card.rarity-5,
+  .hero-card.rarity-6 {
+    animation: none;
+  }
+
+  .collected-card,
+  .collected-card > .card-reveal {
+    transition: none;
+    transform: none;
+  }
+}

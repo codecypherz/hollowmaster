@@ -1,0 +1,51 @@
+<div class="overlay-scrim" aria-hidden="true"></div>
+
+<section #surface class="opening" role="dialog" aria-modal="true" aria-label="Opening a pack">
+  <p class="opening-eyebrow">
+    @if (isComplete()) {
+      The pack is yours
+    } @else {
+      The pack gives up its cards
+    }
+  </p>
+
+  <!-- Hero slot: the card currently arriving, laid out well above the card
+       renderer's ability gate so its text can actually be read. -->
+  <div class="hero-slot">
+    @if (hero(); as card) {
+      <div class="hero-card rarity-{{ card.stars }}" [attr.data-stars]="card.stars">
+        <div class="card-reveal">
+          <app-card [card]="card" />
+          <p class="rarity-label">{{ card.stars }}-star</p>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Collected row: a position for every card of the pack, each holding an
+       empty setting until its card comes to rest in it. All five filled
+       together is the summary the opening ends in. -->
+  <ol class="collected" aria-label="Cards from this pack">
+    @for (card of cards(); track $index) {
+      <li
+        class="collected-card rarity-{{ card.stars }}"
+        [class.is-revealed]="isRevealed($index)"
+        [attr.data-stars]="card.stars"
+        [attr.aria-hidden]="isRevealed($index) ? null : 'true'"
+      >
+        <div class="card-reveal">
+          <app-card [card]="card" />
+          <p class="rarity-label">{{ card.stars }}-star</p>
+        </div>
+      </li>
+    }
+  </ol>
+
+  <div class="opening-controls">
+    @if (isComplete()) {
+      <button type="button" class="hk-btn primary" (click)="close()">Return to the Shop</button>
+    } @else {
+      <button type="button" class="hk-btn" (click)="skip()">Skip</button>
+    }
+  </div>
+</section>

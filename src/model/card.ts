@@ -294,19 +294,40 @@ export const CARD_DB: Card[] = [
 ];
 
 /**
- * A card can vouch for its own values, but not for its uniqueness. This runs
- * once, when the module loads, so a collision fails at app start and in tests
- * rather than surfacing as two cards that look like one.
+ * A card's catalogue identity as one string: its set, a `#`, and its number
+ * within that set. `FC#7` is Vengefly. This is what a collection is keyed by
+ * and what persisted data resolves against, so it is stated once here rather
+ * than reassembled by every caller.
  */
-function assertUniqueSetNumbers(cards: readonly Card[]): void {
-  const seen = new Set<string>();
-  for (const card of cards) {
-    const key = `${card.set}#${card.number}`;
-    if (seen.has(key)) {
-      throw new Error(`Duplicate card number ${card.number} in set "${card.set}"`);
-    }
-    seen.add(key);
-  }
+export type CardKey = `${string}#${number}`;
+
+export function cardKeyOf(set: string, number: number): CardKey {
+  return `${set}#${number}`;
 }
 
-assertUniqueSetNumbers(CARD_DB);
+export function cardKey(card: Card): CardKey {
+  return cardKeyOf(card.set, card.number);
+}
+
+/**
+ * Every card by its key.
+ *
+ * A card can vouch for its own values, but not for its uniqueness. Building
+ * this index *is* that check — a collision is a duplicate key — so the index
+ * and the assertion are one pass rather than the same fact stated twice. It
+ * runs once, when the module loads, so a collision fails at app start and in
+ * tests rather than surfacing as two cards that look like one.
+ */
+export function indexByKey(cards: readonly Card[]): ReadonlyMap<CardKey, Card> {
+  const index = new Map<CardKey, Card>();
+  for (const card of cards) {
+    const key = cardKey(card);
+    if (index.has(key)) {
+      throw new Error(`Duplicate card number ${card.number} in set "${card.set}"`);
+    }
+    index.set(key, card);
+  }
+  return index;
+}
+
+export const CARD_BY_KEY: ReadonlyMap<CardKey, Card> = indexByKey(CARD_DB);

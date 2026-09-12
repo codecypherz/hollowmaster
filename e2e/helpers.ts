@@ -109,3 +109,99 @@ export async function expectNothingClipped(page: Page, size: Size): Promise<void
   await expect(page.locator('app-game .board-cell')).toHaveCount(BOARD_CELLS);
   await expect(page.locator('app-game app-hand-rack .slot')).toHaveCount(HAND_POSITIONS);
 }
+
+// ─── The Shop ───────────────────────────────────────────────────────────────
+
+/** How many cards a pack holds — the one number both sides of the reveal agree on. */
+export const PACK_SIZE = 5;
+
+/** What the dev grant credits, per `shop.ts`. */
+export const GRANT_GEO = 500;
+
+/** The three tiers by id, cheapest first, with the price each states. */
+export const PACK_PRICES: readonly { id: string; name: string; price: number }[] = [
+  { id: 'level-1', name: 'Level 1', price: 100 },
+  { id: 'level-2', name: 'Level 2', price: 250 },
+  { id: 'level-3', name: 'Level 3', price: 500 },
+];
+
+/** Navigates to the Shop and waits for the storefront to be on screen. */
+export async function openShop(page: Page): Promise<void> {
+  await page.goto('/shop');
+  await expect(page.locator('app-shop .ware')).toHaveCount(PACK_PRICES.length);
+  await expect(purse(page)).toBeVisible();
+}
+
+/** The Geo purse, as a number. */
+export function purse(page: Page): Locator {
+  return page.locator('[data-testid="purse"]');
+}
+
+export async function purseValue(page: Page): Promise<number> {
+  return Number((await purse(page).innerText()).trim());
+}
+
+/** Uses the development grant and waits for the purse to reflect it. */
+export async function grantGeo(page: Page): Promise<void> {
+  const before = await purseValue(page);
+  await page.locator('[data-testid="grant"]').click();
+  await expect(purse(page)).toHaveText(String(before + GRANT_GEO));
+}
+
+/** Buys a pack and waits for the opening overlay. */
+export async function buyPack(page: Page, id: string): Promise<void> {
+  await page.locator(`[data-buy="${id}"]`).click();
+  await expect(page.locator('app-pack-opening')).toBeVisible();
+}
+
+/** The collected row's five positions, revealed or not. */
+export function collected(page: Page): Locator {
+  return page.locator('app-pack-opening .collected-card');
+}
+
+/** Only the cards that have come to rest in the row. */
+export function revealedCards(page: Page): Locator {
+  return page.locator('app-pack-opening .collected-card.is-revealed');
+}
+
+/** The rarity of every revealed card, in the order the row holds them. */
+export async function revealedRarities(page: Page): Promise<number[]> {
+  return revealedCards(page).evaluateAll((els) =>
+    els.map((el) => Number(el.getAttribute('data-stars'))),
+  );
+}
+
+/** Waits out the reveal: every card in the row, and the closing control up. */
+export async function openingSettled(page: Page): Promise<void> {
+  await expect(revealedCards(page)).toHaveCount(PACK_SIZE);
+  await expect(page.getByRole('button', { name: 'Return to the Shop' })).toBeVisible();
+}
+
+/**
+ * Every named part of a surface is wholly on screen. The same half-pixel
+ * tolerance as `expectNothingClipped`, and for the same reason: bounding boxes
+ * are fractional and a scaled surface quantises.
+ */
+export async function expectPartsOnScreen(
+  page: Page,
+  size: Size,
+  parts: Record<string, Locator>,
+): Promise<void> {
+  for (const [name, locator] of Object.entries(parts)) {
+    const count = await locator.count();
+    expect(count, `${name} is present at ${label(size)}`).toBeGreaterThan(0);
+    for (let i = 0; i < count; i++) {
+      const box = await locator.nth(i).boundingBox();
+      expect(box, `${name}[${i}] has a bounding box at ${label(size)}`).not.toBeNull();
+      const { x, y, width, height } = box!;
+      expect(x, `${name}[${i}] left edge at ${label(size)}`).toBeGreaterThanOrEqual(-0.5);
+      expect(y, `${name}[${i}] top edge at ${label(size)}`).toBeGreaterThanOrEqual(-0.5);
+      expect(x + width, `${name}[${i}] right edge at ${label(size)}`).toBeLessThanOrEqual(
+        size.width + 0.5,
+      );
+      expect(y + height, `${name}[${i}] bottom edge at ${label(size)}`).toBeLessThanOrEqual(
+        size.height + 0.5,
+      );
+    }
+  }
+}

@@ -1,8 +1,12 @@
 /* ─── Shop screen ─────────────────────────────────────────────────────────────
-   A themed skeleton: the atmosphere, ornament, and frame all come from the
-   global primitives, so the real purchasing experience can be dropped into
-   `.content` later without rebuilding the page around it. What is local here
-   is only this screen's layout and its type scale.
+   The storefront. Atmosphere, ornament, and frame all come from the global
+   primitives; what is local here is this screen's layout, its type scale, and
+   the treatment of a ware the player cannot yet afford.
+
+   Geo is gold. The palette already carries a full gold ramp used for ornament
+   and structure, and gold reads as currency without explanation — so prices,
+   the purse, and the grant all draw from it and the token set gains nothing.
+   The grant takes the dim end, so it reads as an aside rather than a reward.
    ──────────────────────────────────────────────────────────────────────────── */
 
 :host {
@@ -37,9 +41,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2.5rem;
-  padding: 4rem 2rem;
-  max-width: 720px;
+  /* The column's vertical rhythm gives ground as the viewport shortens, so
+     the whole storefront still clears a 768px-tall screen under the nav shell
+     without the page scrolling — and still breathes on a tall one. */
+  gap: clamp(0.7rem, 1.6vh, 1.5rem);
+  padding: clamp(0.9rem, 2.2vh, 1.75rem) 2rem;
+  max-width: 980px;
   width: 100%;
 }
 
@@ -57,36 +64,233 @@
   letter-spacing: 0.4em;
   color: var(--color-text-dim);
   text-transform: uppercase;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.55rem;
 }
 
 .page-title {
   font-family: var(--font-display);
-  font-size: clamp(2.2rem, 7vw, 4rem);
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
   font-weight: 900;
   color: var(--color-soul);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.55rem;
   text-shadow: 0 0 25px var(--color-soul-glow-sm);
 }
 
-.purpose {
-  font-family: var(--font-flavor);
-  font-size: 0.95rem;
+/* ─── The purse ──────────────────────────────────────────────────────────── */
+
+.purse {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.35rem 1.4rem;
+  border: 1px solid var(--color-gold-dim);
+}
+
+.purse-amount {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--color-gold-light);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 14px var(--color-gold-glow);
+}
+
+.purse-currency {
+  font-size: 0.6rem;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+
+/* ─── Sections ───────────────────────────────────────────────────────────── */
+
+.section-title {
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  text-align: center;
+  margin-bottom: 0.7rem;
+}
+
+.wares {
+  width: 100%;
+}
+
+.ware-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ware {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: clamp(0.7rem, 1.4vh, 1.1rem) 0.9rem;
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-section-border);
+  transition: border-color var(--dur-base) ease;
+}
+
+.ware:hover:not(.is-unaffordable) {
+  border-color: var(--color-gold);
+}
+
+.ware-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-soul);
+}
+
+.ware-contents {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
   color: var(--color-text-muted);
-  letter-spacing: 0.08em;
+}
+
+.ware-odds {
+  font-family: var(--font-flavor);
+  font-size: 0.8rem;
   font-style: italic;
+  color: var(--color-text-dim);
+  letter-spacing: 0.04em;
+  min-height: 2.2em;
+}
+
+.ware-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-top: auto;
+}
+
+.price-amount {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--color-gold);
+}
+
+.price-currency {
+  font-size: 0.55rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-gold-dim);
+}
+
+/* A ware out of reach: dimmed, and carrying the reason on its face. There is
+   no control inside it at all, so there is nothing for a pointer or a Tab to
+   reach — inertness is structural rather than a `disabled` attribute someone
+   could style away. */
+.is-unaffordable {
+  opacity: 0.55;
+  border-color: var(--color-section-border);
+}
+
+.is-unaffordable .price-amount,
+.is-unaffordable .ware-name {
+  color: var(--color-text-dim);
+}
+
+.ware-locked {
+  font-size: 0.55rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-crimson-dim);
+  border: 1px solid var(--color-crimson-dim);
+  padding: 0.6rem 1.4rem;
+}
+
+/* ─── Forthcoming wares ──────────────────────────────────────────────────── */
+
+/* Power-ups and cosmetics, marked the way the whole page used to be marked:
+   a name, the gold forthcoming-content rule, and nothing that can be bought.
+   No price, no item, and no control. */
+.forthcoming {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem;
+  border: 1px dashed var(--color-gold-dim);
+  text-align: center;
+}
+
+.placeholder-name {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 /* The forthcoming-content marker: gold, so it reads as structure rather than
    as something the player can act on. */
 .coming-soon {
   font-family: var(--font-ui);
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   letter-spacing: 0.42em;
   text-transform: uppercase;
   color: var(--color-gold-dim);
   border: 1px solid var(--color-gold-dim);
-  padding: 0.8rem 2.2rem;
+  padding: 0.55rem 1.6rem;
+}
+
+/* ─── Development aid ────────────────────────────────────────────────────── */
+
+.dev-grant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  text-align: center;
+}
+
+/* The dim end of the gold ramp: an aside, deliberately not styled as a reward. */
+.dev-btn {
+  --btn-font-size: 0.6rem;
+  --btn-padding: 0.5rem 1.4rem;
+  color: var(--color-text-dim);
+  border-style: dashed;
+}
+
+.dev-note {
+  font-family: var(--font-flavor);
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--color-text-dim);
+  letter-spacing: 0.04em;
+  max-width: 34rem;
+}
+
+/* ─── Narrow viewports ───────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .ware-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .forthcoming {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

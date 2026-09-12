@@ -1,4 +1,14 @@
-import { Card, CardOptions, CARD_DB, DIRECTIONS, Direction } from './card';
+import {
+  Card,
+  CardOptions,
+  CARD_BY_KEY,
+  CARD_DB,
+  cardKey,
+  cardKeyOf,
+  DIRECTIONS,
+  Direction,
+  indexByKey,
+} from './card';
 
 /**
  * The model is the boundary where card values are checked, so every consumer
@@ -181,5 +191,41 @@ describe('CARD_DB', () => {
   it('never repeats a number within a set', () => {
     const keys = CARD_DB.map((c) => `${c.set}#${c.number}`);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+/**
+ * The catalogue identity — what a collection is keyed by and what persisted
+ * data resolves against. Building the index is also the uniqueness check, so
+ * these tests cover both.
+ */
+describe('card identity', () => {
+  it('keys a card by its set and number', () => {
+    const crawlid = CARD_DB.find((c) => c.name === 'Crawlid')!;
+    expect(cardKey(crawlid)).toBe('FC#1');
+    expect(cardKeyOf('FC', 1)).toBe(cardKey(crawlid));
+  });
+
+  it('indexes the whole catalogue', () => {
+    expect(CARD_BY_KEY.size).toBe(15);
+    expect(CARD_BY_KEY.size).toBe(CARD_DB.length);
+    expect(CARD_BY_KEY.get('FC#7')?.name).toBe('Vengefly');
+    for (const c of CARD_DB) expect(CARD_BY_KEY.get(cardKey(c))).toBe(c);
+  });
+
+  it('rejects two cards sharing a set and number', () => {
+    const twin = (name: string) =>
+      new Card({
+        name,
+        arrows: ['N'],
+        stars: 1,
+        image: 'crawlid.webp',
+        attack: 5,
+        defense: 5,
+        ability: 'A twin.',
+        set: 'DUP',
+        number: 3,
+      });
+    expect(() => indexByKey([twin('One'), twin('Two')])).toThrow(/Duplicate card number 3/);
   });
 });

@@ -284,17 +284,29 @@ describe('CardComponent', () => {
       expect(ability).not.toMatch(/border-(top|right|bottom|left):/);
     });
 
-    /* The name, image, and ability sections are one treatment: they take the
-       same rule from the same custom property rather than three that happen to
-       look alike, and none of them carries an edge of its own. */
-    it('rules the name and image sections exactly as it rules the ability', () => {
+    /* The name and ability sections are one treatment: they take the same rule
+       from the same custom property rather than two that happen to look alike,
+       and neither carries an edge of its own. */
+    it('rules the name section exactly as it rules the ability', () => {
       render();
-      const css = componentCss();
-      for (const section of ['cf-name', 'cf-img']) {
-        const body = ruleBody(css, section);
-        expect(body).toMatch(/(^|;)\s*border:\s*var\(--section-rule\)/);
-        expect(body).not.toMatch(/border-(top|right|bottom|left):/);
-      }
+      const name = ruleBody(componentCss(), 'cf-name');
+      expect(name).toMatch(/(^|;)\s*border:\s*var\(--section-rule\)/);
+      expect(name).not.toMatch(/border-(top|right|bottom|left):/);
+    });
+
+    /* The art window is the one section that does not share that rule, and
+       deliberately: it is the only rule with artwork behind it, and the
+       translucent `--section-rule` lets the art through, so the window loses
+       its edge wherever the art is bright. `--color-card-window-rule` is the
+       section rule resolved over the card's face — the same edge to the eye,
+       opaque to the artwork. It is still one four-sided border. */
+    it('rules the art window opaquely, since artwork sits behind it', () => {
+      render();
+      const img = ruleBody(componentCss(), 'cf-img');
+      expect(img).toMatch(/(^|;)\s*border:\s*1px solid var\(--color-card-window-rule\)/);
+      expect(img).not.toMatch(/border-(top|right|bottom|left):/);
+      // And the art stops at that rule rather than painting under it.
+      expect(img).toMatch(/background-clip:\s*padding-box/);
     });
 
     it('draws no border below the gate, where the section is hidden', () => {
