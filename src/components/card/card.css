@@ -285,7 +285,7 @@ button.frame {
   position: relative;
   display: block;
   background-size: cover;
-  background-position: center top;
+  background-position: center center;
   background-color: var(--color-card-art);
   min-height: 0;
   overflow: hidden;
