@@ -510,8 +510,8 @@ button.frame {
      inline box so it flows around the floats, and a block's line boxes are
      struck from the block's own font, not its inline children's. */
   font-family: var(--font-flavor);
-  font-size: clamp(6px, 4.6cqw, 11px);
-  line-height: 1.35;
+  font-size: clamp(7px, 5.4cqw, 16px);
+  line-height: 1.4;
   color: var(--color-ability-text);
 }
 
