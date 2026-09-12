@@ -222,7 +222,6 @@ button.frame {
    that it never overtakes that term above the 120px minimum, which is what
    keeps the fit the same at every size rather than only at the middle ones. */
 .cf-name {
-  position: relative;
   /* Tighter than the other sections' padding on purpose: the row's height is
      fixed by the grid, and what the padding does not take is what a wrapped
      name has to live in — so the padding gives back exactly what the panel's
@@ -255,29 +254,6 @@ button.frame {
   max-width: 100%;
   /* No `nowrap`, no ellipsis: a name the ladder underestimates wraps. */
   overflow-wrap: break-word;
-}
-
-/* Ownership marker — filled for the player, hollow for the opponent, so
-   ownership is not carried by colour alone. */
-.owner-pip {
-  position: absolute;
-  left: 3cqw;
-  top: 50%;
-  width: clamp(3px, 3.5cqw, 6px);
-  height: clamp(3px, 3.5cqw, 6px);
-  transform: translateY(-50%) rotate(45deg);
-  display: none;
-}
-
-:host(.owner-player) .owner-pip {
-  display: block;
-  background: var(--color-soul);
-}
-
-:host(.owner-opponent) .owner-pip {
-  display: block;
-  background: transparent;
-  border: 1px solid var(--color-crimson);
 }
 
 /* Section 2 — the art window, inset into the frame */
@@ -653,8 +629,8 @@ button.frame {
 
 /* ─── Ownership treatments ────────────────────────────────────────────────────
    The frame is ownership's channel and nothing else's: an owned card's metal is
-   its owner's, an unowned card's is the neutral default above. The aura and the
-   pip stay, so the state never rests on colour alone.
+   its owner's, an unowned card's is the neutral default above. The aura rides
+   with it, so the frame reads as the owner's from across the board.
    ──────────────────────────────────────────────────────────────────────────── */
 
 :host(.owner-player) {

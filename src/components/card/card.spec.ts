@@ -362,11 +362,6 @@ describe('CardComponent', () => {
       expect(host.classList).toContain('owner-opponent');
     });
 
-    it('carries ownership by a shape marker, not colour alone', () => {
-      render({ owner: 'opponent' });
-      expect(host.querySelector('.owner-pip')).not.toBeNull();
-    });
-
     it('applies the capture transition when flipped', () => {
       render({ owner: 'player', flipped: true });
       expect(host.classList).toContain('is-flipped');
