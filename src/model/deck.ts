@@ -224,3 +224,29 @@ function replaceDeck(state: UserState, deckIndex: number, deck: Deck): UserState
   decks[deckIndex] = deck;
   return { ...state, decks };
 }
+
+/**
+ * The decks with no more than `quantity` copies of `key` in any one of them.
+ *
+ * Decks do not consume cards, so a fall in the quantity held — a sale — can
+ * leave a deck holding more copies than the collection does. Each such deck
+ * loses its excess copies from its latest positions, keeping the earliest, as
+ * `fromPersisted` does on load; the deck then closes up so its positions stay
+ * contiguous. A deck within the quantity is returned as the same object, so
+ * "which decks changed" is an identity comparison.
+ */
+export function trimDecks(decks: readonly Deck[], key: CardKey, quantity: number): readonly Deck[] {
+  const allowed = Math.max(0, quantity);
+  return decks.map((deck) => {
+    let excess = deck.cards.filter((held) => held === key).length - allowed;
+    if (excess <= 0) return deck;
+    const cards = [...deck.cards];
+    for (let i = cards.length - 1; i >= 0 && excess > 0; i--) {
+      if (cards[i] === key) {
+        cards.splice(i, 1);
+        excess--;
+      }
+    }
+    return { cards };
+  });
+}

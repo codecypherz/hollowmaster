@@ -352,6 +352,12 @@
   color: var(--color-gold);
 }
 
+/* The two currencies side by side, far enough apart to read as two amounts. */
+.currency-pair {
+  display: inline-flex;
+  gap: 1.25em;
+}
+
 .geo-purse {
   font-family: var(--font-display);
   font-size: 1.5rem;

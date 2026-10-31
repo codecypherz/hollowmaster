@@ -331,3 +331,61 @@ export function indexByKey(cards: readonly Card[]): ReadonlyMap<CardKey, Card> {
 }
 
 export const CARD_BY_KEY: ReadonlyMap<CardKey, Card> = indexByKey(CARD_DB);
+
+// ─── Sets ───────────────────────────────────────────────────────────────────
+
+/** A card set: the identity a card carries, and the name the player reads. */
+export interface CardSet {
+  /** The identity printed on the card face and stored with it, e.g. `FC`. */
+  readonly id: string;
+  /** What the set is called on screen, e.g. `Forgotten Crossroads`. */
+  readonly name: string;
+}
+
+/**
+ * Every set the application knows, in the order it presents them.
+ *
+ * Stated rather than derived from `CARD_DB`: a set is announced before its
+ * cards are catalogued (the Greenpath and City of Tears pack posters already
+ * exist), and a derived list could neither name nor order a set that holds
+ * nothing yet.
+ */
+export const CARD_SETS: readonly CardSet[] = Object.freeze([
+  Object.freeze({ id: 'FC', name: 'Forgotten Crossroads' }),
+  Object.freeze({ id: 'GP', name: 'Greenpath' }),
+  Object.freeze({ id: 'CT', name: 'City of Tears' }),
+]);
+
+/**
+ * Checks that the sets are uniquely named and that every card belongs to one.
+ * Run at module load beside `indexByKey`, so a card naming an unlisted set
+ * fails at app start and in tests rather than vanishing from the Collection.
+ * A set with no cards is allowed: it is forthcoming, not wrong.
+ */
+export function assertCatalogueSets(sets: readonly CardSet[], cards: readonly Card[]): void {
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  for (const set of sets) {
+    if (ids.has(set.id)) throw new Error(`Duplicate set id "${set.id}"`);
+    if (names.has(set.name)) throw new Error(`Duplicate set name "${set.name}"`);
+    ids.add(set.id);
+    names.add(set.name);
+  }
+  for (const card of cards) {
+    if (!ids.has(card.set)) {
+      throw new Error(`Card "${card.name}" belongs to set "${card.set}", which is not a named set`);
+    }
+  }
+}
+
+assertCatalogueSets(CARD_SETS, CARD_DB);
+
+/** The named set with that identity, or undefined for one the list does not hold. */
+export function cardSet(id: string): CardSet | undefined {
+  return CARD_SETS.find((set) => set.id === id);
+}
+
+/** Every catalogued card in that set, lowest number first. Empty for a forthcoming set. */
+export function cardsInSet(id: string, cards: readonly Card[] = CARD_DB): Card[] {
+  return cards.filter((card) => card.set === id).sort((a, b) => a.number - b.number);
+}

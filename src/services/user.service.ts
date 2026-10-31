@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Card } from '../model/card';
 import { addCardToDeck, createDeck, deleteDeck, removeCardFromDeck } from '../model/deck';
+import { buyCard, sellCard } from '../model/exchange';
 import {
   SCHEMA_VERSION,
   UserState,
@@ -29,6 +30,7 @@ export class UserService {
 
   readonly state = this._state.asReadonly();
   readonly geo = computed(() => this._state().geo);
+  readonly rosaries = computed(() => this._state().rosaries);
   readonly collection = computed(() => this._state().collection);
 
   /** The decks the player has built, in their own order. */
@@ -118,6 +120,25 @@ export class UserService {
     return true;
   }
 
+  // ─── Rosaries ─────────────────────────────────────────────────────────────
+  //
+  // The Collection page's exchange. The prices, the affordability check, and
+  // the deck trimming a sale brings all live in `exchange.ts`; each command
+  // commits that function's result in one step, or nothing.
+
+  /** Buys one copy of `card` for Rosaries. Refused when the balance is short. */
+  buyCard(card: Card): boolean {
+    return this.apply((s) => buyCard(s, card));
+  }
+
+  /**
+   * Sells one copy of `card` for Rosaries, trimming any deck left holding more
+   * copies than remain. Refused for a card not held.
+   */
+  sellCard(card: Card): boolean {
+    return this.apply((s) => sellCard(s, card));
+  }
+
   // ─── Decks ────────────────────────────────────────────────────────────────
   //
   // Each command applies the matching pure function from `deck.ts` and does
@@ -150,7 +171,7 @@ export class UserService {
   }
 
   /**
-   * Commits a deck operation's result, or reports that it did not happen.
+   * Commits a deck or exchange operation's result, or reports that it did not happen.
    *
    * A refusal persists nothing: the state is unchanged, so a write would be a
    * no-op that still costs a round trip to the store.

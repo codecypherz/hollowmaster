@@ -2,10 +2,10 @@ import { Card, CardKey, CARD_BY_KEY, cardKey, cardKeyOf } from './card';
 import { DECK_SIZE, Deck, MAX_DECKS, emptyDeck } from './deck';
 
 /**
- * Everything a player owns: the cards they hold, the Geo they can spend, and
- * the decks they have built.
+ * Everything a player owns: the cards they hold, the Geo and the Rosaries they
+ * can spend, and the decks they have built.
  *
- * Neither is derived from the other, and the whole shape is plain data — no
+ * None is derived from another, and the whole shape is plain data — no
  * class, no methods — so serializing it is a near-identity mapping rather than
  * a translation layer. The operations that change it are the pure functions
  * below; `UserService` is what holds one of these and publishes it.
@@ -13,6 +13,8 @@ import { DECK_SIZE, Deck, MAX_DECKS, emptyDeck } from './deck';
 export interface UserState {
   /** Whole number of Geo, never negative. */
   readonly geo: number;
+  /** Whole number of Rosaries, never negative. Earned by selling cards; see `exchange.ts`. */
+  readonly rosaries: number;
   /**
    * How many copies of each card the player holds, keyed by catalogue identity.
    * A card absent from the map is owned zero times — read it through
@@ -74,12 +76,13 @@ function assertStarterSet(keys: readonly CardKey[]): void {
 assertStarterSet(STARTER_CARD_KEYS);
 
 /**
- * A user with no prior data: no Geo, one copy of each starter card, and one
+ * A user with no prior data: no Geo, no Rosaries, one copy of each starter card, and one
  * empty deck, so the Decks page has somewhere to build on first arrival.
  */
 export function seedUser(): UserState {
   return {
     geo: 0,
+    rosaries: 0,
     collection: new Map(STARTER_CARD_KEYS.map((key) => [key, 1])),
     decks: [emptyDeck()],
   };
@@ -126,17 +129,21 @@ export function distinctCards(collection: ReadonlyMap<CardKey, number>): number 
 /**
  * The shape persisted data is written in.
  *
- * Version 1 held a collection and a balance; version 2 adds the decks. A read
+ * Version 1 held a collection and a balance; version 2 adds the decks; version
+ * 3 adds the Rosary balance. A read
  * dispatches on the version rather than demanding equality: a version this
  * application knows an *earlier* shape for is upgraded, because an earlier
  * record is a complete user of its own time and a player must not lose their
  * collection or their Geo because the shape around it grew. A version it knows
  * nothing about is still unreadable rather than hopefully-current.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** The first shape written: a collection and a balance, and no decks. */
 const VERSION_WITHOUT_DECKS = 1;
+
+/** The second shape: decks beside the collection and the Geo, but no Rosaries. */
+const VERSION_WITHOUT_ROSARIES = 2;
 
 /** One card's holding, as it is stored: identity and quantity, nothing else. */
 export interface PersistedEntry {
@@ -175,6 +182,7 @@ export type PersistedDeck = readonly PersistedCardRef[];
 export interface PersistedUser {
   readonly version: number;
   readonly geo: number;
+  readonly rosaries: number;
   readonly collection: readonly PersistedEntry[];
   readonly decks: readonly PersistedDeck[];
 }
@@ -197,7 +205,13 @@ export function toPersisted(state: UserState): PersistedUser {
     return cards;
   });
 
-  return { version: SCHEMA_VERSION, geo: state.geo, collection, decks };
+  return {
+    version: SCHEMA_VERSION,
+    geo: state.geo,
+    rosaries: state.rosaries,
+    collection,
+    decks,
+  };
 }
 
 /**
@@ -216,8 +230,20 @@ export function parsePersistedUser(raw: unknown): PersistedUser | null {
   const record = raw as Record<string, unknown>;
 
   const version = record['version'];
-  if (version !== SCHEMA_VERSION && version !== VERSION_WITHOUT_DECKS) return null;
+  if (
+    version !== SCHEMA_VERSION &&
+    version !== VERSION_WITHOUT_ROSARIES &&
+    version !== VERSION_WITHOUT_DECKS
+  ) {
+    return null;
+  }
   if (!isCount(record['geo'])) return null;
+
+  // Records written before Rosaries existed upgrade to a user holding none. A
+  // current record must state a possible balance, the same rule Geo follows.
+  const rosaries = version === SCHEMA_VERSION ? record['rosaries'] : 0;
+  if (!isCount(rosaries)) return null;
+
   if (!Array.isArray(record['collection'])) return null;
 
   const collection: PersistedEntry[] = [];
@@ -232,7 +258,7 @@ export function parsePersistedUser(raw: unknown): PersistedUser | null {
   // one entry" rule the collection follows, applied to the whole field.
   const decks = version === VERSION_WITHOUT_DECKS ? [] : parseDecks(record['decks']);
 
-  return { version, geo: record['geo'], collection, decks };
+  return { version, geo: record['geo'], rosaries, collection, decks };
 }
 
 /** Turns a read record back into state, dropping cards the catalogue has lost. */
@@ -264,7 +290,7 @@ export function fromPersisted(persisted: PersistedUser): UserState {
     return { cards };
   });
 
-  return { geo: persisted.geo, collection, decks };
+  return { geo: persisted.geo, rosaries: persisted.rosaries, collection, decks };
 }
 
 function parseDecks(raw: unknown): PersistedDeck[] {

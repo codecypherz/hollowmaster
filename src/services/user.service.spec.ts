@@ -5,6 +5,7 @@ import { CARD_BY_KEY, Card, cardKey, cardKeyOf } from '../model/card';
 import { DECK_SIZE, MAX_DECKS } from '../model/deck';
 import {
   PersistedUser,
+  SCHEMA_VERSION,
   STARTER_CARD_KEYS,
   quantityOf,
   seedUser,
@@ -276,6 +277,103 @@ describe('UserService', () => {
     });
   });
 
+  // ─── Rosaries ─────────────────────────────────────────────────────────────
+
+  describe('the Rosary commands', () => {
+    function withStore(store: UserStore): UserService {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [{ provide: USER_STORE, useValue: store }] });
+      return TestBed.inject(UserService);
+    }
+
+    it('starts a new player at zero Rosaries', () => {
+      expect(us.rosaries()).toBe(0);
+    });
+
+    it('sells a held card, persisting once, and refuses one not held without a write', () => {
+      const store = new InMemoryUserStore();
+      const users = withStore(store);
+
+      expect(users.sellCard(vengefly)).toBe(true);
+      expect(users.rosaries()).toBe(10);
+      expect(quantityOf(users.collection(), vengefly)).toBe(0);
+      expect(store.saved).toHaveLength(1);
+      expect(store.saved[0].rosaries).toBe(10);
+
+      expect(users.sellCard(vengefly)).toBe(false);
+      expect(store.saved).toHaveLength(1);
+    });
+
+    it('buys a card it can afford, persisting once, and refuses one it cannot', () => {
+      const store = new InMemoryUserStore();
+      const users = withStore(store);
+
+      expect(users.buyCard(crawlid)).toBe(false);
+      expect(store.saved).toHaveLength(0);
+
+      for (const key of STARTER_CARD_KEYS) users.sellCard(CARD_BY_KEY.get(key)!);
+      expect(users.rosaries()).toBe(90);
+      store.saved = [];
+      expect(users.buyCard(crawlid)).toBe(false);
+      expect(store.saved).toHaveLength(0);
+
+      users.sellCard(crawlid); // not held any more: refused
+      users.grantCards([crawlid]);
+      users.sellCard(crawlid);
+      store.saved = [];
+      expect(users.rosaries()).toBe(100);
+      expect(users.buyCard(crawlid)).toBe(true);
+      expect(users.rosaries()).toBe(0);
+      expect(quantityOf(users.collection(), crawlid)).toBe(1);
+      expect(store.saved).toHaveLength(1);
+    });
+
+    it('takes a sold last copy out of every deck in the same step', () => {
+      us.createDeck();
+      us.addCardToDeck(0, crawlid);
+      us.addCardToDeck(1, crawlid);
+      const seen: { held: number; inDecks: number; rosaries: number }[] = [];
+      TestBed.runInInjectionContext(() =>
+        effect(() => {
+          const s = us.state();
+          seen.push({
+            held: quantityOf(s.collection, crawlid),
+            inDecks: s.decks.flatMap((d) => d.cards).length,
+            rosaries: s.rosaries,
+          });
+        }),
+      );
+      TestBed.tick();
+      us.sellCard(crawlid);
+      TestBed.tick();
+      expect(us.decks().every((d) => d.cards.length === 0)).toBe(true);
+      expect(seen.at(-1)).toEqual({ held: 0, inDecks: 0, rosaries: 10 });
+      for (const step of seen) expect([2, 0]).toContain(step.inDecks);
+    });
+
+    it('loads a version 2 record with no Rosaries and rewrites it at the current version', async () => {
+      const store = new InMemoryUserStore();
+      store.saved = [
+        {
+          version: 2,
+          geo: 120,
+          rosaries: 0,
+          collection: [{ set: 'FC', number: 1, quantity: 2 }],
+          decks: [[{ set: 'FC', number: 1 }]],
+        },
+      ];
+      const users = withStore(store);
+      await users.load();
+
+      expect(users.geo()).toBe(120);
+      expect(users.rosaries()).toBe(0);
+      expect(users.decks()).toEqual([{ cards: [cardKey(crawlid)] }]);
+      expect(store.saved).toHaveLength(2);
+      expect(store.saved[1].version).toBe(SCHEMA_VERSION);
+      expect(store.saved[1].rosaries).toBe(0);
+    });
+  });
+
   // ─── Reset ────────────────────────────────────────────────────────────────
 
   describe('reset', () => {
@@ -291,9 +389,12 @@ describe('UserService', () => {
       users.createDeck();
       users.addCardToDeck(0, crawlid);
       users.addCardToDeck(1, goam);
+      users.sellCard(goam);
+      expect(users.rosaries()).toBeGreaterThan(0);
 
       users.reset();
 
+      expect(users.rosaries()).toBe(0);
       expect(users.geo()).toBe(0);
       expect(users.distinctCards()).toBe(9);
       for (const key of STARTER_CARD_KEYS) expect(users.collection().get(key)).toBe(1);

@@ -1270,7 +1270,7 @@ test('reset restores a new player after confirmation', async ({ page }) => {
   await expect(dialog).toBeVisible();
   // Nothing has been reset merely by asking.
   await expect(deckTabs(page)).toHaveCount(3);
-  await expect(dialog).toContainText(/cards, Geo, and decks/);
+  await expect(dialog).toContainText(/cards, Geo, Rosaries, and decks/);
   await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).toHaveCount(0);

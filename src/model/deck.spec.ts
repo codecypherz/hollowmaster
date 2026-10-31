@@ -15,6 +15,7 @@ import {
   emptyDeck,
   isBattleReady,
   removeCardFromDeck,
+  trimDecks,
 } from './deck';
 import {
   STARTER_CARD_KEYS,
@@ -506,5 +507,49 @@ describe('building past the rarity limit', () => {
     state = removeCardFromDeck(state, 0, 1)!;
 
     expect(deckStanding(state.decks[0]).problems.map((p) => p.kind)).toEqual(['incomplete']);
+  });
+});
+
+describe('trimming decks to a quantity', () => {
+  const c = cardKey(crawlid);
+  const v = cardKey(vengefly);
+  const g = cardKey(gruzzer);
+  const t = cardKey(tiktik);
+
+  it('takes the only copy out of every deck that used it', () => {
+    const decks = [deckOf(c, v, g), deckOf(v, g), deckOf(g, c, t)];
+    const trimmed = trimDecks(decks, c, 0);
+    expect(trimmed[0].cards).toEqual([v, g]);
+    expect(trimmed[2].cards).toEqual([g, t]);
+    expect(trimmed[1]).toBe(decks[1]);
+  });
+
+  it('removes the latest copy and closes the deck up', () => {
+    // Crawlid at the second and fifth positions; two held becomes one.
+    const deck = deckOf(v, c, g, t, c, v, g);
+    const [trimmed] = trimDecks([deck], c, 1);
+    expect(trimmed.cards).toEqual([v, c, g, t, v, g]);
+  });
+
+  it('leaves a deck within the quantity as it was', () => {
+    const deck = deckOf(c, v, c);
+    const decks = [deck];
+    const trimmed = trimDecks(decks, c, 2);
+    expect(trimmed[0]).toBe(deck);
+    expect(trimmed[0].cards).toEqual([c, v, c]);
+  });
+
+  it('leaves every other card in a trimmed deck alone', () => {
+    const [trimmed] = trimDecks([deckOf(c, c, c, v)], c, 1);
+    expect(trimmed.cards).toEqual([c, v]);
+  });
+
+  it('turns a full deck incomplete when it trims one out', () => {
+    const full = deckOf(c, ...lowKeys(9).slice(1));
+    expect(full.cards).toHaveLength(DECK_SIZE);
+    expect(isBattleReady(full)).toBe(true);
+    const [trimmed] = trimDecks([full], c, 0);
+    expect(trimmed.cards).toHaveLength(DECK_SIZE - 1);
+    expect(deckStanding(trimmed).problems).toEqual([{ kind: 'incomplete', needed: 1 }]);
   });
 });

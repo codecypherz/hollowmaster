@@ -346,14 +346,14 @@
   transition: opacity var(--dur-base);
 }
 
-.hk-btn:hover:not(:disabled),
+.hk-btn:hover:not(:disabled, [aria-disabled='true']),
 .hk-btn.is-hover {
   color: var(--color-gold-light);
   border-color: var(--color-gold);
   box-shadow: var(--elev-glow-gold);
 }
 
-.hk-btn:hover:not(:disabled)::after,
+.hk-btn:hover:not(:disabled, [aria-disabled='true'])::after,
 .hk-btn.is-hover::after {
   opacity: 1;
 }
@@ -366,7 +366,10 @@
   color: var(--color-gold-light);
 }
 
-.hk-btn:disabled {
+/* `aria-disabled` is the unavailable control that stays focusable so its
+   reason can be read; it looks exactly like a natively disabled one. */
+.hk-btn:disabled,
+.hk-btn[aria-disabled='true'] {
   opacity: 0.4;
   cursor: not-allowed;
   color: var(--color-text-dim);
@@ -381,7 +384,7 @@
   background: rgba(90, 120, 210, 0.06);
 }
 
-.hk-btn.primary:hover:not(:disabled),
+.hk-btn.primary:hover:not(:disabled, [aria-disabled='true']),
 .hk-btn.primary.is-hover {
   color: var(--color-soul-bright);
   border-color: var(--color-soul);
@@ -402,6 +405,15 @@
   --btn-padding: 1.1rem 3rem;
 }
 
+/* The compact step, for controls that sit under a card tile: the same
+   treatment at a smaller scale and with the tracking tightened so a verb and
+   a price fit a tile's width. */
+.hk-btn.sm {
+  --btn-font-size: 0.6rem;
+  --btn-padding: 0.45rem 0.6rem;
+  letter-spacing: 0.12em;
+}
+
 /* Below a phone width the step keeps its type size — the scale is the point —
    and gives back the horizontal padding, so a row of large buttons stays a row
    rather than stacking. */
@@ -418,8 +430,8 @@
   pointer-events: none;
 }
 
-/* ─── Currency: the Geo amount ────────────────────────────────────────────────
-   An amount of Geo is the numeral followed by the currency's mark, and the two
+/* ─── Currency: the Geo and Rosary amounts ───────────────────────────────────
+   An amount of either currency is the numeral followed by the currency's mark, and the two
    are one word: they never break apart, and the mark is sized in `em` so it is
    drawn from whatever type it sits in — a small price and the purse's display
    numeral both get a proportionate mark with no size passed in.
@@ -429,15 +441,19 @@
    numeral. Inline layout is what puts it on the numeral's own baseline.
 
    The arrangement itself is not something a surface assembles — `<app-geo>` in
-   src/components/geo/ is the only thing that writes these two classes, so the
-   order of amount and mark, and the mark's accessible name, have one definition.
+   src/components/geo/ and `<app-rosary>` in src/components/rosary/ are the only
+   things that write these classes, so the order of amount and mark, and each
+   mark's accessible name, have one definition. The two currencies share every
+   rule here and differ only in their artwork.
    ──────────────────────────────────────────────────────────────────────────── */
 
-.geo-amount {
+.geo-amount,
+.rosary-amount {
   white-space: nowrap;
 }
 
-.geo-mark {
+.geo-mark,
+.rosary-mark {
   display: inline-block;
   width: 1.15em;
   height: 1.15em;

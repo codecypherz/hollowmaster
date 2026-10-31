@@ -1,6 +1,7 @@
 import { Component, computed, signal } from '@angular/core';
 import { CardComponent } from '../card/card';
 import { Geo } from '../geo/geo';
+import { Rosary } from '../rosary/rosary';
 import { PackComponent } from '../pack/pack';
 import { Card, CardOptions, CARD_DB } from '../../model/card';
 import { PACKS } from '../../model/pack';
@@ -54,7 +55,7 @@ const GROUPS = [
  */
 @Component({
   selector: 'app-style-guide',
-  imports: [CardComponent, Geo, PackComponent],
+  imports: [CardComponent, Geo, PackComponent, Rosary],
   templateUrl: './style-guide.html',
   styleUrl: './style-guide.css',
 })

@@ -120,7 +120,7 @@
       <h2 class="sg-h2">Buttons</h2>
       <p class="sg-sub">
         Hover and focus are shown pinned open with the same rules the real states use, so all four
-        are comparable at once. Each treatment appears at both size steps — size changes scale only.
+        are comparable at once. Each treatment appears at its size steps — size changes scale only.
       </p>
 
       <div class="state-grid">
@@ -187,6 +187,22 @@
             <span class="state-label"
               >primary · large · {{ state === 'resting' ? 'resting' : state }}</span
             >
+          </div>
+        }
+      </div>
+
+      <div class="state-grid">
+        @for (state of buttonStates; track state) {
+          <div class="state-item">
+            <button
+              class="hk-btn sm"
+              [class.is-hover]="state === 'is-hover'"
+              [class.is-focus]="state === 'is-focus'"
+              [disabled]="state === 'disabled'"
+            >
+              Sell
+            </button>
+            <span class="state-label">compact · {{ state === 'resting' ? 'resting' : state }}</span>
           </div>
         }
       </div>
@@ -284,6 +300,52 @@
         <div class="state-item">
           <button class="hk-btn"><app-geo [amount]="500" /></button>
           <span class="state-label">as a control's whole label</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Rosaries ───────────────────────────────────────────────────── -->
+    <section class="sg-section" data-testid="sg-rosary">
+      <h2 class="sg-h2">Rosaries</h2>
+      <p class="sg-sub">
+        The second currency, built as the Geo amount is: the amount then the Rosary mark, sharing
+        every rule of the Geo primitive and differing only in its artwork. The word "Rosaries" is
+        never set beside a number. A control may carry a verb, such as Buy or Sell, beside it.
+      </p>
+
+      <div class="state-grid">
+        <div class="state-item">
+          <span class="geo-demo geo-body"><app-rosary [amount]="0" /></span>
+          <span class="state-label">zero · body type</span>
+        </div>
+        <div class="state-item">
+          <span class="geo-demo geo-body"><app-rosary [amount]="10" /></span>
+          <span class="state-label">a sale price · body type</span>
+        </div>
+        <div class="state-item">
+          <span class="geo-demo geo-purse"><app-rosary [amount]="600" /></span>
+          <span class="state-label">the purse</span>
+        </div>
+        <div class="state-item">
+          <button type="button" class="hk-btn sm">Buy <app-rosary [amount]="600" /></button>
+          <span class="state-label">compact control · enabled</span>
+        </div>
+        <div class="state-item">
+          <button type="button" class="hk-btn sm" aria-disabled="true">
+            Buy <app-rosary [amount]="600" />
+          </button>
+          <span class="state-label">compact control · unavailable</span>
+        </div>
+        <div class="state-item">
+          <button type="button" class="hk-btn" disabled><app-rosary [amount]="10" /></button>
+          <span class="state-label">disabled control</span>
+        </div>
+        <div class="state-item">
+          <span class="geo-demo geo-price currency-pair">
+            <app-geo [amount]="100" />
+            <app-rosary [amount]="100" />
+          </span>
+          <span class="state-label">beside a Geo amount</span>
         </div>
       </div>
     </section>

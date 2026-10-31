@@ -8,6 +8,10 @@ import {
   DIRECTIONS,
   Direction,
   indexByKey,
+  CARD_SETS,
+  assertCatalogueSets,
+  cardSet,
+  cardsInSet,
 } from './card';
 
 /**
@@ -227,5 +231,63 @@ describe('card identity', () => {
         number: 3,
       });
     expect(() => indexByKey([twin('One'), twin('Two')])).toThrow(/Duplicate card number 3/);
+  });
+});
+
+describe('card sets', () => {
+  const inSet = (set: string, number: number) =>
+    new Card({
+      name: `${set} ${number}`,
+      arrows: ['N'],
+      stars: 1,
+      image: 'crawlid.webp',
+      attack: 5,
+      defense: 5,
+      ability: 'A test card.',
+      set,
+      number,
+    });
+
+  it("names a card's set", () => {
+    const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
+    expect(cardSet(crawlid.set)?.name).toBe('Forgotten Crossroads');
+  });
+
+  it('states the sets in order', () => {
+    expect(CARD_SETS.map((set) => [set.id, set.name])).toEqual([
+      ['FC', 'Forgotten Crossroads'],
+      ['GP', 'Greenpath'],
+      ['CT', 'City of Tears'],
+    ]);
+  });
+
+  it('puts every catalogued card in a named set', () => {
+    expect(() => assertCatalogueSets(CARD_SETS, CARD_DB)).not.toThrow();
+    for (const card of CARD_DB) expect(cardSet(card.set)).toBeDefined();
+  });
+
+  it('rejects a card in an unnamed set', () => {
+    expect(() => assertCatalogueSets(CARD_SETS, [inSet('ZZ', 1)])).toThrow(/not a named set/);
+  });
+
+  it('rejects a repeated set id or name', () => {
+    const fc = { id: 'FC', name: 'Forgotten Crossroads' };
+    expect(() => assertCatalogueSets([fc, { id: 'FC', name: 'Other' }], [])).toThrow(/id/);
+    expect(() => assertCatalogueSets([fc, { id: 'XX', name: fc.name }], [])).toThrow(/name/);
+  });
+
+  it('allows a named set with no cards', () => {
+    expect(() => assertCatalogueSets(CARD_SETS, [inSet('FC', 1)])).not.toThrow();
+    expect(cardsInSet('GP', [inSet('FC', 1)])).toEqual([]);
+  });
+
+  it("lists a set's cards by number, lowest first", () => {
+    const cards = [inSet('FC', 3), inSet('GP', 1), inSet('FC', 1), inSet('FC', 2)];
+    expect(cardsInSet('FC', cards).map((card) => card.number)).toEqual([1, 2, 3]);
+    const fc = cardsInSet('FC');
+    expect(fc.length).toBe(CARD_DB.filter((card) => card.set === 'FC').length);
+    expect(fc.map((card) => card.number)).toEqual(
+      [...fc.map((c) => c.number)].sort((a, b) => a - b),
+    );
   });
 });

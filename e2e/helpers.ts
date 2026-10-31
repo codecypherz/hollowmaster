@@ -317,20 +317,36 @@ export function deckControls(page: Page): { create: Locator; remove: Locator; gr
  * store once at start, so the record is written from a page that is already
  * up and then a fresh navigation picks it up.
  */
-export async function openDecksAs(
-  page: Page,
-  user: {
-    geo?: number;
-    collection: { set: string; number: number; quantity: number }[];
-    decks: { set: string; number: number }[][];
-  },
-): Promise<void> {
+export async function openDecksAs(page: Page, user: StoredUser): Promise<void> {
+  await storeUser(page, user);
+  await openDecks(page);
+}
+
+/** A user as a test states it: the stored record's fields, balances defaulting to zero. */
+export interface StoredUser {
+  geo?: number;
+  rosaries?: number;
+  collection: { set: string; number: number; quantity: number }[];
+  decks: { set: string; number: number }[][];
+}
+
+/**
+ * Replaces the stored user. The app reads the store once at start, so the
+ * record is written from a page that is already up and the caller's next
+ * navigation picks it up.
+ */
+export async function storeUser(page: Page, user: StoredUser): Promise<void> {
   await page.goto('/battle');
   await page.evaluate(
     (record) => localStorage.setItem('hollowmaster.user.v1', JSON.stringify(record)),
-    { version: 2, geo: user.geo ?? 0, collection: user.collection, decks: user.decks },
+    {
+      version: 3,
+      geo: user.geo ?? 0,
+      rosaries: user.rosaries ?? 0,
+      collection: user.collection,
+      decks: user.decks,
+    },
   );
-  await openDecks(page);
 }
 
 /** One tile per distinct card the collection holds. */
@@ -455,4 +471,48 @@ export async function expectCollectionLeftAligned(page: Page): Promise<Collectio
     expect(section.leadingRule).toBe('none');
   }
   return aligned;
+}
+
+// ─── The Collection page ────────────────────────────────────────────────────
+
+/** Navigates to the Collection page and waits for its tiles. */
+export async function openCollection(page: Page): Promise<void> {
+  await page.goto('/collection');
+  await expect(exchangeTiles(page).first()).toBeVisible();
+}
+
+/** Replaces the stored user and loads the Collection page on it. */
+export async function openCollectionAs(page: Page, user: StoredUser): Promise<void> {
+  await storeUser(page, user);
+  await openCollection(page);
+}
+
+/** Every card tile on the Collection page, owned or not. */
+export function exchangeTiles(page: Page): Locator {
+  return page.locator('app-collection .tile');
+}
+
+/** The Collection tile for one card, by set and number. */
+export function exchangeTile(page: Page, set: string, number: number): Locator {
+  return page.locator(`app-collection .tile[data-card="${set}-${number}"]`);
+}
+
+/** The Rosary purse's amount. */
+export function rosaryPurse(page: Page): Locator {
+  return page.locator('[data-testid="rosary-purse"]');
+}
+
+export async function rosaryPurseValue(page: Page): Promise<number> {
+  return Number((await rosaryPurse(page).innerText()).trim());
+}
+
+/** Waits out the tiles' staggered entrance. */
+export async function collectionSettled(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      exchangeTiles(page).evaluateAll((els) =>
+        els.every((el) => getComputedStyle(el).opacity === '1'),
+      ),
+    )
+    .toBe(true);
 }

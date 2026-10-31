@@ -1,0 +1,136 @@
+<div class="page-wrap">
+  <!-- Layered void background. No corner frame on this page. -->
+  <div class="void-bg" aria-hidden="true"></div>
+  <div class="mist-layer" aria-hidden="true"></div>
+
+  <!-- Floating soul particles -->
+  <div class="particles" aria-hidden="true">
+    @for (p of particles; track $index) {
+      <span class="particle" [class.falls]="p.falling" [style]="vars(p)"></span>
+    }
+  </div>
+
+  <main class="content">
+    <!-- ─── The pinned top bar ──────────────────────────────────────────────
+         A grid row that does not scroll. The header takes the first column
+         and its rules give way first; the purse holds the second, so the two
+         can never overlap. -->
+    <div class="top-bar">
+      <header class="screen-header">
+        <span class="screen-header-rule" aria-hidden="true"></span>
+        <h1 class="screen-header-title">Collection</h1>
+        <span class="screen-header-rule is-end" aria-hidden="true"></span>
+      </header>
+
+      <!-- The purse. Always shown, and zero is a number like any other. -->
+      <p class="purse" aria-label="Your Rosaries">
+        <app-rosary class="purse-amount" data-testid="rosary-purse" [amount]="rosaries()" />
+      </p>
+    </div>
+
+    <!-- ─── The scrolling sections ──────────────────────────────────────── -->
+    <div class="sections-region" data-testid="sections">
+      @for (section of sections(); track section.set.id) {
+        <section class="set-section" [attr.aria-labelledby]="'set-' + section.set.id">
+          <h2 class="set-head" [id]="'set-' + section.set.id">
+            <span class="set-name">{{ section.set.name }}</span>
+            <span class="set-rule" aria-hidden="true"></span>
+            @if (section.tiles.length === 0) {
+              <span class="set-progress is-forthcoming">Forthcoming</span>
+            } @else {
+              <span class="set-progress">
+                <span aria-hidden="true">{{ section.collected }} / {{ section.tiles.length }}</span>
+                <span class="sr-only"
+                  >{{ section.collected }} of {{ section.tiles.length }} collected</span
+                >
+              </span>
+            }
+          </h2>
+
+          @if (section.tiles.length > 0) {
+            <div class="grid">
+              @for (tile of section.tiles; track tile.key; let i = $index) {
+                <div
+                  class="tile"
+                  [class.is-unowned]="tile.quantity === 0"
+                  [attr.data-card]="tile.slug"
+                  [style.--index]="i"
+                >
+                  <div class="tile-card">
+                    <app-card [card]="tile.card" />
+
+                    @if (tile.quantity === 0) {
+                      <!-- An overlay rather than a filter on the renderer, so
+                           the card beneath is drawn exactly as it always is. -->
+                      <span class="veil" aria-hidden="true"></span>
+                      <span class="badge is-unowned" aria-label="Not owned">
+                        <span aria-hidden="true">Not owned</span>
+                      </span>
+                    } @else {
+                      <span class="badge" [attr.aria-label]="tile.quantity + ' held'">
+                        <span aria-hidden="true">{{ tile.quantity }} held</span>
+                      </span>
+                    }
+                  </div>
+
+                  <div class="controls">
+                    <!-- Unaffordable stays focusable — not the native
+                         `disabled` — so its reason can be read. -->
+                    <button
+                      type="button"
+                      class="hk-btn sm exchange buy"
+                      [attr.data-buy]="tile.slug"
+                      [attr.aria-label]="buyLabel(tile)"
+                      [attr.aria-disabled]="tile.affordable ? null : 'true'"
+                      [attr.aria-describedby]="tile.affordable ? null : 'not-enough-rosaries'"
+                      [attr.title]="tile.affordable ? null : notEnough"
+                      (click)="onBuy(tile)"
+                    >
+                      Buy <app-rosary [amount]="tile.buyPrice" />
+                    </button>
+
+                    @if (tile.quantity > 0) {
+                      @let warns = tile.trims.length > 0;
+                      <button
+                        type="button"
+                        class="hk-btn sm exchange sell"
+                        [class.is-warning]="warns"
+                        [attr.data-sell]="tile.slug"
+                        [attr.aria-label]="sellLabel(tile)"
+                        [attr.aria-describedby]="warns ? 'trim-' + tile.slug : null"
+                        [attr.title]="warns ? trimText(tile) : null"
+                        (click)="onSell(tile)"
+                      >
+                        @if (warns) {
+                          <svg
+                            class="warn-mark"
+                            viewBox="0 0 10 10"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 1.2 9.2 8.8H0.8Z" />
+                          </svg>
+                        }
+                        Sell <app-rosary [amount]="tile.sellPrice" />
+                      </button>
+                      @if (warns) {
+                        <span class="sr-only" [id]="'trim-' + tile.slug">{{ trimText(tile) }}</span>
+                      }
+                    } @else {
+                      <!-- Holds the sell control's slot, so the buy control and
+                           the neighbours do not move. Not a control. -->
+                      <span class="exchange-spacer" aria-hidden="true"></span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </section>
+      }
+    </div>
+  </main>
+
+  <span id="not-enough-rosaries" class="sr-only">{{ notEnough }}</span>
+  <p class="sr-only" aria-live="polite" data-testid="exchange-announcement">{{ announcement() }}</p>
+</div>

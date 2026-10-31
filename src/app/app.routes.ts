@@ -22,6 +22,10 @@ export const routes: Routes = [
     path: 'decks',
     loadComponent: () => import('../components/decks/decks').then((m) => m.Decks),
   },
+  {
+    path: 'collection',
+    loadComponent: () => import('../components/collection/collection').then((m) => m.Collection),
+  },
   // The Decks page was the Cards page; an address saved before the rename still lands there.
   { path: 'cards', redirectTo: 'decks' },
   {

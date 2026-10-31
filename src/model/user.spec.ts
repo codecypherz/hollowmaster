@@ -77,6 +77,10 @@ describe('seedUser', () => {
     expect(seedUser().geo).toBe(0);
   });
 
+  it('starts with no Rosaries', () => {
+    expect(seedUser().rosaries).toBe(0);
+  });
+
   it('holds nine cards, one copy each', () => {
     const seeded: UserState = seedUser();
     expect(totalCards(seeded.collection)).toBe(9);

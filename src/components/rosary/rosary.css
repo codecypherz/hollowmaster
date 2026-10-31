@@ -1,0 +1,7 @@
+/* The treatment is the shared currency primitive in src/styles/primitives.css.
+   As with the Geo amount, the host is one unbreakable inline object whose
+   baseline is the numeral's. */
+
+:host {
+  display: inline-block;
+}

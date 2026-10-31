@@ -11,7 +11,11 @@ import {
   expectNoScroll,
   expectNothingClipped,
   grantGeo,
+  exchangeTile,
+  exchangeTiles,
   openCardMenu,
+  openCollectionAs,
+  rosaryPurse,
   openDecks,
   openDecksAs,
   openShop,
@@ -264,4 +268,56 @@ test('the Decks page is left aligned under reduced motion as it is otherwise', a
   });
   const aligned = await expectCollectionLeftAligned(page);
   expect(aligned.sections).toHaveLength(3);
+});
+
+test('the Collection page presents its tiles and purse without animation', async ({ page }) => {
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
+    true,
+  );
+
+  await page.setViewportSize(VIEWPORT);
+  await openCollectionAs(page, {
+    rosaries: 50,
+    collection: [1, 7, 8, 9, 10, 11, 12, 13, 14].map((number) => ({
+      set: 'FC',
+      number,
+      quantity: number === 7 ? 3 : 1,
+    })),
+    decks: [[{ set: 'FC', number: 1 }]],
+  });
+
+  // Every tile and the purse are at rest at once rather than arriving.
+  const arriving = await exchangeTiles(page).evaluateAll((els) =>
+    els.map((el) => ({
+      animation: getComputedStyle(el).animationName,
+      opacity: getComputedStyle(el).opacity,
+    })),
+  );
+  expect(arriving.length).toBeGreaterThan(0);
+  for (const tile of arriving) {
+    expect(tile.animation).toBe('none');
+    expect(tile.opacity).toBe('1');
+  }
+  await expect(rosaryPurse(page)).toHaveText('50');
+  const purse = await page.locator('app-collection .purse').evaluate((el) => ({
+    animation: getComputedStyle(el).animationName,
+    opacity: getComputedStyle(el).opacity,
+  }));
+  expect(purse).toEqual({ animation: 'none', opacity: '1' });
+
+  // Every treatment the motion might have carried is still there.
+  const crawlid = exchangeTile(page, 'FC', 1);
+  const vengefly = exchangeTile(page, 'FC', 7);
+  const gruzMother = exchangeTile(page, 'FC', 2);
+  await expect(vengefly.locator('.badge')).toHaveAccessibleName('3 held');
+  await expect(gruzMother.locator('.badge')).toHaveAccessibleName('Not owned');
+  await expect(gruzMother.locator('.veil')).toBeVisible();
+  await expect(crawlid.locator('button.sell .warn-mark')).toBeVisible();
+  await expect(gruzMother.locator('button.buy')).toHaveAttribute('aria-disabled', 'true');
+  await expect(gruzMother.locator('button.buy')).toHaveAttribute('title', 'Not enough Rosaries');
+
+  // A count changing settles at once, too.
+  await vengefly.locator('button.sell').click();
+  await expect(vengefly.locator('.badge')).toHaveAccessibleName('2 held');
+  await expect(rosaryPurse(page)).toHaveText('60');
 });

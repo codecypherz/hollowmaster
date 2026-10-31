@@ -53,6 +53,7 @@ describe('the persisted shape', () => {
   it('round-trips a user holding duplicates', () => {
     const original = {
       geo: 350,
+      rosaries: 70,
       collection: grantAll(seedUser().collection, [crawlid, crawlid, goam]),
       decks: [],
     };
@@ -61,6 +62,7 @@ describe('the persisted shape', () => {
     );
 
     expect(restored.geo).toBe(350);
+    expect(restored.rosaries).toBe(70);
     expect(totalCards(restored.collection)).toBe(totalCards(original.collection));
     expect(distinctCards(restored.collection)).toBe(distinctCards(original.collection));
     expect([...restored.collection.entries()].sort()).toEqual(
@@ -71,12 +73,14 @@ describe('the persisted shape', () => {
   it('states a set, a number, and a quantity, and nothing else about a card', () => {
     const persisted = toPersisted({
       geo: 12,
+      rosaries: 0,
       collection: grantAll(new Map(), [goam, goam]),
       decks: [],
     });
     expect(persisted).toEqual({
       version: SCHEMA_VERSION,
       geo: 12,
+      rosaries: 0,
       collection: [{ set: 'FC', number: 6, quantity: 2 }],
       decks: [],
     });
@@ -97,6 +101,7 @@ describe('the persisted shape', () => {
     // resolved at load time, never stored.
     const persisted = toPersisted({
       geo: 0,
+      rosaries: 0,
       collection: new Map([[cardKeyOf('FC', 6), 3]]),
       decks: [],
     });
@@ -113,6 +118,7 @@ describe('parsePersistedUser', () => {
   const valid = (): Record<string, unknown> => ({
     version: SCHEMA_VERSION,
     geo: 100,
+    rosaries: 30,
     collection: [{ set: 'FC', number: 1, quantity: 2 }],
     decks: [],
   });
@@ -121,6 +127,7 @@ describe('parsePersistedUser', () => {
     expect(parsePersistedUser(valid())).toEqual({
       version: SCHEMA_VERSION,
       geo: 100,
+      rosaries: 30,
       collection: [{ set: 'FC', number: 1, quantity: 2 }],
       decks: [],
     });
@@ -140,6 +147,10 @@ describe('parsePersistedUser', () => {
       { ...valid(), geo: 12.5 },
       { ...valid(), geo: '100' },
       { ...valid(), geo: Number.NaN },
+      { ...valid(), rosaries: -1 },
+      { ...valid(), rosaries: 2.5 },
+      { ...valid(), rosaries: '30' },
+      { ...valid(), rosaries: undefined },
       { ...valid(), collection: 'not an array' },
       { ...valid(), collection: undefined },
     ];
@@ -156,6 +167,7 @@ describe('parsePersistedUser', () => {
     const parsed = parsePersistedUser({
       version: SCHEMA_VERSION,
       geo: 42,
+      rosaries: 0,
       collection: [
         { set: 'FC', number: 1, quantity: 1 },
         { set: 'FC', number: 2, quantity: -1 },
@@ -180,6 +192,7 @@ describe('parsePersistedUser', () => {
     const parsed = parsePersistedUser({
       version: SCHEMA_VERSION,
       geo: 777,
+      rosaries: 0,
       collection: [
         { set: 'FC', number: 1, quantity: 1 },
         { set: 'FC', number: 2, quantity: 1 },
@@ -211,9 +224,9 @@ describe('persisted decks', () => {
     [cardKey(goam), DECK_SIZE],
   ]);
 
-  it('writes a version 2 record carrying its decks', () => {
-    const persisted = toPersisted({ geo: 0, collection: holdings, decks: three });
-    expect(persisted.version).toBe(2);
+  it('writes a current record carrying its decks', () => {
+    const persisted = toPersisted({ geo: 0, rosaries: 0, collection: holdings, decks: three });
+    expect(persisted.version).toBe(SCHEMA_VERSION);
     expect(persisted.decks).toHaveLength(3);
     expect(persisted.decks[0]).toEqual([]);
     expect(persisted.decks[1]).toEqual([
@@ -224,7 +237,9 @@ describe('persisted decks', () => {
   });
 
   it("names a deck's cards and nothing else about them", () => {
-    const json = JSON.stringify(toPersisted({ geo: 0, collection: holdings, decks: three }));
+    const json = JSON.stringify(
+      toPersisted({ geo: 0, rosaries: 0, collection: holdings, decks: three }),
+    );
     for (const card of CARD_BY_KEY.values()) {
       expect(json).not.toContain(card.name);
       expect(json).not.toContain(card.image);
@@ -236,7 +251,7 @@ describe('persisted decks', () => {
   });
 
   it('round-trips three decks in order, contents, and positions', () => {
-    const original = { geo: 40, collection: holdings, decks: three };
+    const original = { geo: 40, rosaries: 0, collection: holdings, decks: three };
     const restored = fromPersisted(
       parsePersistedUser(JSON.parse(JSON.stringify(toPersisted(original))))!,
     );
@@ -408,7 +423,7 @@ describe('persisted decks', () => {
 
   it('rejects a version the application does not know', () => {
     const record = {
-      version: 3,
+      version: SCHEMA_VERSION + 1,
       geo: 0,
       collection: [{ set: 'FC', number: 1, quantity: 1 }],
       decks: [],
@@ -459,6 +474,45 @@ describe('a version 1 record', () => {
   it('reports the version it was read at, not the one it will be written at', () => {
     expect(parsePersistedUser(v1([]))!.version).toBe(1);
   });
+
+  it('upgrades to a user holding no Rosaries', () => {
+    expect(fromPersisted(parsePersistedUser(v1([]))!).rosaries).toBe(0);
+  });
+});
+
+describe('a version 2 record', () => {
+  const v2 = (extra: Record<string, unknown> = {}) => ({
+    version: 2,
+    geo: 210,
+    collection: [
+      { set: 'FC', number: 1, quantity: 2 },
+      { set: 'FC', number: 6, quantity: 1 },
+    ],
+    decks: [
+      [
+        { set: 'FC', number: 1 },
+        { set: 'FC', number: 6 },
+      ],
+      [],
+    ],
+    ...extra,
+  });
+
+  it('restores its collection, its Geo, and every deck in full, with no Rosaries', () => {
+    const state = fromPersisted(parsePersistedUser(v2())!);
+    expect(state.geo).toBe(210);
+    expect(state.rosaries).toBe(0);
+    expect(state.collection.get(cardKey(crawlid))).toBe(2);
+    expect(state.decks).toEqual([{ cards: [cardKey(crawlid), cardKey(goam)] }, { cards: [] }]);
+  });
+
+  it('ignores a stray Rosary field, which the shape did not have', () => {
+    expect(parsePersistedUser(v2({ rosaries: 999 }))!.rosaries).toBe(0);
+  });
+
+  it('reports the version it was read at', () => {
+    expect(parsePersistedUser(v2())!.version).toBe(2);
+  });
 });
 
 // ─── 4.4 The localStorage implementation ────────────────────────────────────
@@ -471,12 +525,15 @@ describe('LocalStorageUserStore', () => {
   });
 
   it('round-trips through one named key', async () => {
-    await store.save(toPersisted({ geo: 25, collection: grantAll(new Map(), [goam]), decks: [] }));
+    await store.save(
+      toPersisted({ geo: 25, rosaries: 15, collection: grantAll(new Map(), [goam]), decks: [] }),
+    );
     expect(localStorage.getItem(STORAGE_KEY)).toBeTruthy();
     expect(Object.keys(localStorage)).toEqual([STORAGE_KEY]);
     expect(await store.load()).toEqual({
       version: SCHEMA_VERSION,
       geo: 25,
+      rosaries: 15,
       collection: [{ set: 'FC', number: 6, quantity: 1 }],
       decks: [],
     });
@@ -524,6 +581,7 @@ describe('UserService persistence', () => {
       new InMemoryUserStore({
         version: SCHEMA_VERSION,
         geo: 640,
+        rosaries: 0,
         collection: [{ set: 'FC', number: 6, quantity: 2 }],
         decks: [],
       }),
@@ -575,13 +633,14 @@ describe('UserService persistence', () => {
     expect(store.saved[2].geo).toBe(400);
   });
 
-  it('writes a version 2 record back after upgrading a version 1 one', async () => {
+  it('writes a current record back after upgrading a version 1 one', async () => {
     // What a real store hands back for a stored version 1 record: the reader
     // has already upgraded it to hold no decks, and it still reports the
     // version it was read at.
     const store = new InMemoryUserStore({
       version: 1,
       geo: 300,
+      rosaries: 0,
       collection: [{ set: 'FC', number: 1, quantity: 2 }],
       decks: [],
     });
