@@ -2,7 +2,7 @@
  * Fitting a laid-out surface into the space available to it.
  *
  * CSS cannot divide one length by another, so a surface that lays itself out
- * at a fixed unit — the pack opening's cards, the Cards page's deck row —
+ * at a fixed unit — the pack opening's cards, the Decks page's deck row —
  * cannot ask the stylesheet how far to scale down when the viewport is too
  * small to host it. That ratio is computed here and handed back as a custom
  * property. `arena.ts` solves the same problem for the in-game board, in its

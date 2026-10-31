@@ -12,8 +12,8 @@ import {
   expectNothingClipped,
   grantGeo,
   openCardMenu,
-  openCards,
-  openCardsAs,
+  openDecks,
+  openDecksAs,
   openShop,
   revealedCards,
   revealedRarities,
@@ -152,13 +152,13 @@ test('a pack keeps a still foil highlight with the travel taken away', async ({ 
   }
 });
 
-test('the Cards page presents its cards, menus, and reader without animation', async ({ page }) => {
+test('the Decks page presents its cards, menus, and reader without animation', async ({ page }) => {
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
     true,
   );
 
   await page.setViewportSize(VIEWPORT);
-  await openCards(page);
+  await openDecks(page);
   await page.getByRole('button', { name: 'New deck', exact: true }).click();
   await expect(deckTabs(page)).toHaveCount(2);
 
@@ -247,14 +247,14 @@ test('the Cards page presents its cards, menus, and reader without animation', a
   await expectNoScroll(page);
 });
 
-test('the Cards page is left aligned under reduced motion as it is otherwise', async ({ page }) => {
+test('the Decks page is left aligned under reduced motion as it is otherwise', async ({ page }) => {
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
     true,
   );
 
   await page.setViewportSize(VIEWPORT);
   // Starters, one two-star card, and Goam: three rarity sections.
-  await openCardsAs(page, {
+  await openDecksAs(page, {
     collection: [1, 7, 8, 9, 10, 11, 12, 13, 14, 4, 6].map((number) => ({
       set: 'FC',
       number,

@@ -7,7 +7,7 @@ import {
   abilitySectionWidth,
   badgeCount,
   cardWidth,
-  cardsSettled,
+  decksSettled,
   collectionTiles,
   deckCards,
   deckSlots,
@@ -19,11 +19,11 @@ import {
   deckButton,
   deckControls,
   deckStanding,
-  openCardsAs,
+  openDecksAs,
   label,
   laidOutCardWidth,
   openCardMenu,
-  openCards,
+  openDecks,
   openMenu,
   purse,
   tileNamed,
@@ -31,7 +31,7 @@ import {
 } from './helpers';
 
 /**
- * The Cards page: the collection, the decks built from it, and the fit that
+ * The Decks page: the collection, the decks built from it, and the fit that
  * holds the whole thing inside a viewport it is not allowed to scroll.
  *
  * What is checked here is what only a browser can settle — laid-out widths,
@@ -103,10 +103,10 @@ function pinnedParts(page: Page) {
   };
 }
 
-test.describe('the Cards page', () => {
+test.describe('the Decks page', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(DEFAULT);
-    await openCards(page);
+    await openDecks(page);
   });
 
   test('shows the seeded deck and the whole collection', async ({ page }) => {
@@ -117,7 +117,7 @@ test.describe('the Cards page', () => {
 
     // The nine starter cards, one tile each, and nothing marked as forthcoming.
     await expect(collectionTiles(page)).toHaveCount(9);
-    await expect(page.locator('app-collection .coming-soon')).toHaveCount(0);
+    await expect(page.locator('app-decks .coming-soon')).toHaveCount(0);
   });
 
   test('warns that the empty deck needs nine cards from the collection', async ({ page }) => {
@@ -193,7 +193,7 @@ test.describe('the width bands', () => {
   for (const size of LADDER.filter((s) => s.width === 1920 || s.width === 1100)) {
     test(`at ${label(size)} every tile is under the ability gate`, async ({ page }) => {
       await page.setViewportSize(size);
-      await openCards(page);
+      await openDecks(page);
 
       const tiles = collectionTiles(page);
       const count = await tiles.count();
@@ -214,7 +214,7 @@ test.describe('the width bands', () => {
     page,
   }) => {
     await page.setViewportSize(DEFAULT);
-    await openCards(page);
+    await openDecks(page);
 
     await openCardMenu(collectionTiles(page).first());
     await page.getByRole('button', { name: 'Read' }).click();
@@ -252,14 +252,14 @@ for (const widest of [false, true]) {
     await page.setViewportSize(DEFAULT);
     if (widest) {
       // The widest figure a seeded collection reaches: nine held, nine used.
-      await openCardsAs(page, {
+      await openDecksAs(page, {
         collection: startersWithCrawlid(9),
         decks: [Array(DECK_SIZE).fill(CRAWLID)],
       });
     } else {
-      await openCards(page);
+      await openDecks(page);
       await page.evaluate(() => localStorage.clear());
-      await openCards(page);
+      await openDecks(page);
     }
 
     const first = widest ? tileNamed(page, 'Crawlid') : collectionTiles(page).first();
@@ -300,13 +300,13 @@ for (const widest of [false, true]) {
     expect(visible['bars']).toEqual({ count: 2, obscured: 0 });
     expect(visible['chevrons']).toEqual({ count: 8, obscured: 0 });
 
-    if (widest) await first.screenshot({ path: 'test-results/cards-badge-9-of-9.png' });
+    if (widest) await first.screenshot({ path: 'test-results/decks-badge-9-of-9.png' });
   });
 }
 
 test('the badge states used of held, per deck', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCardsAs(page, { collection: startersWithCrawlid(3), decks: [[], []] });
+  await openDecksAs(page, { collection: startersWithCrawlid(3), decks: [[], []] });
 
   const crawlid = tileNamed(page, 'Crawlid');
   const badge = crawlid.locator('.badge');
@@ -361,11 +361,11 @@ test('the badge separator is as heavy and as high in contrast as the used figure
 }) => {
   await page.setViewportSize(DEFAULT);
   // Crawlid: one of three used, the normal badge. FC 7: its one copy used, exhausted.
-  await openCardsAs(page, {
+  await openDecksAs(page, {
     collection: startersWithCrawlid(3),
     decks: [[CRAWLID, { set: 'FC', number: 7 }]],
   });
-  await cardsSettled(page);
+  await decksSettled(page);
 
   const exhausted = collectionTiles(page).filter({ has: page.locator('.badge.is-exhausted') });
   await expect(exhausted).toHaveCount(1);
@@ -407,15 +407,15 @@ test('the badge separator is as heavy and as high in contrast as the used figure
     expect(parts.sep.contrast).toBeGreaterThan(7);
   }
 
-  await normal.screenshot({ path: 'test-results/cards-badge-separator.png' });
-  await exhausted.screenshot({ path: 'test-results/cards-badge-separator-exhausted.png' });
+  await normal.screenshot({ path: 'test-results/decks-badge-separator.png' });
+  await exhausted.screenshot({ path: 'test-results/decks-badge-separator-exhausted.png' });
 });
 
 // ─── 13.5 Building a deck ───────────────────────────────────────────────────
 
 test('a deck is built, filled, trimmed, and survives a reload', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
 
   // A second deck, created from the page and selected on arrival.
   await page.getByRole('button', { name: 'New deck', exact: true }).click();
@@ -456,7 +456,7 @@ test('a deck is built, filled, trimmed, and survives a reload', async ({ page })
 
   // And none of it needed saving.
   await page.reload();
-  await openCards(page);
+  await openDecks(page);
   await deckButton(page, 'Deck 2').click();
   await expect(deckCards(page)).toHaveCount(DECK_SIZE - 1);
   await expect(deckCards(page).first().locator('.cf-name-text')).toHaveText(
@@ -466,7 +466,7 @@ test('a deck is built, filled, trimmed, and survives a reload', async ({ page })
 
 test('the same card can be read from the deck and removed from there', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
 
   await openCardMenu(collectionTiles(page).first());
   await page.getByRole('button', { name: 'Add to Deck 1' }).click();
@@ -484,7 +484,7 @@ test('the same card can be read from the deck and removed from there', async ({ 
 
 test('the reader withholds the add with the same reason the menu states', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
 
   const tile = collectionTiles(page).first();
   for (let i = 0; i < DECK_SIZE; i++) {
@@ -513,7 +513,7 @@ test('the reader withholds the add with the same reason the menu states', async 
 test('removing the second of three copies leaves the other two in order', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
   // Three copies held, so a deck may hold three.
-  await openCardsAs(page, { collection: startersWithCrawlid(3), decks: [[]] });
+  await openDecksAs(page, { collection: startersWithCrawlid(3), decks: [[]] });
 
   const first = tileNamed(page, 'Crawlid');
   const second = tileNamed(page, 'Vengefly');
@@ -539,7 +539,7 @@ test('removing the second of three copies leaves the other two in order', async 
 
 test('a card read from the collection can be added from there', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
 
   await openCardMenu(collectionTiles(page).first());
   await page.getByRole('button', { name: 'Read' }).click();
@@ -554,7 +554,7 @@ test('a card read from the collection can be added from there', async ({ page })
 
 test('deleting a deck is confirmed, renumbers the rest, and costs no cards', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
 
   await page.getByRole('button', { name: 'New deck', exact: true }).click();
   await page.getByRole('button', { name: 'New deck', exact: true }).click();
@@ -602,7 +602,7 @@ test('deleting a deck is confirmed, renumbers the rest, and costs no cards', asy
 
 test('deleting the last deck leaves the no-decks state', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
 
   await page.getByRole('button', { name: 'Delete Deck 1' }).click();
   const confirm = page.getByRole('alertdialog');
@@ -622,7 +622,7 @@ test('deleting the last deck leaves the no-decks state', async ({ page }) => {
 
 test('the create control is disabled at the deck limit', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
   const { create } = deckControls(page);
 
   for (let i = 1; i < MAX_DECKS; i++) await create.click();
@@ -666,15 +666,15 @@ test('the create control is disabled at the deck limit', async ({ page }) => {
 
 // ─── 13.2 The fit ladder ────────────────────────────────────────────────────
 
-test.describe('the Cards page fits the viewport', () => {
+test.describe('the Decks page fits the viewport', () => {
   for (const size of LADDER) {
     test(`at ${label(size)} nothing scrolls but the collection`, async ({ page }) => {
       await page.setViewportSize(size);
-      await openCards(page);
+      await openDecks(page);
       // A deck with cards in it, so the row is measured at its real content.
       await openCardMenu(collectionTiles(page).first());
       await page.getByRole('button', { name: 'Add to Deck 1' }).click();
-      await cardsSettled(page);
+      await decksSettled(page);
 
       await expectNoScroll(page);
       await expectPartsOnScreen(page, size, pinnedParts(page));
@@ -701,7 +701,7 @@ test.describe('the Cards page fits the viewport', () => {
       // does not move when it goes there.
       const scrollers = await page.evaluate(() => {
         const out: string[] = [];
-        for (const el of document.querySelectorAll<HTMLElement>('app-collection *')) {
+        for (const el of document.querySelectorAll<HTMLElement>('app-decks *')) {
           if (el.scrollHeight - el.clientHeight > 1 && getComputedStyle(el).overflowY === 'auto') {
             out.push(el.tagName.toLowerCase());
           }
@@ -715,12 +715,12 @@ test.describe('the Cards page fits the viewport', () => {
       await expect(page.locator('app-deck-bar')).toBeVisible();
       expect(await page.locator('app-deck-bar').boundingBox()).toEqual(before);
 
-      await page.screenshot({ path: `test-results/cards-${label(size)}.png` });
+      await page.screenshot({ path: `test-results/decks-${label(size)}.png` });
 
       // The page is titled by the shared single-line header, on one line.
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^cards$/i);
-      const header = page.locator('app-collection .screen-header');
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^decks$/i);
+      const header = page.locator('app-decks .screen-header');
       await expect(header).toHaveCount(1);
       const fit = await header.evaluate((el) => {
         const title = el.querySelector<HTMLElement>('.screen-header-title')!;
@@ -738,8 +738,8 @@ test.describe('the Cards page fits the viewport', () => {
 
       if (size === LADDER[0] || size === LADDER[LADDER.length - 1]) {
         await page
-          .locator('app-collection .pinned')
-          .screenshot({ path: `test-results/cards-pinned-${label(size)}.png` });
+          .locator('app-decks .pinned')
+          .screenshot({ path: `test-results/decks-pinned-${label(size)}.png` });
       }
     });
   }
@@ -749,7 +749,7 @@ test.describe('the Cards page fits the viewport', () => {
 
 test('the whole screen is operable by keyboard', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
 
   // Each deck button is its own stop, and choosing one needs no pointer.
   await page.getByRole('button', { name: 'New deck', exact: true }).click();
@@ -828,7 +828,7 @@ test('the whole screen is operable by keyboard', async ({ page }) => {
 
 test('the selected deck button is marked by more than colour', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
   await page.getByRole('button', { name: 'New deck', exact: true }).click();
 
   // A filled ground and a heavier weight, neither of which is a hue. Polled,
@@ -861,7 +861,7 @@ test('only the selected deck button says "Deck", and every one keeps its full na
   page,
 }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
   const { create } = deckControls(page);
   await create.click();
   await create.click();
@@ -883,7 +883,7 @@ test('the deck controls are named icons, beside the deck buttons behind a separa
   page,
 }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
   const { create, remove, group } = deckControls(page);
 
   // Icons on their face, names for assistive technology.
@@ -969,7 +969,7 @@ test('the deck controls are named icons, beside the deck buttons behind a separa
 test('the deck states its standing: error, warning, or ready', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
   // Two Goam held, so one deck may hold both and break the rarity limit.
-  await openCardsAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 2 }], decks: [[]] });
+  await openDecksAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 2 }], decks: [[]] });
 
   // An empty deck is a warning, and nothing is an error.
   expect(await deckStanding(page)).toEqual([
@@ -1017,8 +1017,8 @@ test('the deck states its standing: error, warning, or ready', async ({ page }) 
   expect(colours.error).not.toBe(colours.warning);
 
   await page
-    .locator('app-collection .pinned')
-    .screenshot({ path: 'test-results/cards-standing-both.png' });
+    .locator('app-decks .pinned')
+    .screenshot({ path: 'test-results/decks-standing-both.png' });
 
   // Removing one Goam clears the error.
   await openCardMenu(deckSlots(page).nth(1));
@@ -1053,7 +1053,7 @@ async function tileAttacks(page: Page): Promise<number[]> {
 
 test('the active order shows its direction and reverses on a second choice', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCardsAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 1 }], decks: [[]] });
+  await openDecksAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 1 }], decks: [[]] });
 
   // On arrival only Rarity carries a chevron, and it is announced descending.
   await expect(page.locator('.sort-option .sort-chevron')).toHaveCount(1);
@@ -1080,16 +1080,14 @@ test('the active order shows its direction and reverses on a second choice', asy
   const names = await tileNames(page);
   expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'en')));
 
-  await page
-    .locator('app-collection .sort-row')
-    .screenshot({ path: 'test-results/cards-sort-row.png' });
+  await page.locator('app-decks .sort-row').screenshot({ path: 'test-results/decks-sort-row.png' });
 });
 
 test('ordering by rarity sections the collection', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
   // The one-star starters, one two-star card (FC 4), and Goam at four stars.
   // Nothing at three, so no three-star section may appear.
-  await openCardsAs(page, {
+  await openDecksAs(page, {
     collection: [...STARTERS, { set: 'FC', number: 4, quantity: 1 }, { ...GOAM, quantity: 1 }],
     decks: [[]],
   });
@@ -1139,8 +1137,8 @@ test('ordering by rarity sections the collection', async ({ page }) => {
     .allInnerTexts();
   expect(oneStarsUp).toEqual(oneStarsDown);
 
-  await cardsSettled(page);
-  await page.screenshot({ path: 'test-results/cards-rarity-sections.png' });
+  await decksSettled(page);
+  await page.screenshot({ path: 'test-results/decks-rarity-sections.png' });
 
   // Every other order is one run with no headings.
   for (const order of ['Name', 'Quantity', 'Attack', 'Defense']) {
@@ -1153,7 +1151,7 @@ test('ordering by rarity sections the collection', async ({ page }) => {
 test('the collection is aligned to its left edge in every order', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
   // One four-star and one two-star card, so those sections are rows of one.
-  await openCardsAs(page, {
+  await openDecksAs(page, {
     collection: [...STARTERS, { set: 'FC', number: 4, quantity: 1 }, { ...GOAM, quantity: 1 }],
     decks: [[]],
   });
@@ -1206,17 +1204,17 @@ test('the collection is aligned to its left edge in every order', async ({ page 
 
 test('the page draws no corner frame but keeps its atmosphere', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  await openDecks(page);
   await expect(page.locator('.corner')).toHaveCount(0);
-  await expect(page.locator('app-collection .void-bg')).toHaveCount(1);
-  await expect(page.locator('app-collection .mist-layer')).toHaveCount(1);
-  await expect(page.locator('app-collection .particles .particle').first()).toBeAttached();
+  await expect(page.locator('app-decks .void-bg')).toHaveCount(1);
+  await expect(page.locator('app-decks .mist-layer')).toHaveCount(1);
+  await expect(page.locator('app-decks .particles .particle').first()).toBeAttached();
 });
 
 test('a reorder animates every tile', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
-  await cardsSettled(page);
+  await openDecks(page);
+  await decksSettled(page);
 
   // The nine starters are all one-star, so rarity and name read the same
   // sequence: no tile changes place, and every one must still move.
@@ -1242,7 +1240,7 @@ test('a reorder animates every tile', async ({ page }) => {
   expect(await tileNames(page)).toEqual(before);
 
   // A reversal animates too.
-  await cardsSettled(page);
+  await decksSettled(page);
   await sortControl(page, 'Name').click();
   await expect.poll(allRunning).toEqual(Array(9).fill(true));
   expect(await tileNames(page)).toEqual([...before].reverse());
@@ -1252,7 +1250,7 @@ test('a reorder animates every tile', async ({ page }) => {
 
 test('reset restores a new player after confirmation', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCardsAs(page, {
+  await openDecksAs(page, {
     geo: 750,
     collection: [...startersWithCrawlid(3), { ...GOAM, quantity: 2 }],
     decks: [[CRAWLID, CRAWLID, GOAM], [CRAWLID], []],
@@ -1310,7 +1308,7 @@ test('reset restores a new player after confirmation', async ({ page }) => {
 
   // And it is durable.
   await page.reload();
-  await openCards(page);
+  await openDecks(page);
   await expect(deckTabs(page)).toHaveCount(1);
   await expect(collectionTiles(page)).toHaveCount(9);
   await expect(deckCards(page)).toHaveCount(0);

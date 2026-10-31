@@ -3,7 +3,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { cardKey } from '../../model/card';
 import { CardComponent } from '../card/card';
 import { CardMenu } from '../card-menu/card-menu';
-import type { Tile, TileSection } from '../collection/collection';
+import type { Tile, TileSection } from '../decks/decks';
 
 /**
  * The scrolling collection: one tile per distinct card the player holds, with

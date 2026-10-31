@@ -10,3 +10,16 @@ test('the app loads and lands on Battle', async ({ page }) => {
   await expect(page).toHaveURL(/\/battle$/);
   await expect(page.getByRole('button', { name: 'Start Game' })).toBeVisible();
 });
+
+/**
+ * The Decks page was the Cards page. An address saved before the rename still
+ * lands there, and the nav marks it once the redirect settles.
+ */
+test('the former Cards route lands on the Decks page', async ({ page }) => {
+  await page.goto('/cards');
+
+  await expect(page).toHaveURL(/\/decks$/);
+  const nav = page.getByRole('navigation', { name: 'Primary' });
+  await expect(nav.getByRole('link', { name: 'Decks' })).toHaveAttribute('aria-current', 'page');
+  await expect(nav.getByRole('link', { name: 'Cards' })).toHaveCount(0);
+});

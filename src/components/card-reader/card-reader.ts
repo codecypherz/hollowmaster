@@ -3,7 +3,7 @@ import { Card } from '../../model/card';
 import { CardComponent } from '../card/card';
 
 /**
- * Reading a card: the one place on the Cards page where a card is rendered
+ * Reading a card: the one place on the Decks page where a card is rendered
  * above the renderer's 200px ability gate, so the ability text, the set, and
  * the number a collection tile withholds are legible.
  *

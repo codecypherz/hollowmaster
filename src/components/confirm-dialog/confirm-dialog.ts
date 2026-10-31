@@ -12,7 +12,7 @@ import {
  * Asking the player to confirm something that cannot be taken back.
  *
  * An overlay rather than an inline two-step control: an inline confirm changes
- * the height of whatever it sits in, which on the Cards page would move the
+ * the height of whatever it sits in, which on the Decks page would move the
  * collection under the player mid-decision. One component serves every such
  * question — deleting a deck, resetting the player's data — so the two cannot
  * drift apart in how they trap focus or how they are dismissed.

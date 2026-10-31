@@ -75,7 +75,7 @@ assertStarterSet(STARTER_CARD_KEYS);
 
 /**
  * A user with no prior data: no Geo, one copy of each starter card, and one
- * empty deck, so the Cards page has somewhere to build on first arrival.
+ * empty deck, so the Decks page has somewhere to build on first arrival.
  */
 export function seedUser(): UserState {
   return {

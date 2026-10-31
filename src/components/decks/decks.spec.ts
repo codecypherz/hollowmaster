@@ -4,20 +4,20 @@ import { CARD_BY_KEY, cardKeyOf } from '../../model/card';
 import { MAX_DECKS } from '../../model/deck';
 import { STARTER_CARD_KEYS } from '../../model/user';
 import { UserService } from '../../services/user.service';
-import { Collection } from './collection';
+import { Decks } from './decks';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
 const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
 
-describe('the Cards page', () => {
-  let fixture: ComponentFixture<Collection>;
-  let page: Collection;
+describe('the Decks page', () => {
+  let fixture: ComponentFixture<Decks>;
+  let page: Decks;
   let users: UserService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
     users = TestBed.inject(UserService);
-    fixture = TestBed.createComponent(Collection);
+    fixture = TestBed.createComponent(Decks);
     page = fixture.componentInstance;
     fixture.detectChanges();
   });
@@ -215,6 +215,6 @@ describe('the Cards page', () => {
 });
 
 /** Where a card sits in the collection under the order in effect. */
-function indexOf(page: Collection, card: { name: string }): number {
+function indexOf(page: Decks, card: { name: string }): number {
   return page.owned().findIndex((o) => o.card.name === card.name);
 }

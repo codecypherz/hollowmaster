@@ -1,21 +1,21 @@
 ## 1. Rename the Cards page to Decks (its own commit)
 
-- [ ] 1.1 `git mv src/components/collection src/components/decks`. Rename the files to `decks.*`,
+- [x] 1.1 `git mv src/components/collection src/components/decks`. Rename the files to `decks.*`,
       the class to `Decks`, and the selector to `app-decks`. Update the imports in the moved
       component and its `.spec.ts` (`collection-grid`'s `import type { Tile, TileSection }` path
       included). Verify with `ng build` and `ng test`, both green.
-- [ ] 1.2 Set the screen header title to `Decks`. Replace "Cards page" in the doc comments of
+- [x] 1.2 Set the screen header title to `Decks`. Replace "Cards page" in the doc comments of
       `decks.ts`, `deck-bar.ts`, `confirm-dialog.ts`, `card-reader.ts`, `fit.ts`, and `user.ts`,
       and in the Vitest `describe` names. Verify that `grep -rn "Cards page" src` returns nothing.
-- [ ] 1.3 In `src/app/app.routes.ts`, serve `Decks` lazily at `decks` and add
+- [x] 1.3 In `src/app/app.routes.ts`, serve `Decks` lazily at `decks` and add
       `{ path: 'cards', redirectTo: 'decks' }`. In `nav-shell.html`, link to `/decks` with the
       label `Decks`. Verify `ng build`.
-- [ ] 1.4 In `e2e/helpers.ts`, rename `openCards`→`openDecks` and `openCardsAs`→`openDecksAs` and
+- [x] 1.4 In `e2e/helpers.ts`, rename `openCards`→`openDecks` and `openCardsAs`→`openDecksAs` and
       point them at `/decks`. Rename `e2e/cards.spec.ts` to `e2e/decks.spec.ts`, and update the
       callers in `reduced-motion.spec.ts`, the `Cards` labels in `smoke.spec.ts`, and the
       screenshot names. Add a smoke check that `/cards` lands on `/decks` with the Decks nav item
       active. Verify with `npm run e2e`, all green.
-- [ ] 1.5 Commit the rename on its own before any Collection-page work. Verify that `git log
+- [x] 1.5 Commit the rename on its own before any Collection-page work. Verify that `git log
       --stat -1` shows the files as renames.
 
 ## 2. Model: named sets, prices, Rosaries, and trimming

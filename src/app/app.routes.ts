@@ -19,9 +19,11 @@ export const routes: Routes = [
     loadComponent: () => import('../components/shop/shop').then((m) => m.Shop),
   },
   {
-    path: 'cards',
-    loadComponent: () => import('../components/collection/collection').then((m) => m.Collection),
+    path: 'decks',
+    loadComponent: () => import('../components/decks/decks').then((m) => m.Decks),
   },
+  // The Decks page was the Cards page; an address saved before the rename still lands there.
+  { path: 'cards', redirectTo: 'decks' },
   {
     // Development reference only — deliberately not linked from any
     // player-facing screen, and lazy so it adds nothing to the game bundle.

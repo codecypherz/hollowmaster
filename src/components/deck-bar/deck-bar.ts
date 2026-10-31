@@ -71,7 +71,7 @@ function standingLine(problem: DeckProblem): StandingLine {
 const DECK_CARD_WIDTH = 128;
 
 /**
- * The pinned region at the top of the Cards page: the deck buttons, the selected
+ * The pinned region at the top of the Decks page: the deck buttons, the selected
  * deck's nine positions, and the controls that create and delete a deck.
  *
  * It holds no user state of its own. Which deck is selected is the page's, and

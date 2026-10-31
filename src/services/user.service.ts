@@ -71,7 +71,7 @@ export class UserService {
   /**
    * Replaces the player's data with a brand-new player's, and persists it.
    *
-   * A testing aid, offered on the Cards page. It takes the same route `load()`
+   * A testing aid, offered on the Decks page. It takes the same route `load()`
    * takes for a player with no stored data, so "exactly what a new player
    * holds" is true by construction rather than by a second description of one.
    */

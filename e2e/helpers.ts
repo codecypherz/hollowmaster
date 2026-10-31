@@ -246,7 +246,7 @@ export async function expectPartsOnScreen(
   }
 }
 
-// ─── The Cards page ─────────────────────────────────────────────────────────
+// ─── The Decks page ─────────────────────────────────────────────────────────
 
 /** The card renderer's two width constants, as the card spec states them. */
 export const CARD_MIN_WIDTH = 120;
@@ -256,9 +256,9 @@ export const CARD_ABILITY_GATE = 200;
 export const DECK_SIZE = 9;
 export const MAX_DECKS = 9;
 
-/** Navigates to the Cards page and waits for the collection to be on screen. */
-export async function openCards(page: Page): Promise<void> {
-  await page.goto('/cards');
+/** Navigates to the Decks page and waits for the collection to be on screen. */
+export async function openDecks(page: Page): Promise<void> {
+  await page.goto('/decks');
   await expect(page.locator('app-collection-grid').first()).toBeVisible();
   await expect(collectionTiles(page).first()).toBeVisible();
 }
@@ -313,11 +313,11 @@ export function deckControls(page: Page): { create: Locator; remove: Locator; gr
 }
 
 /**
- * Replaces the stored user and loads the Cards page on it. The app reads the
+ * Replaces the stored user and loads the Decks page on it. The app reads the
  * store once at start, so the record is written from a page that is already
  * up and then a fresh navigation picks it up.
  */
-export async function openCardsAs(
+export async function openDecksAs(
   page: Page,
   user: {
     geo?: number;
@@ -330,7 +330,7 @@ export async function openCardsAs(
     (record) => localStorage.setItem('hollowmaster.user.v1', JSON.stringify(record)),
     { version: 2, geo: user.geo ?? 0, collection: user.collection, decks: user.decks },
   );
-  await openCards(page);
+  await openDecks(page);
 }
 
 /** One tile per distinct card the collection holds. */
@@ -374,7 +374,7 @@ export async function openCardMenu(holder: Locator): Promise<Locator> {
  * screen at rest. Every tile and every position fades in; all of them at full
  * opacity is the whole page having arrived.
  */
-export async function cardsSettled(page: Page): Promise<void> {
+export async function decksSettled(page: Page): Promise<void> {
   await expect
     .poll(() =>
       page
@@ -424,7 +424,7 @@ export interface CollectionAlignment {
  * no entrance to wait out.
  */
 export async function collectionAlignment(page: Page): Promise<CollectionAlignment> {
-  await cardsSettled(page);
+  await decksSettled(page);
   return page.locator('app-collection-grid').evaluate((host) => {
     const grid = host.querySelector('.grid')!;
     const edge = grid.getBoundingClientRect().left + parseFloat(getComputedStyle(grid).paddingLeft);

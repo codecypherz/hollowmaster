@@ -46,7 +46,7 @@ interface Selection {
 }
 
 /**
- * The Cards page: the player's collection, and the decks built from it.
+ * The Decks page: the player's collection, and the decks built from it.
  *
  * Two rows — the pinned deck region above, the scrolling collection below —
  * and nothing between them is `position: sticky`. The region is pinned because
@@ -60,15 +60,15 @@ interface Selection {
  * in the Shop is here on arrival without the page being reloaded.
  */
 @Component({
-  selector: 'app-collection',
+  selector: 'app-decks',
   imports: [CardReader, CollectionGrid, ConfirmDialog, DeckBar],
-  templateUrl: './collection.html',
-  styleUrl: './collection.css',
+  templateUrl: './decks.html',
+  styleUrl: './decks.css',
   host: {
     '(document:click)': 'onDocumentClick($event)',
   },
 })
-export class Collection {
+export class Decks {
   private readonly users = inject(UserService);
 
   readonly particles = createParticleField(14, 0xc0115);
