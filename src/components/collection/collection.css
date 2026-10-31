@@ -3,14 +3,13 @@
    itself never scrolls — `overflow: hidden` on the wrapper and `1fr` on the
    lower row mean the collection is the only thing with anywhere to go.
 
-   The atmosphere, ornament, and corner frame come from the global primitives,
-   unchanged from the themed page this replaced.
+   The atmosphere and ornament come from the global primitives, unchanged from
+   the themed page this replaced. The page's edges are left unframed.
    ──────────────────────────────────────────────────────────────────────────── */
 
 :host {
-  /* Takes the whole column above the nav shell, so the atmosphere and the
-     corner frame reach the viewport edges rather than stopping at the
-     content's natural height.
+  /* Takes the whole column above the nav shell, so the atmosphere reaches
+     the viewport edges rather than stopping at the content's natural height.
      ── The page is laid out *inside* the space it is given rather than asking
      for the space its content wants: `.page-wrap` is taken out of flow, so the
      collection's full height is never handed back up the flex chain and the
@@ -24,10 +23,6 @@
 }
 
 .page-wrap {
-  /* Primitive parameters for this screen: a sparse field, tighter frame. */
-  --corner-size: 48px;
-  --corner-inset: 20px;
-
   position: absolute;
   inset: 0;
   background: var(--color-void);

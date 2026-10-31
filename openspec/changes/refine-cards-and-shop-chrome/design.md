@@ -48,14 +48,18 @@
    label to the right edge. A rule on the left would push the label off the shared edge, and
    with no rule at all the label would no longer read as a divider.
 
-4. **Separator: brighter colour, heavier weight, explicit spacing.** Set `.badge-sep` to
-   `--color-text-bright` (#c4d6f5) and `font-weight: 700`, and keep its 0.25em margins. Use only
-   existing tokens: the soul colour belongs to the used number, and gold belongs to the held
-   number, so a neutral bright tone keeps the three parts distinct. In the exhausted treatment the
-   separator already inherits `--color-void` on gold, which is high contrast; the 700 weight now
-   applies there too. Alternatives considered: a drawn vertical bar (border-left) instead of the
-   glyph, which would change the `2 / 3` reading the spec gives as its example; and only a larger
-   font size, which would make the badge taller and risk overlapping the chevrons.
+4. **Separator: the used number's colour, heavier weight, explicit spacing.** Set `.badge-sep` to
+   `--color-soul` (#cfe6fb) and `font-weight: 700`, and keep its 0.25em margins. The spec requires
+   the separator to have no lower a contrast than the used number, and the used number is drawn in
+   soul. Any lower-luminance neutral, such as `--color-text-bright` (#c4d6f5, 12.95:1 on the scrim
+   against soul's 14.84:1), would fail that rule. The weight keeps the parts distinct: the `/` is
+   soul at 700 beside a soul `used` at regular weight, and gold `held` stays the primary number. In
+   the exhausted treatment the separator already inherits `--color-void` on gold, exactly like the
+   used number, so it matches its contrast; the 700 weight now applies there too. Alternatives
+   considered: `--color-text-bright`, which was rejected for the contrast reason above; a drawn
+   vertical bar (border-left) instead of the glyph, which would change the `2 / 3` reading the
+   spec gives as its example; and only a larger font size, which would make the badge taller and
+   risk overlapping the chevrons.
 
 5. **Remove the duplicated block inside reduced motion.** Leave only `.tile { animation: none; }`
    inside `@media (prefers-reduced-motion: reduce)`. Otherwise the copied centring would come back

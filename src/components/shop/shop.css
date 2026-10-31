@@ -1,7 +1,8 @@
 /* ─── Shop screen ─────────────────────────────────────────────────────────────
-   The storefront. Atmosphere, ornament, and frame all come from the global
-   primitives; what is local here is this screen's layout, its type scale, and
-   the treatment of a ware the player cannot yet afford.
+   The storefront. Atmosphere and ornament come from the global primitives, and
+   the page's edges are left unframed; what is local here is this screen's
+   layout, its type scale, and the treatment of a ware the player cannot yet
+   afford.
 
    Geo is gold. The palette already carries a full gold ramp used for ornament
    and structure, and gold reads as currency without explanation — so prices,
@@ -14,16 +15,12 @@
   flex-direction: column;
   width: 100%;
   /* Takes the whole column above the nav shell, and hands that height on to
-     .page-wrap, so the atmosphere and the corner frame reach the viewport
-     edges rather than stopping at the content's natural height. */
+     .page-wrap, so the atmosphere reaches the viewport edges rather than
+     stopping at the content's natural height. */
   flex: 1;
 }
 
 .page-wrap {
-  /* Primitive parameters for this screen: a sparse field, tighter frame. */
-  --corner-size: 48px;
-  --corner-inset: 20px;
-
   position: relative;
   flex: 1;
   width: 100%;

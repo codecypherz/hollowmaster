@@ -7,11 +7,13 @@ import {
   deckCards,
   deckSlots,
   deckTabs,
+  expectCollectionLeftAligned,
   expectNoScroll,
   expectNothingClipped,
   grantGeo,
   openCardMenu,
   openCards,
+  openCardsAs,
   openShop,
   revealedCards,
   revealedRarities,
@@ -243,4 +245,23 @@ test('the Cards page presents its cards, menus, and reader without animation', a
   for (const tile of moving) expect(tile).toEqual({ animations: 0, opacity: '1' });
 
   await expectNoScroll(page);
+});
+
+test('the Cards page is left aligned under reduced motion as it is otherwise', async ({ page }) => {
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
+    true,
+  );
+
+  await page.setViewportSize(VIEWPORT);
+  // Starters, one two-star card, and Goam: three rarity sections.
+  await openCardsAs(page, {
+    collection: [1, 7, 8, 9, 10, 11, 12, 13, 14, 4, 6].map((number) => ({
+      set: 'FC',
+      number,
+      quantity: 1,
+    })),
+    decks: [[]],
+  });
+  const aligned = await expectCollectionLeftAligned(page);
+  expect(aligned.sections).toHaveLength(3);
 });

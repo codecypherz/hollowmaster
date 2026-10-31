@@ -45,15 +45,13 @@ describe('Shop', () => {
   });
 
   it('keeps the themed treatment of the page', () => {
-    for (const part of [
-      '.void-bg',
-      '.mist-layer',
-      '.particles .particle',
-      '.corner',
-      '.ornament',
-    ]) {
+    for (const part of ['.void-bg', '.mist-layer', '.particles .particle', '.ornament']) {
       expect(fixture.nativeElement.querySelector(part), part).not.toBeNull();
     }
+  });
+
+  it('draws no corner frame', () => {
+    expect(fixture.nativeElement.querySelectorAll('.corner')).toHaveLength(0);
   });
 
   // ─── 7.2 The purse ──────────────────────────────────────────────────────

@@ -407,3 +407,52 @@ export async function abilitySectionWidth(holder: Locator): Promise<number> {
   const box = await holder.locator('app-card .cf-ability').boundingBox();
   return box?.width ?? 0;
 }
+
+/** Where the collection's sections and tiles start, measured against its left edge. */
+export interface CollectionAlignment {
+  /** The collection region's left edge: the grid's content box, inside its side padding. */
+  edge: number;
+  /** The first tile's left edge, whatever the order. */
+  firstTile: number;
+  /** Per rarity section: its label's left edge, its first tile's, and what is drawn before it. */
+  sections: { label: number; firstTile: number; leadingRule: string }[];
+}
+
+/**
+ * Measures the collection's left alignment. Measured at rest, so a tile's
+ * entrance transform does not shift what is read; under reduced motion there is
+ * no entrance to wait out.
+ */
+export async function collectionAlignment(page: Page): Promise<CollectionAlignment> {
+  await cardsSettled(page);
+  return page.locator('app-collection-grid').evaluate((host) => {
+    const grid = host.querySelector('.grid')!;
+    const edge = grid.getBoundingClientRect().left + parseFloat(getComputedStyle(grid).paddingLeft);
+    const left = (el: Element) => el.getBoundingClientRect().left;
+    return {
+      edge,
+      firstTile: left(host.querySelector('.tile')!),
+      sections: [...host.querySelectorAll('.rarity-section')].map((section) => {
+        const head = section.querySelector('.section-head')!;
+        return {
+          label: left(head.firstElementChild!),
+          firstTile: left(section.querySelector('.tile')!),
+          leadingRule: getComputedStyle(head, '::before').content,
+        };
+      }),
+    };
+  });
+}
+
+/** Asserts the collection is left aligned: every section head and first tile on one edge. */
+export async function expectCollectionLeftAligned(page: Page): Promise<CollectionAlignment> {
+  const aligned = await collectionAlignment(page);
+  expect(Math.abs(aligned.firstTile - aligned.edge)).toBeLessThanOrEqual(1);
+  for (const section of aligned.sections) {
+    expect(Math.abs(section.label - aligned.edge)).toBeLessThanOrEqual(1);
+    expect(Math.abs(section.firstTile - aligned.edge)).toBeLessThanOrEqual(1);
+    // No rule ahead of the label.
+    expect(section.leadingRule).toBe('none');
+  }
+  return aligned;
+}

@@ -20,13 +20,13 @@
 
 .grid {
   display: grid;
-  /* `auto-fit` rather than `auto-fill`: both make as many fixed tracks as the
-     row can host, but auto-fill leaves the empty ones in place, so a
-     collection smaller than a full row would sit hard against the left edge
-     with the whole gutter on the right. Collapsing the empty tracks is what
-     lets `justify-content: center` actually centre what is there. */
+  /* As many fixed tracks as the row can host, packed from the left edge. A
+     short row leaves its unused width on the right, and the first tile sits on
+     the same edge in every order, sectioned or not, so reordering never moves
+     the grid sideways. With start alignment `auto-fit` and `auto-fill` lay out
+     identically; the grid's 16px side padding is the shared left edge. */
   grid-template-columns: repeat(auto-fit, var(--tile-w));
-  justify-content: center;
+  justify-content: start;
   gap: 18px 16px;
   padding: 20px 16px 32px;
 }
@@ -49,9 +49,11 @@
 .section-head {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
   margin: 0;
+  /* The same 16px side padding as the grid, so the label starts level with
+     its section's first tile. */
   padding: 16px 16px 0;
   font-family: var(--font-ui);
   font-size: 0.58rem;
@@ -61,11 +63,11 @@
   color: var(--color-text-dim);
 }
 
-/* A hairline either side, so the label reads as a divider, not a title. */
-.section-head::before,
+/* A single hairline running from the label to the right edge, so the label
+   reads as a divider, not a title, without leaving the shared left edge. */
 .section-head::after {
   content: '';
-  flex: 0 1 120px;
+  flex: 1 1 auto;
   height: 1px;
   background: var(--color-section-border);
 }
@@ -122,14 +124,18 @@
 }
 
 /* used / held: the used figure in soul at regular weight, the held figure in
-   gold and heavier, so held reads as the primary number. */
+   gold and heavier, so held reads as the primary number. The separator shares
+   the used figure's colour, so its contrast is never the lower of the two, and
+   is drawn at full weight so at the badge's small size it reads as a divider
+   rather than a faint hairline. */
 .badge .used {
   color: var(--color-soul);
 }
 
 .badge .badge-sep {
   margin: 0 0.25em;
-  color: var(--color-text-dim);
+  color: var(--color-soul);
+  font-weight: 700;
 }
 
 .badge .held {
@@ -165,50 +171,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* ─── Rarity sections ─────────────────────────────────────────────────────────
-   Inside the one scrolling region and not sticky: a heading scrolls away with
-   its section. Each section's grid drops the outer grid's top padding so the
-   heading, not a gap, introduces it.
-   ──────────────────────────────────────────────────────────────────────────── */
-
-  .rarity-section .grid {
-    padding-top: 10px;
-    padding-bottom: 12px;
-  }
-
-  .rarity-section:last-child .grid {
-    padding-bottom: 32px;
-  }
-
-  .section-head {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin: 0;
-    padding: 16px 16px 0;
-    font-family: var(--font-ui);
-    font-size: 0.58rem;
-    font-weight: 400;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--color-text-dim);
-  }
-
-  /* A hairline either side, so the label reads as a divider, not a title. */
-  .section-head::before,
-  .section-head::after {
-    content: '';
-    flex: 0 1 120px;
-    height: 1px;
-    background: var(--color-section-border);
-  }
-
-  .section-stars {
-    letter-spacing: 0.1em;
-    color: var(--color-gold-dim);
-  }
-
   .tile {
     animation: none;
   }

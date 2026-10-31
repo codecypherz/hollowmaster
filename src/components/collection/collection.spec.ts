@@ -22,6 +22,13 @@ describe('the Cards page', () => {
     fixture.detectChanges();
   });
 
+  it('keeps its atmosphere but draws no corner frame', () => {
+    for (const part of ['.void-bg', '.mist-layer', '.particles .particle']) {
+      expect(fixture.nativeElement.querySelector(part), part).not.toBeNull();
+    }
+    expect(fixture.nativeElement.querySelectorAll('.corner')).toHaveLength(0);
+  });
+
   it('opens on the first deck, ordered by rarity', () => {
     expect(page.selectedDeck()).toBe(0);
     expect(page.sort()).toEqual({ key: 'rarity', direction: 'desc' });

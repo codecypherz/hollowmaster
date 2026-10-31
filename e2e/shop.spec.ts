@@ -435,6 +435,27 @@ test(`at ${label(SUB_MINIMUM)} the overlay is scaled rather than reflowed`, asyn
 
 // ─── 8.6 Review artifacts ───────────────────────────────────────────────────
 
+test('draws no corner frame on the storefront or during an opening', async ({ page }) => {
+  await page.setViewportSize(VIEWPORT);
+  await openShop(page);
+  const themed = async () => {
+    await expect(page.locator('.corner')).toHaveCount(0);
+    await expect(page.locator('app-shop .void-bg')).toHaveCount(1);
+    await expect(page.locator('app-shop .particles .particle').first()).toBeAttached();
+  };
+  await themed();
+  await expect(page.locator('app-shop .ornament').first()).toBeVisible();
+
+  await grantGeo(page);
+  await buyPack(page, 'level-1');
+  await expect(sealedPack(page)).toBeVisible();
+  await themed();
+
+  await page.getByRole('button', { name: 'Skip' }).click();
+  await openingSettled(page);
+  await themed();
+});
+
 test('captures the storefront, a mid-reveal hero, and the summary', async ({ page }) => {
   await page.setViewportSize(VIEWPORT);
   await openShop(page);

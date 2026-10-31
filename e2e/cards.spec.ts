@@ -12,6 +12,8 @@ import {
   deckCards,
   deckSlots,
   deckTabs,
+  collectionAlignment,
+  expectCollectionLeftAligned,
   expectNoScroll,
   expectPartsOnScreen,
   deckButton,
@@ -352,6 +354,61 @@ test('the badge states used of held, per deck', async ({ page }) => {
   await expect(deckTabs(page)).toHaveCount(0);
   await expect(badge).toHaveAttribute('aria-label', '3 held');
   await expect(badge).toHaveText(/×3/);
+});
+
+test('the badge separator is as heavy and as high in contrast as the used figure', async ({
+  page,
+}) => {
+  await page.setViewportSize(DEFAULT);
+  // Crawlid: one of three used, the normal badge. FC 7: its one copy used, exhausted.
+  await openCardsAs(page, {
+    collection: startersWithCrawlid(3),
+    decks: [[CRAWLID, { set: 'FC', number: 7 }]],
+  });
+  await cardsSettled(page);
+
+  const exhausted = collectionTiles(page).filter({ has: page.locator('.badge.is-exhausted') });
+  await expect(exhausted).toHaveCount(1);
+  const normal = tileNamed(page, 'Crawlid');
+  await expect(normal.locator('.badge')).not.toHaveClass(/is-exhausted/);
+
+  for (const tile of [normal, exhausted]) {
+    const parts = await tile.locator('.badge').evaluate((badge) => {
+      // Relative luminance, so contrast against the badge background can be
+      // compared directly.
+      const probe = document.createElement('canvas').getContext('2d')!;
+      const luminance = (css: string) => {
+        probe.fillStyle = '#000';
+        probe.fillRect(0, 0, 1, 1);
+        probe.fillStyle = css;
+        probe.fillRect(0, 0, 1, 1);
+        const [r, g, b] = [...probe.getImageData(0, 0, 1, 1).data].map((v) => {
+          const c = v / 255;
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      const bg = luminance(getComputedStyle(badge).backgroundColor);
+      const read = (sel: string) => {
+        const style = getComputedStyle(badge.querySelector(sel)!);
+        return {
+          weight: Number(style.fontWeight),
+          color: style.color,
+          contrast: contrast(luminance(style.color), bg),
+        };
+      };
+      return { used: read('.used'), sep: read('.badge-sep') };
+    });
+    expect(parts.sep.weight).toBeGreaterThanOrEqual(parts.used.weight);
+    expect(parts.sep.contrast).toBeGreaterThanOrEqual(parts.used.contrast);
+    expect(parts.sep.color).toBe(parts.used.color);
+    // Plainly visible: well past the 4.5:1 floor for text this small.
+    expect(parts.sep.contrast).toBeGreaterThan(7);
+  }
+
+  await normal.screenshot({ path: 'test-results/cards-badge-separator.png' });
+  await exhausted.screenshot({ path: 'test-results/cards-badge-separator-exhausted.png' });
 });
 
 // ─── 13.5 Building a deck ───────────────────────────────────────────────────
@@ -1091,6 +1148,69 @@ test('ordering by rarity sections the collection', async ({ page }) => {
     await expect(heads).toHaveCount(0);
     await expect(collectionTiles(page)).toHaveCount(11);
   }
+});
+
+test('the collection is aligned to its left edge in every order', async ({ page }) => {
+  await page.setViewportSize(DEFAULT);
+  // One four-star and one two-star card, so those sections are rows of one.
+  await openCardsAs(page, {
+    collection: [...STARTERS, { set: 'FC', number: 4, quantity: 1 }, { ...GOAM, quantity: 1 }],
+    decks: [[]],
+  });
+
+  // Every heading's label and every section's first tile sit on the region's
+  // left edge, with no rule ahead of the label.
+  const sectioned = await expectCollectionLeftAligned(page);
+  expect(sectioned.sections).toHaveLength(3);
+
+  // A short row leaves its unused width on the right of its last tile.
+  const shortRow = await page
+    .locator('app-collection-grid .rarity-section')
+    .first()
+    .evaluate((section) => {
+      const grid = section.querySelector('.grid')!;
+      const box = grid.getBoundingClientRect();
+      const tiles = [...section.querySelectorAll('.tile')];
+      return {
+        tiles: tiles.length,
+        left: tiles[0].getBoundingClientRect().left - box.left,
+        right: box.right - tiles[tiles.length - 1].getBoundingClientRect().right,
+      };
+    });
+  expect(shortRow.tiles).toBe(1);
+  expect(shortRow.right).toBeGreaterThan(shortRow.left * 4);
+
+  // The heading's single rule runs on from the label towards the right edge.
+  const rule = await page
+    .locator('app-collection-grid .section-head')
+    .first()
+    .evaluate((head) => {
+      const after = getComputedStyle(head, '::after');
+      return { content: after.content, width: parseFloat(after.width) };
+    });
+  expect(rule.content).not.toBe('none');
+  expect(rule.width).toBeGreaterThan(200);
+
+  // Every other order starts its one run on the same edge, so switching order
+  // never moves the grid sideways.
+  for (const order of ['Name', 'Quantity', 'Attack', 'Defense']) {
+    await chooseOrder(page, order);
+    await expect(page.locator('app-collection-grid .section-head')).toHaveCount(0);
+    const run = await expectCollectionLeftAligned(page);
+    expect(Math.abs(run.firstTile - sectioned.firstTile)).toBeLessThanOrEqual(1);
+  }
+  await chooseOrder(page, 'Rarity');
+  const back = await collectionAlignment(page);
+  expect(Math.abs(back.firstTile - sectioned.firstTile)).toBeLessThanOrEqual(1);
+});
+
+test('the page draws no corner frame but keeps its atmosphere', async ({ page }) => {
+  await page.setViewportSize(DEFAULT);
+  await openCards(page);
+  await expect(page.locator('.corner')).toHaveCount(0);
+  await expect(page.locator('app-collection .void-bg')).toHaveCount(1);
+  await expect(page.locator('app-collection .mist-layer')).toHaveCount(1);
+  await expect(page.locator('app-collection .particles .particle').first()).toBeAttached();
 });
 
 test('a reorder animates every tile', async ({ page }) => {
