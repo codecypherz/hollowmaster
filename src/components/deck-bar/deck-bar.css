@@ -32,25 +32,36 @@
 
 /* ─── Tabs and controls ───────────────────────────────────────────────────── */
 
+/* Two parts: the tab strip, which takes the room, and the control group,
+   which keeps its place at the row's end behind a rule. */
 .tab-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  gap: 16px;
   width: 100%;
+}
+
+.tab-strip {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .tabs {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 4px;
 }
 
 .deck-tab {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  /* A tab showing only its numeral is still a comfortable target. */
+  min-width: 40px;
   padding: 6px 12px;
   font-family: var(--font-ui);
   font-size: 0.64rem;
@@ -125,9 +136,94 @@
   outline-offset: 2px;
 }
 
+/* ─── The control group ───────────────────────────────────────────────────── */
+
+.controls-sep {
+  flex: none;
+  align-self: stretch;
+  width: 1px;
+  margin: 2px 0;
+  background: var(--color-section-border);
+}
+
+.deck-controls {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-bright);
+  background: var(--color-surface);
+  border: 1px solid var(--color-section-border);
+  border-radius: 2px;
+  transition:
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+}
+
+.icon-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-btn:hover {
+  color: var(--color-soul-bright);
+  border-color: var(--color-soul-dim);
+  box-shadow: var(--elev-glow-soul);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--color-soul);
+  outline-offset: 2px;
+}
+
 .create-deck {
   color: var(--color-gold-light);
   border-color: var(--color-gold-dim);
+}
+
+/* The control's name, on hover and on keyboard focus alike — a native title
+   never appears for the keyboard. Drawn below the button so it never covers
+   the tabs. */
+.icon-btn::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  right: 0;
+  padding: 4px 8px;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-bright);
+  background: var(--color-deep);
+  border: 1px solid var(--color-section-border);
+  box-shadow: var(--elev-overlay);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.icon-btn:hover::after,
+.icon-btn:focus-visible::after {
+  opacity: 1;
 }
 
 .delete-deck:hover,
@@ -196,26 +292,71 @@
   }
 }
 
-.deck-count {
+/* ─── The deck's standing ─────────────────────────────────────────────────── */
+
+.deck-standing {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
   justify-content: center;
-  gap: 10px;
+  gap: 6px 16px;
   margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.count {
-  font-size: 0.62rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+.standing-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-flavor);
+  font-size: 0.72rem;
   color: var(--color-text-muted);
 }
 
-.count-note {
-  font-family: var(--font-flavor);
-  font-size: 0.68rem;
-  color: var(--color-text-dim);
+.standing-mark {
+  flex: none;
+  width: 9px;
+  height: 9px;
+}
+
+.standing-word {
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* The error is set heavier than the warning — a rule, a tint, a filled mark —
+   so the warning reads softer by weight as well as by hue. */
+.standing-item.is-invalid {
+  padding: 3px 10px 3px 8px;
+  color: var(--color-error);
+  background: var(--color-error-tint);
+  border-left: 2px solid var(--color-error);
+}
+
+.standing-item.is-invalid .standing-mark {
+  fill: currentColor;
+}
+
+.standing-item.is-incomplete {
+  color: var(--color-warning);
+}
+
+.standing-item.is-incomplete .standing-mark {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+.standing-item.is-ready {
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 .empty-state {
@@ -275,7 +416,9 @@
   }
 
   .deck-tab,
-  .bar-control {
+  .bar-control,
+  .icon-btn,
+  .icon-btn::after {
     transition: none;
   }
 }

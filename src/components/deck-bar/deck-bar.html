@@ -4,42 +4,69 @@
        makes the strip one tab stop: arrow keys move between decks inside it,
        so the whole strip does not stand between the player and the deck. -->
   <div class="tab-row">
-    @if (decks().length > 0) {
-      <div class="tabs" role="tablist" aria-label="Your decks">
-        @for (name of names(); track $index) {
-          <button
-            type="button"
-            class="deck-tab"
-            role="tab"
-            [class.is-selected]="selectedIndex() === $index"
-            [attr.aria-selected]="selectedIndex() === $index"
-            [tabindex]="focusedTab() === $index ? 0 : -1"
-            (click)="focusedTab.set($index); selectDeck.emit($index)"
-            (keydown)="onTabKeydown($event, $index)"
-          >
-            <!-- The mark is the non-colour cue: present on the selected tab
-                 and absent on the others, so the selection survives with
-                 colour removed. -->
-            <span class="tab-mark" aria-hidden="true"></span>
-            {{ name }}
-          </button>
-        }
-      </div>
-    }
+    <div class="tab-strip">
+      @if (decks().length > 0) {
+        <div class="tabs" role="tablist" aria-label="Your decks">
+          @for (name of names(); track $index) {
+            <!-- Only the selected tab spells out "Deck"; the others show the
+                 numeral alone. The accessible name is the full name either
+                 way, so a screen reader never hears a bare number. -->
+            <button
+              type="button"
+              class="deck-tab"
+              role="tab"
+              [class.is-selected]="selectedIndex() === $index"
+              [attr.aria-selected]="selectedIndex() === $index"
+              [attr.aria-label]="name"
+              [tabindex]="focusedTab() === $index ? 0 : -1"
+              (click)="focusedTab.set($index); selectDeck.emit($index)"
+              (keydown)="onTabKeydown($event, $index)"
+            >
+              <!-- The mark is the non-colour cue: present on the selected tab
+                   and absent on the others, so the selection survives with
+                   colour removed. -->
+              <span class="tab-mark" aria-hidden="true"></span>
+              <span class="tab-label">{{ selectedIndex() === $index ? name : $index + 1 }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
 
-    @if (canCreate()) {
-      <button type="button" class="bar-control create-deck" (click)="createDeck.emit()">
-        + New deck
-      </button>
-    } @else {
-      <p class="bar-note">{{ maxDecks }} decks is the limit.</p>
-    }
+    <!-- The controls are their own group behind a rule, pinned to the row's
+         end, so neither reads as another tab however many tabs there are. -->
+    <span class="controls-sep" aria-hidden="true"></span>
+    <div class="deck-controls" role="group" aria-label="Deck controls">
+      @if (canCreate()) {
+        <button
+          type="button"
+          class="icon-btn create-deck"
+          aria-label="New deck"
+          data-tip="New deck"
+          (click)="createDeck.emit()"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M8 2.5v11M2.5 8h11" />
+          </svg>
+        </button>
+      } @else {
+        <p class="bar-note">{{ maxDecks }} decks is the limit.</p>
+      }
 
-    @if (selectedIndex() !== null) {
-      <button type="button" class="bar-control delete-deck" (click)="askToDelete()">
-        Delete {{ selectedName() }}
-      </button>
-    }
+      @if (selectedIndex() !== null) {
+        <button
+          type="button"
+          class="icon-btn delete-deck"
+          [attr.aria-label]="'Delete ' + selectedName()"
+          [attr.data-tip]="'Delete ' + selectedName()"
+          (click)="askToDelete()"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.75 6.5v4.5M9.25 6.5v4.5" />
+          </svg>
+        </button>
+      }
+    </div>
   </div>
 
   @if (selectedIndex() === null) {
@@ -82,17 +109,29 @@
       </div>
     </div>
 
-    <p class="deck-count" aria-live="polite">
-      @if (filledCount() === 0) {
-        <span class="count">0 of {{ deckSize }} positions filled</span>
-        <span class="count-note">This deck is empty — fill it from the collection below.</span>
-      } @else {
-        <span class="count">{{ filledCount() }} of {{ deckSize }} positions filled</span>
-        @if (isFull()) {
-          <span class="count-note">This deck is full.</span>
-        }
+    <!-- What the deck still needs, in words: an error for a broken rule, a
+         softer warning for a deck not yet full, or a quiet all-clear. Each
+         carries a mark of its own shape and a leading word, so error and
+         warning are told apart with colour removed. -->
+    <ul class="deck-standing" aria-live="polite">
+      @for (line of standing(); track line.kind) {
+        <li class="standing-item is-{{ line.kind }}">
+          @if (line.kind === 'invalid') {
+            <svg class="standing-mark" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+              <path d="M5 0.8 9.2 5 5 9.2 0.8 5Z" />
+            </svg>
+          } @else if (line.kind === 'incomplete') {
+            <svg class="standing-mark" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+              <path d="M5 1.2 9.2 8.8H0.8Z" />
+            </svg>
+          }
+          @if (line.word) {
+            <span class="standing-word">{{ line.word }}</span>
+          }
+          <span class="standing-text">{{ line.text }}</span>
+        </li>
       }
-    </p>
+    </ul>
   }
 </div>
 

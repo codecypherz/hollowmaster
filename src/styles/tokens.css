@@ -48,6 +48,18 @@
   --color-crimson-glow: rgba(236, 74, 68, 0.5);
   --color-crimson-seal: rgba(206, 62, 56, 0.22);
 
+  /* ── Status: what a surface says is wrong ────────────────────────────────
+     Named apart from the accents on purpose. Gold is structure and crimson is
+     the opponent; a problem stated in either would read as ornament or as
+     ownership, and tuning a status would drag an accent with it. */
+  /* Warning: a lemon yellow, greener and paler than gold so it never reads as
+     the gold of a selected tab beside it. The softer of the two. */
+  --color-warning: #e4dd6a;
+  /* Error: a red with its own value — warmer and brighter than crimson. */
+  --color-error: #ff6a5c;
+  /* A faint wash of the error behind the message that carries it. */
+  --color-error-tint: rgba(255, 106, 92, 0.1);
+
   /* ── Atmosphere: the layered void field and drifting mist ────────────── */
   --color-nebula-core: #1b2450;
   --color-nebula-low: #141c3c;

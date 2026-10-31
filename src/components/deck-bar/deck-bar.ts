@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Card, CARD_BY_KEY } from '../../model/card';
-import { DECK_SIZE, Deck, MAX_DECKS, deckName } from '../../model/deck';
+import { DECK_SIZE, Deck, DeckProblem, MAX_DECKS, deckName, deckStanding } from '../../model/deck';
 import { fitOverlay } from '../../model/fit';
 import { CardComponent } from '../card/card';
 import { CardMenu } from '../card-menu/card-menu';
@@ -20,6 +20,43 @@ import { CardMenu } from '../card-menu/card-menu';
 interface Position {
   readonly index: number;
   readonly card: Card | null;
+}
+
+/** One line of the deck's standing, as the page words it. */
+interface StandingLine {
+  readonly kind: DeckProblem['kind'] | 'ready';
+  /** The leading word that names the problem without colour; empty for Ready. */
+  readonly word: string;
+  readonly text: string;
+}
+
+/** "card" or "cards", for a count. */
+function cardWord(count: number): string {
+  return count === 1 ? 'card' : 'cards';
+}
+
+/**
+ * The page's words for one problem. The model reports what is wrong as data;
+ * how it is said is this region's to decide.
+ */
+function standingLine(problem: DeckProblem): StandingLine {
+  if (problem.kind === 'invalid') {
+    const over = problem.held - problem.allowed;
+    return {
+      kind: 'invalid',
+      word: 'Invalid',
+      text:
+        `${problem.held} ${cardWord(problem.held)} of ${problem.minStars}★ or more — only ${problem.allowed} ` +
+        `is allowed. Remove ${over}.`,
+    };
+  }
+  return {
+    kind: 'incomplete',
+    word: 'Incomplete',
+    text:
+      `Add ${problem.needed} more ${cardWord(problem.needed)} from the collection below ` +
+      `to battle with this deck.`,
+  };
 }
 
 /**
@@ -69,7 +106,6 @@ export class DeckBar {
 
   readonly deckCardWidth = DECK_CARD_WIDTH;
   readonly maxDecks = MAX_DECKS;
-  readonly deckSize = DECK_SIZE;
 
   /** Raised while the player is being asked to confirm a deletion. */
   readonly confirming = signal(false);
@@ -99,9 +135,18 @@ export class DeckBar {
     }));
   });
 
-  readonly filledCount = computed(() => this.selectedDeck()?.cards.length ?? 0);
-
-  readonly isFull = computed(() => this.filledCount() >= DECK_SIZE);
+  /**
+   * The selected deck's standing in words: each problem, the error first, or a
+   * single all-clear when there is none.
+   */
+  readonly standing = computed<StandingLine[]>(() => {
+    const deck = this.selectedDeck();
+    if (!deck) return [];
+    const problems = deckStanding(deck).problems;
+    return problems.length > 0
+      ? problems.map(standingLine)
+      : [{ kind: 'ready', word: '', text: 'Ready for battle' }];
+  });
 
   /** At the limit the control is absent, not disabled — the page says why. */
   readonly canCreate = computed(() => this.decks().length < MAX_DECKS);

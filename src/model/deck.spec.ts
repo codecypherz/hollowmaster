@@ -1,14 +1,17 @@
-import { CARD_BY_KEY, CardKey, cardKey, cardKeyOf } from './card';
+import { CARD_BY_KEY, Card, CardKey, cardKey, cardKeyOf } from './card';
 import { HAND_SIZE } from './game';
 import {
   DECK_SIZE,
   Deck,
   MAX_DECKS,
+  RARITY_LIMIT,
   addCardToDeck,
   createDeck,
   deckName,
+  deckStanding,
   deleteDeck,
   emptyDeck,
+  isBattleReady,
   removeCardFromDeck,
 } from './deck';
 import { UserState, distinctCards, quantityOf, seedUser, totalCards } from './user';
@@ -262,5 +265,144 @@ describe('every deck operation', () => {
     }
 
     expect(state.decks).toEqual([]);
+  });
+});
+
+// ─── Standing ───────────────────────────────────────────────────────────────
+
+/** A card at any rating, for ratings the catalogue does not hold yet. */
+function rated(stars: number, number: number): Card {
+  return new Card({
+    name: `Rated ${stars}`,
+    arrows: [],
+    stars,
+    image: 'crawlid.webp',
+    attack: 10,
+    defense: 10,
+    ability: 'None.',
+    set: 'TEST',
+    number,
+  });
+}
+
+/** Looks a key up among test-only cards first, then the catalogue. */
+function lookupWith(...extra: Card[]) {
+  const byKey = new Map(extra.map((c) => [cardKey(c), c] as const));
+  return (key: CardKey) => byKey.get(key) ?? CARD_BY_KEY.get(key);
+}
+
+const low = [crawlid, vengefly, gruzzer].map(cardKey);
+
+function lows(count: number): CardKey[] {
+  return Array.from({ length: count }, (_, i) => low[i % low.length]);
+}
+
+describe('the rarity limit', () => {
+  it('allows one card of four stars or more', () => {
+    expect(RARITY_LIMIT).toEqual({ minStars: 4, allowed: 1 });
+    expect(goam.stars).toBe(4);
+  });
+});
+
+describe("a deck's standing", () => {
+  it('is Ready for a full deck within the limit', () => {
+    const deck = deckOf(cardKey(goam), ...lows(8));
+    expect(deckStanding(deck).problems).toEqual([]);
+  });
+
+  it('reports how many more cards a short deck needs', () => {
+    expect(deckStanding(deckOf(...lows(5))).problems).toEqual([{ kind: 'incomplete', needed: 4 }]);
+  });
+
+  it('reports an empty deck as needing nine', () => {
+    expect(deckStanding(emptyDeck()).problems).toEqual([{ kind: 'incomplete', needed: 9 }]);
+  });
+
+  it('is Invalid with two different four-star cards', () => {
+    const otherFour = rated(4, 1);
+    const deck = deckOf(cardKey(goam), cardKey(otherFour), ...lows(7));
+    expect(deckStanding(deck, lookupWith(otherFour)).problems).toEqual([
+      { kind: 'invalid', rule: 'rarity', held: 2, allowed: 1, minStars: 4 },
+    ]);
+  });
+
+  it('is Invalid with two copies of one four-star card', () => {
+    const deck = deckOf(cardKey(goam), cardKey(goam), ...lows(7));
+    expect(deckStanding(deck).problems.map((p) => p.kind)).toEqual(['invalid']);
+  });
+
+  it('counts ratings above four toward the limit', () => {
+    for (const stars of [5, 6]) {
+      const high = rated(stars, stars);
+      const deck = deckOf(cardKey(goam), cardKey(high), ...lows(7));
+      expect(deckStanding(deck, lookupWith(high)).problems.map((p) => p.kind)).toEqual(['invalid']);
+    }
+  });
+
+  it('never counts ratings below four', () => {
+    const three = rated(3, 3);
+    const deck = deckOf(...Array.from({ length: 9 }, () => cardKey(three)));
+    expect(deckStanding(deck, lookupWith(three)).problems).toEqual([]);
+  });
+
+  it('reports both problems, Invalid first', () => {
+    const deck = deckOf(cardKey(goam), cardKey(goam), ...lows(4));
+    expect(deckStanding(deck).problems).toEqual([
+      { kind: 'invalid', rule: 'rarity', held: 2, allowed: 1, minStars: 4 },
+      { kind: 'incomplete', needed: 3 },
+    ]);
+  });
+
+  it('counts a key the catalogue does not resolve toward size only', () => {
+    const deck = deckOf(cardKeyOf('NOPE', 1), ...lows(8));
+    expect(deckStanding(deck).problems).toEqual([]);
+  });
+
+  it('is the same every time the same contents are evaluated', () => {
+    const deck = deckOf(cardKey(goam), cardKey(goam), ...lows(2));
+    expect(deckStanding(deck)).toEqual(deckStanding(deck));
+  });
+});
+
+describe('battle eligibility', () => {
+  it('admits only a Ready deck', () => {
+    expect(isBattleReady(deckOf(cardKey(goam), ...lows(8)))).toBe(true);
+    expect(isBattleReady(deckOf(cardKey(goam), cardKey(goam), ...lows(7)))).toBe(false);
+    expect(isBattleReady(deckOf(...lows(8)))).toBe(false);
+    expect(isBattleReady(deckOf(cardKey(goam), cardKey(goam), ...lows(1)))).toBe(false);
+  });
+
+  it('admits no deck for a freshly seeded user', () => {
+    const user = seedUser();
+    expect(user.decks).toHaveLength(1);
+    expect(deckStanding(user.decks[0]).problems).toEqual([{ kind: 'incomplete', needed: 9 }]);
+    expect(user.decks.some(isBattleReady)).toBe(false);
+  });
+});
+
+describe('building past the rarity limit', () => {
+  /** A seeded user who also holds one Goam. */
+  function holdingGoam(): UserState {
+    const user = seedUser();
+    return { ...user, collection: new Map([...user.collection, [cardKey(goam), 1]]) };
+  }
+
+  it('accepts a second four-star card and the deck becomes Invalid', () => {
+    let state = holdingGoam();
+    state = addCardToDeck(state, 0, goam)!;
+    state = addCardToDeck(state, 0, goam)!;
+
+    expect(state).not.toBeNull();
+    expect(state.decks[0].cards).toEqual([cardKey(goam), cardKey(goam)]);
+    expect(deckStanding(state.decks[0]).problems[0].kind).toBe('invalid');
+  });
+
+  it('becomes valid again when one is removed', () => {
+    let state = holdingGoam();
+    state = addCardToDeck(state, 0, goam)!;
+    state = addCardToDeck(state, 0, goam)!;
+    state = removeCardFromDeck(state, 0, 1)!;
+
+    expect(deckStanding(state.decks[0]).problems.map((p) => p.kind)).toEqual(['incomplete']);
   });
 });

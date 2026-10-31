@@ -157,7 +157,7 @@ test('the Cards page presents its cards, menus, and reader without animation', a
 
   await page.setViewportSize(VIEWPORT);
   await openCards(page);
-  await page.getByRole('button', { name: '+ New deck' }).click();
+  await page.getByRole('button', { name: 'New deck', exact: true }).click();
   await expect(deckTabs(page)).toHaveCount(2);
 
   // The collection is present at once rather than arriving over a stagger.

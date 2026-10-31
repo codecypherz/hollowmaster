@@ -240,6 +240,82 @@
   box-shadow: 0 0 10px 3px var(--color-gold-glow);
 }
 
+/* ─── Header: the single-line screen header ───────────────────────────────────
+   A screen's title on one line between two rules, for screens whose working
+   content needs the height a stacked hero header would take. No eyebrow, no
+   tagline, no second line of any kind.
+
+     <header class="screen-header">
+       <span class="screen-header-rule" aria-hidden="true"></span>
+       <h1 class="screen-header-title">Cards</h1>
+       <span class="screen-header-rule is-end" aria-hidden="true"></span>
+     </header>
+
+   The heading level is the host's: `h1` where it heads a screen, lower where it
+   is shown as an example. The rules are what give way in a narrow container —
+   they shrink to nothing before the title wraps, shrinks, or truncates. */
+
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 16px 0;
+}
+
+.screen-header-title {
+  flex: none;
+  margin: 0;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1.2;
+  color: var(--color-soul);
+  letter-spacing: 0.24em;
+  /* Letter-spacing trails the last glyph; give it back so the title sits
+     centred between its rules. */
+  margin-right: -0.24em;
+  text-transform: uppercase;
+  text-shadow: 0 0 25px var(--color-soul-glow-sm);
+}
+
+/* A gradient rule fading in from the outside edge, ending in a node beside
+   the title — the divider's own vocabulary, halved. */
+.screen-header-rule {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.screen-header-rule::before {
+  content: '';
+  flex: 1 1 0;
+  min-width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold-dim));
+}
+
+.screen-header-rule::after {
+  content: '';
+  flex: none;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-gold-dim);
+}
+
+.screen-header-rule.is-end {
+  flex-direction: row-reverse;
+}
+
+.screen-header-rule.is-end::before {
+  background: linear-gradient(270deg, transparent, var(--color-gold-dim));
+}
+
 /* ─── Control: button ─────────────────────────────────────────────────────── */
 
 .hk-btn {

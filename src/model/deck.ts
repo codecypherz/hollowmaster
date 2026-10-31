@@ -1,4 +1,4 @@
-import { Card, CardKey, cardKey } from './card';
+import { CARD_BY_KEY, Card, CardKey, cardKey } from './card';
 import { HAND_SIZE } from './game';
 import { UserState, quantityOf } from './user';
 
@@ -34,6 +34,81 @@ export const MAX_DECKS = 9;
  * a coincidence.
  */
 export const DECK_SIZE = HAND_SIZE;
+
+/**
+ * The rarity limit: a deck may hold at most `allowed` cards rated `minStars`
+ * or higher.
+ *
+ * "Four or more" rather than "exactly four": ratings run to six, and a limit
+ * that caught four-star cards while letting any number of five- and six-star
+ * cards through would be backwards. Both numbers live here and nowhere else —
+ * the standing, its message, and battle eligibility all read them.
+ */
+export const RARITY_LIMIT = Object.freeze({ minStars: 4, allowed: 1 });
+
+/** One thing wrong with a deck. Invalid outranks Incomplete. */
+export type DeckProblem =
+  | {
+      readonly kind: 'invalid';
+      readonly rule: 'rarity';
+      /** How many cards at or above `minStars` the deck holds. */
+      readonly held: number;
+      readonly allowed: number;
+      readonly minStars: number;
+    }
+  | {
+      readonly kind: 'incomplete';
+      /** How many more cards the deck needs to be full. */
+      readonly needed: number;
+    };
+
+/**
+ * What a deck's contents say about it: every problem it has, most serious
+ * first. An empty list is a Ready deck.
+ */
+export interface DeckStanding {
+  readonly problems: readonly DeckProblem[];
+}
+
+/**
+ * The deck's standing, worked out from its cards and nothing else.
+ *
+ * Derived, never stored: the same contents always give the same standing, so
+ * there is nothing to persist and nothing to fall out of date. A key the
+ * catalogue does not resolve still occupies a position — it counts toward
+ * size — but has no rating to count toward rarity.
+ *
+ * `lookup` exists so tests can state ratings the catalogue does not yet hold.
+ */
+export function deckStanding(
+  deck: Deck,
+  lookup: (key: CardKey) => Card | undefined = (key) => CARD_BY_KEY.get(key),
+): DeckStanding {
+  const problems: DeckProblem[] = [];
+
+  const held = deck.cards.filter(
+    (key) => (lookup(key)?.stars ?? 0) >= RARITY_LIMIT.minStars,
+  ).length;
+  if (held > RARITY_LIMIT.allowed) {
+    problems.push({
+      kind: 'invalid',
+      rule: 'rarity',
+      held,
+      allowed: RARITY_LIMIT.allowed,
+      minStars: RARITY_LIMIT.minStars,
+    });
+  }
+
+  const needed = DECK_SIZE - deck.cards.length;
+  if (needed > 0) problems.push({ kind: 'incomplete', needed });
+
+  return { problems };
+}
+
+/** Whether the deck may be taken into battle: only when nothing is wrong with it. */
+export function isBattleReady(deck: Deck): boolean {
+  return deckStanding(deck).problems.length === 0;
+}
 
 /** An empty deck. */
 export function emptyDeck(): Deck {

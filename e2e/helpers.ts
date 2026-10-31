@@ -278,10 +278,54 @@ export function deckCards(page: Page): Locator {
   return page.locator('app-deck-bar .slot app-card');
 }
 
-/** How many of the nine positions the region says are filled. */
-export async function filledCount(page: Page): Promise<number> {
-  const text = await page.locator('app-deck-bar .count').innerText();
-  return Number(text.trim().split(/\s+/)[0]);
+/** One line of the selected deck's standing: what kind it is, and what it says. */
+export interface StandingLine {
+  readonly kind: 'invalid' | 'incomplete' | 'ready';
+  readonly text: string;
+}
+
+/** The selected deck's standing, in the order the region states it. */
+export async function deckStanding(page: Page): Promise<StandingLine[]> {
+  return page.locator('app-deck-bar .deck-standing .standing-item').evaluateAll((els) =>
+    els.map((el) => ({
+      kind: (['invalid', 'incomplete', 'ready'] as const).find((k) =>
+        el.classList.contains(`is-${k}`),
+      )!,
+      text: (el.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    })),
+  );
+}
+
+/** The deck controls, found by the names assistive technology announces. */
+export function deckControls(page: Page): { create: Locator; remove: Locator; group: Locator } {
+  return {
+    create: page.getByRole('button', { name: 'New deck', exact: true }),
+    remove: page
+      .locator('app-deck-bar .deck-controls')
+      .getByRole('button', { name: /^Delete Deck/ }),
+    group: page.locator('app-deck-bar .deck-controls'),
+  };
+}
+
+/**
+ * Replaces the stored user and loads the Cards page on it. The app reads the
+ * store once at start, so the record is written from a page that is already
+ * up and then a fresh navigation picks it up.
+ */
+export async function openCardsAs(
+  page: Page,
+  user: {
+    geo?: number;
+    collection: { set: string; number: number; quantity: number }[];
+    decks: { set: string; number: number }[][];
+  },
+): Promise<void> {
+  await page.goto('/battle');
+  await page.evaluate(
+    (record) => localStorage.setItem('hollowmaster.user.v1', JSON.stringify(record)),
+    { version: 2, geo: user.geo ?? 0, collection: user.collection, decks: user.decks },
+  );
+  await openCards(page);
 }
 
 /** One tile per distinct card the collection holds. */

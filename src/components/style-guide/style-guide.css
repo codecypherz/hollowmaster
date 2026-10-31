@@ -283,6 +283,18 @@
   max-width: 460px;
 }
 
+.header-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 560px;
+  margin-bottom: 1.2rem;
+}
+
+.header-demo.narrow {
+  width: 200px;
+}
+
 .corner-demo,
 .atmos-demo {
   position: relative;
