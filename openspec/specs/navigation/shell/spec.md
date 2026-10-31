@@ -4,28 +4,6 @@ Defines the persistent navigation chrome shared by the out-of-battle pages — w
 
 ## Requirements
 
-### Requirement: A persistent navigation shell wraps the out-of-battle pages
-
-The application SHALL present a persistent navigation control on the Battle, Shop, and Cards pages, offering all three destinations from any of them. The destinations SHALL be presented in the order Shop, Battle, Cards — so that Battle, the primary destination, occupies the centre position and Shop the leading one.
-
-#### Scenario: The shell is present on every out-of-battle page
-
-- **WHEN** the user is on the Battle page, the Shop page, or the Cards page
-- **THEN** the navigation control is visible
-- **AND** it offers Battle, Shop, and Cards as destinations
-
-#### Scenario: The destinations are ordered Shop, Battle, Cards
-
-- **WHEN** the navigation control renders
-- **THEN** Shop is the first destination, Battle the second, and Cards the third
-- **AND** Battle is the centre of the three
-
-#### Scenario: Moving between destinations
-
-- **WHEN** the user activates a destination in the navigation control
-- **THEN** the application navigates to that destination's route
-- **AND** the navigation control remains present
-
 ### Requirement: The navigation shell is anchored to the bottom of the viewport
 
 On the out-of-battle pages the navigation control SHALL occupy the bottom of the viewport, below the routed page's content. It SHALL remain at the viewport's bottom edge however tall the page is, and it SHALL reserve its own height in the page's layout rather than floating free of it, so that no part of the page's content is permanently hidden behind it.
@@ -61,12 +39,17 @@ The navigation control SHALL visually distinguish the destination matching the c
 
 - **WHEN** the Shop page is the current route
 - **THEN** the Shop destination in the navigation control is marked as active
-- **AND** the Battle and Cards destinations are not
+- **AND** the Battle, Decks, and Collection destinations are not
 
 #### Scenario: Arriving by URL rather than by clicking
 
 - **WHEN** the user loads a destination's route directly
 - **THEN** that destination is marked as active in the navigation control
+
+#### Scenario: Arriving by the former Cards route
+
+- **WHEN** the user loads the route the Cards page used to live at
+- **THEN** the Decks destination is marked as active once the redirect settles
 
 ### Requirement: The navigation shell yields the viewport during a battle
 
@@ -116,3 +99,33 @@ The navigation control MUST NOT offer any development-only route as a destinatio
 
 - **WHEN** the navigation control renders
 - **THEN** the style guide is not among the destinations offered
+
+### Requirement: The navigation shell offers four destinations in a fixed order
+
+The application SHALL present a persistent navigation control on the Battle, Shop, Decks, and
+Collection pages, offering all four destinations from any of them. The destinations SHALL be
+presented in the order Shop, Battle, Decks, Collection. Shop leads, Battle follows it, and the two
+card screens, Decks and then Collection, come last.
+
+#### Scenario: The shell is present on every out-of-battle page
+
+- **WHEN** the user is on the Battle page, the Shop page, the Decks page, or the Collection page
+- **THEN** the navigation control is visible
+- **AND** it offers Shop, Battle, Decks, and Collection as destinations
+
+#### Scenario: The destinations are ordered Shop, Battle, Decks, Collection
+
+- **WHEN** the navigation control renders
+- **THEN** Shop is the first destination, Battle the second, Decks the third, and Collection the
+  fourth
+
+#### Scenario: Cards is no longer a destination
+
+- **WHEN** the navigation control renders
+- **THEN** no destination is labelled `Cards`
+
+#### Scenario: Moving between destinations
+
+- **WHEN** the user activates a destination in the navigation control
+- **THEN** the application navigates to that destination's route
+- **AND** the navigation control remains present

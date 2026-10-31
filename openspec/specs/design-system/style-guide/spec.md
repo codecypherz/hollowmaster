@@ -15,7 +15,7 @@ The application SHALL expose the style guide at its own route, reachable without
 
 #### Scenario: The game flow is unaffected
 
-- **WHEN** the user navigates to the application root, the Shop route, the Cards route, or the in-game route
+- **WHEN** the user navigates to the application root, the Shop route, the Decks route, the Collection route, or the in-game route
 - **THEN** each behaves exactly as its own specification defines, unchanged by the style guide's presence
 
 #### Scenario: Viewing the guide does not disturb game state
@@ -56,6 +56,7 @@ The style guide SHALL render every shared primitive, including:
 - the corner framing
 - the atmosphere layers
 - the Geo amount
+- the Rosary amount
 - the single-line screen header
 
 #### Scenario: Button variants and states are shown
@@ -74,6 +75,15 @@ The style guide SHALL render every shared primitive, including:
 - **WHEN** the style guide renders the Geo amount
 - **THEN** amounts spanning the range the application shows — including zero — appear as amount followed by the Geo mark
 - **AND** the same primitive is shown at the type sizes it is used at, including inside a button
+
+#### Scenario: The Rosary amount is shown
+
+- **WHEN** the style guide renders the Rosary amount
+- **THEN** amounts spanning the range the application shows, including zero, appear as amount
+  followed by the Rosary mark
+- **AND** the same primitive is shown at the type sizes it is used at, including inside an enabled
+  and a disabled button
+- **AND** it is shown beside a Geo amount, so a reviewer can compare the two marks
 
 #### Scenario: The single-line screen header is shown
 
@@ -160,7 +170,7 @@ The style guide SHALL be a development reference only and MUST NOT be linked fro
 
 #### Scenario: No player-facing entry point
 
-- **WHEN** a player uses the Battle page, the Shop page, the Cards page, or the in-game screen
+- **WHEN** a player uses the Battle page, the Shop page, the Decks page, the Collection page, or the in-game screen
 - **THEN** no navigation to the style guide is presented
 
 #### Scenario: The navigation shell does not offer it

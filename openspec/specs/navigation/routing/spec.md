@@ -19,25 +19,6 @@ The application SHALL render the Battle page at the root route. The Battle page 
 - **WHEN** the user navigates to a route the application does not define
 - **THEN** the application redirects to the Battle page rather than rendering an empty screen
 
-### Requirement: Each destination has its own route
-
-The application SHALL expose the Battle page, the Shop page, and the Cards page each at its own distinct route.
-
-#### Scenario: Navigating to the Shop
-
-- **WHEN** the user navigates to the Shop route
-- **THEN** the Shop page renders
-
-#### Scenario: Navigating to the Cards page
-
-- **WHEN** the user navigates to the Cards route
-- **THEN** the Cards page renders
-
-#### Scenario: A destination is directly addressable
-
-- **WHEN** the user loads the Shop route or the Cards route directly, without first visiting the Battle page
-- **THEN** that page renders
-
 ### Requirement: The in-game screen has its own route
 
 The in-game screen SHALL live at its own route, distinct from the Battle page's route, so an active battle is addressable and appears in browser history as its own entry.
@@ -72,20 +53,56 @@ The in-game route SHALL only render when a game is in progress. Reaching it with
 
 #### Scenario: Navigating away during a battle
 
-- **WHEN** the user navigates from the in-game route to the Shop or the Cards page
+- **WHEN** the user navigates from the in-game route to the Shop, the Decks page, or the Collection
+  page
 - **THEN** that page renders
 - **AND** returning to the in-game route renders the battle still in progress
 
 ### Requirement: Navigation preserves page state boundaries
 
-Navigating between the Battle, Shop, and Cards pages SHALL NOT start, end, or otherwise modify a game.
+Navigating between the Battle, Shop, Decks, and Collection pages SHALL NOT start, end, or otherwise
+modify a game.
 
 #### Scenario: Browsing without a battle
 
-- **WHEN** the user moves between the Battle, Shop, and Cards pages
+- **WHEN** the user moves between the Battle, Shop, Decks, and Collection pages
 - **THEN** no game is started or ended
 
 #### Scenario: Browsing during a battle
 
-- **WHEN** the user moves between the Shop and Cards pages while a battle is in progress
+- **WHEN** the user moves between the Shop, Decks, and Collection pages while a battle is in
+  progress
 - **THEN** the battle in progress is neither ended nor altered
+
+### Requirement: Each out-of-battle page has its own route
+
+The application SHALL expose the Battle page, the Shop page, the Decks page, and the Collection
+page each at its own distinct route. The Decks page's route SHALL be named for it. The route the
+Decks page was reached at while it was called the Cards page SHALL redirect to the Decks page, so
+an address saved before the rename still lands where it used to.
+
+#### Scenario: Navigating to the Shop
+
+- **WHEN** the user navigates to the Shop route
+- **THEN** the Shop page renders
+
+#### Scenario: Navigating to the Decks page
+
+- **WHEN** the user navigates to the Decks route
+- **THEN** the Decks page renders
+
+#### Scenario: Navigating to the Collection page
+
+- **WHEN** the user navigates to the Collection route
+- **THEN** the Collection page renders
+
+#### Scenario: The former Cards route redirects
+
+- **WHEN** the user navigates to the route the Cards page used to live at
+- **THEN** the application redirects to the Decks route and the Decks page renders
+
+#### Scenario: A destination is directly addressable
+
+- **WHEN** the user loads the Shop route, the Decks route, or the Collection route directly,
+  without first visiting the Battle page
+- **THEN** that page renders

@@ -49,7 +49,7 @@ not removed.
 
 #### Scenario: Returning from another page
 
-- **WHEN** the user navigates to the Battle page from the Shop or Cards page
+- **WHEN** the user navigates to the Battle page from the Shop, Decks, or Collection page
 - **THEN** the entrance plays at the same shortened pace
 - **AND** the transition does not read as a stall before the page becomes usable
 
