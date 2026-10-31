@@ -57,48 +57,6 @@ position. Adding a card to a full deck SHALL change nothing.
 - **THEN** the addition does not happen
 - **AND** the deck still holds the same nine cards in the same order
 
-### Requirement: Quantity held does not limit use in a deck
-
-A card's quantity in the collection SHALL NOT bound how many times that card may appear in a deck,
-nor how many decks it may appear in. Holding at least one copy of a card SHALL permit up to nine of
-that card in a single deck and that card in every deck at once. Adding a card to a deck SHALL NOT
-reduce, reserve, consume, or otherwise change the collection.
-
-#### Scenario: One copy fills a whole deck
-
-- **WHEN** a player holding exactly one copy of a card adds that card to a deck nine times
-- **THEN** the deck holds nine copies of it
-- **AND** the collection still reports a quantity of one for that card
-
-#### Scenario: The same card serves several decks
-
-- **WHEN** a player holding one copy of a card adds it to three different decks
-- **THEN** all three decks hold that card
-- **AND** no deck's contents are affected by another's
-
-#### Scenario: Deck building never spends the collection
-
-- **WHEN** any sequence of additions and removals is applied to any of the user's decks
-- **THEN** the collection's quantities and its distinct-card count are unchanged throughout
-- **AND** the Geo balance is unchanged throughout
-
-### Requirement: Only unlocked cards may be placed in a deck
-
-A card SHALL be placeable in a deck only where the user's collection holds at least one copy of it.
-A card the user does not hold SHALL NOT be added to any deck, and the attempt SHALL change nothing.
-
-#### Scenario: An unowned card is refused
-
-- **WHEN** a card the collection reports a quantity of zero for is added to a deck
-- **THEN** the addition does not happen
-- **AND** the deck is unchanged
-
-#### Scenario: Unlocking is the only gate
-
-- **WHEN** a card the collection holds exactly one copy of is added to a deck
-- **THEN** the addition succeeds
-- **AND** it succeeds again for the same card and the same deck
-
 ### Requirement: Removing a card takes out exactly one copy
 
 Removing a card from a deck SHALL name the position it occupies, not merely the card, so that one
@@ -190,10 +148,10 @@ A user created with no prior data SHALL hold exactly one deck, and that deck SHA
 ### Requirement: A refused deck operation changes nothing and says so
 
 Every operation on a deck SHALL either apply in full or change nothing at all, and SHALL report
-which of the two happened. An operation that would break a stated limit — a tenth deck, a tenth
-card, an unowned card, a position no card occupies, a deck that does not exist — SHALL be refused
-rather than truncated, clamped, or partially applied, and MUST NOT raise an error the caller has to
-recover from.
+which of the two happened. An operation that would break a stated limit SHALL be refused rather
+than truncated, clamped, or partially applied, and MUST NOT raise an error the caller has to
+recover from. The stated limits are a tenth deck, a tenth card, an unowned card, more copies of a
+card than are held, a position no card occupies, and a deck that does not exist.
 
 #### Scenario: A refusal is reported
 
@@ -206,6 +164,12 @@ recover from.
 - **WHEN** any refused operation is attempted
 - **THEN** no error is raised
 - **AND** the application continues normally
+
+#### Scenario: An addition beyond the copies held is refused cleanly
+
+- **WHEN** a card is added to a deck that already holds as many copies of it as the collection does
+- **THEN** it reports that it did not happen
+- **AND** the deck is unchanged
 
 #### Scenario: An operation naming a deck that does not exist changes nothing
 
@@ -298,13 +262,14 @@ limit the deck is, so the player can be told what to remove.
 
 Adding a card that would make a deck Invalid SHALL NOT be refused for that reason. The limit governs
 the deck's standing, not what deck editing allows. A deck operation SHALL still be refused only for
-the reasons already stated: no such deck, a full deck, an unowned card, or a position no card
-occupies. The player SHALL always be able to make an Invalid deck valid again by removing cards.
+the reasons already stated: no such deck, a full deck, an unowned card, more copies of a card than
+are held, or a position no card occupies. The player SHALL always be able to make an Invalid deck
+valid again by removing cards.
 
 #### Scenario: A second four-star card is accepted
 
-- **WHEN** a card of four stars is added to a deck that already holds one, and the deck has a free
-  position
+- **WHEN** a four-star card is added to a deck that already holds a different four-star card, and
+  the deck has a free position
 - **THEN** the addition succeeds
 - **AND** the deck's standing becomes Invalid
 
@@ -340,3 +305,62 @@ the decks the standing reports a problem for.
 - **WHEN** a user created with no prior data is read
 - **THEN** their one seeded deck is Incomplete
 - **AND** they hold no deck eligible for battle
+
+### Requirement: Quantity held limits the copies of a card within each deck
+
+A card's quantity in the collection SHALL bound how many copies of that card a single deck may
+hold: a deck SHALL hold no more copies of a card than the collection holds. The bound SHALL apply
+to each deck on its own and SHALL NOT be shared between decks, so holding one copy of a card permits
+one copy of it in every deck at once. Adding a card to a deck SHALL NOT reduce, reserve, consume, or
+otherwise change the collection. An addition that would put more copies of a card in a deck than
+the collection holds SHALL be refused.
+
+#### Scenario: One copy permits one per deck
+
+- **WHEN** a player holding exactly one copy of a card adds that card to a deck, and then adds it to
+  the same deck again
+- **THEN** the first addition succeeds and the second is refused
+- **AND** the deck holds one copy of it
+- **AND** the collection still reports a quantity of one for that card
+
+#### Scenario: Copies held are copies usable
+
+- **WHEN** a player holding three copies of a card adds it to an empty deck four times
+- **THEN** the first three additions succeed and the fourth is refused
+- **AND** the deck holds three copies of it
+
+#### Scenario: The same card serves several decks
+
+- **WHEN** a player holding one copy of a card adds it to three different decks
+- **THEN** all three decks hold that card
+- **AND** no deck's contents or limit are affected by another's
+
+#### Scenario: Removing a copy makes room for it again
+
+- **WHEN** a deck holds every copy of a card the collection holds and one of them is removed
+- **THEN** that card can be added to the deck again
+
+#### Scenario: Deck building never spends the collection
+
+- **WHEN** any sequence of additions and removals is applied to any of the user's decks
+- **THEN** the collection's quantities and its distinct-card count are unchanged throughout
+- **AND** the Geo balance is unchanged throughout
+
+### Requirement: A card must be unlocked before any deck may use it
+
+A card SHALL be placeable in a deck only where the user's collection holds at least one copy of it.
+A card the user does not hold SHALL NOT be added to any deck, and the attempt SHALL change nothing.
+Unlocking a card is the gate to using it at all. How many copies one deck may use is bounded by the
+quantity held.
+
+#### Scenario: An unowned card is refused
+
+- **WHEN** a card the collection reports a quantity of zero for is added to a deck
+- **THEN** the addition does not happen
+- **AND** the deck is unchanged
+
+#### Scenario: Unlocking opens the card to every deck
+
+- **WHEN** a card the collection holds exactly one copy of is added to a deck
+- **THEN** the addition succeeds
+- **AND** it succeeds again for the same card and a different deck
