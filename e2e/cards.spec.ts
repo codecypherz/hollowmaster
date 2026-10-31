@@ -682,7 +682,7 @@ test.describe('the Cards page fits the viewport', () => {
       // The order control and the reset control share one line: every part
       // of the sort row overlaps every other vertically.
       const rows = await page.locator('.sort-row').evaluate((row) =>
-        [...row.querySelectorAll('.sort-label, .sort-option, .reset-data')].map((el) => {
+        [...row.querySelectorAll('.sort-option, .reset-data')].map((el) => {
           const box = el.getBoundingClientRect();
           return { top: box.top, bottom: box.bottom };
         }),

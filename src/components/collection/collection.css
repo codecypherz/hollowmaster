@@ -77,13 +77,6 @@
   gap: 10px;
 }
 
-.sort-label {
-  font-size: 0.58rem;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-}
-
 .sort-options {
   display: flex;
   gap: 4px;

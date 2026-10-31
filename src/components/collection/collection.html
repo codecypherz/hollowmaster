@@ -37,8 +37,7 @@
 
       <div class="sort-row">
         <div class="sort-group">
-          <span class="sort-label" id="sort-label">Order by</span>
-          <div class="sort-options" role="group" aria-labelledby="sort-label">
+          <div class="sort-options" role="group" aria-label="Order by">
             @for (order of sorts; track order.key) {
               @let active = sort().key === order.key;
               <button
