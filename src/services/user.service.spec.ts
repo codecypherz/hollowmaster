@@ -3,7 +3,26 @@ import { effect } from '@angular/core';
 import { UserService } from './user.service';
 import { CARD_BY_KEY, Card, cardKey, cardKeyOf } from '../model/card';
 import { DECK_SIZE, MAX_DECKS } from '../model/deck';
-import { STARTER_CARD_KEYS, quantityOf, seedUser, totalCards } from '../model/user';
+import {
+  PersistedUser,
+  STARTER_CARD_KEYS,
+  quantityOf,
+  seedUser,
+  toPersisted,
+  totalCards,
+} from '../model/user';
+import { USER_STORE, UserStore } from './user-store';
+
+/** A store that keeps everything it is given, in memory. */
+class InMemoryUserStore implements UserStore {
+  saved: PersistedUser[] = [];
+  async load(): Promise<PersistedUser | null> {
+    return this.saved.at(-1) ?? null;
+  }
+  async save(user: PersistedUser): Promise<void> {
+    this.saved.push(user);
+  }
+}
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
 const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
@@ -182,14 +201,24 @@ describe('UserService', () => {
       expect(us.decks()[0].cards).toEqual([cardKey(crawlid)]);
     });
 
-    it('fills a deck from one held copy and refuses the tenth card', () => {
-      for (let i = 0; i < DECK_SIZE; i++) expect(us.addCardToDeck(0, crawlid)).toBe(true);
+    it('fills a deck from the nine starters and refuses the tenth card', () => {
+      for (const key of STARTER_CARD_KEYS) {
+        expect(us.addCardToDeck(0, CARD_BY_KEY.get(key)!)).toBe(true);
+      }
       expect(us.decks()[0].cards).toHaveLength(DECK_SIZE);
+      us.grantCards([crawlid]);
       expect(us.addCardToDeck(0, crawlid)).toBe(false);
-      expect(quantityOf(us.collection(), crawlid)).toBe(1);
+      expect(quantityOf(us.collection(), crawlid)).toBe(2);
+    });
+
+    it('refuses a second copy of a card held once', () => {
+      expect(us.addCardToDeck(0, crawlid)).toBe(true);
+      expect(us.addCardToDeck(0, crawlid)).toBe(false);
+      expect(us.decks()[0].cards).toEqual([cardKey(crawlid)]);
     });
 
     it('removes the card at a position and refuses one no card occupies', () => {
+      us.grantCards([crawlid]);
       us.addCardToDeck(0, crawlid);
       us.addCardToDeck(0, vengefly);
       us.addCardToDeck(0, crawlid);
@@ -244,6 +273,33 @@ describe('UserService', () => {
       expect(collectionSeen).toHaveLength(1);
       expect(us.geo()).toBe(500);
       expect(us.totalCards()).toBe(9);
+    });
+  });
+
+  // ─── Reset ────────────────────────────────────────────────────────────────
+
+  describe('reset', () => {
+    it('replaces decks, grants, and Geo with a new player, and persists that', () => {
+      const store = new InMemoryUserStore();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [{ provide: USER_STORE, useValue: store }] });
+      const users = TestBed.inject(UserService);
+
+      users.creditGeo(300);
+      users.grantCards([goam, gruzMother, crawlid]);
+      users.createDeck();
+      users.createDeck();
+      users.addCardToDeck(0, crawlid);
+      users.addCardToDeck(1, goam);
+
+      users.reset();
+
+      expect(users.geo()).toBe(0);
+      expect(users.distinctCards()).toBe(9);
+      for (const key of STARTER_CARD_KEYS) expect(users.collection().get(key)).toBe(1);
+      expect(users.totalCards()).toBe(9);
+      expect(users.decks()).toEqual([{ cards: [] }]);
+      expect(store.saved.at(-1)).toEqual(toPersisted(seedUser()));
     });
   });
 

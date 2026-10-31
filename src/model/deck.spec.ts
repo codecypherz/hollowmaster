@@ -6,6 +6,8 @@ import {
   MAX_DECKS,
   RARITY_LIMIT,
   addCardToDeck,
+  addRefusal,
+  copiesInDeck,
   createDeck,
   deckName,
   deckStanding,
@@ -14,11 +16,19 @@ import {
   isBattleReady,
   removeCardFromDeck,
 } from './deck';
-import { UserState, distinctCards, quantityOf, seedUser, totalCards } from './user';
+import {
+  STARTER_CARD_KEYS,
+  UserState,
+  distinctCards,
+  quantityOf,
+  seedUser,
+  totalCards,
+} from './user';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
 const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
 const gruzzer = CARD_BY_KEY.get(cardKeyOf('FC', 8))!;
+const tiktik = CARD_BY_KEY.get(cardKeyOf('FC', 9))!;
 /** Not a starter card, so a seeded user holds none of it. */
 const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
 
@@ -28,6 +38,17 @@ function withDecks(decks: readonly Deck[]): UserState {
 
 function deckOf(...keys: CardKey[]): Deck {
   return { cards: keys };
+}
+
+/** `count` keys drawn from the starter set, for decks built directly. */
+function lowKeys(count: number): CardKey[] {
+  return STARTER_CARD_KEYS.slice(0, count);
+}
+
+/** A seeded user with one empty deck who holds `quantity` copies of `card`. */
+function holding(card: Card, quantity: number): UserState {
+  const user = seedUser();
+  return { ...user, collection: new Map([...user.collection, [cardKey(card), quantity]]) };
 }
 
 describe('the deck constants', () => {
@@ -130,18 +151,48 @@ describe('adding a card to a deck', () => {
     expect(state.decks[0].cards).toEqual([cardKey(crawlid), cardKey(vengefly), cardKey(gruzzer)]);
   });
 
-  it('lets one held copy fill a whole deck', () => {
+  it('lets one held copy into a deck once, and refuses the second', () => {
+    // Replaces "lets one held copy fill a whole deck": the quantity held now
+    // bounds the copies one deck may hold.
     let state = withDecks([emptyDeck()]);
     expect(quantityOf(state.collection, crawlid)).toBe(1);
 
-    for (let i = 0; i < DECK_SIZE; i++) {
+    state = addCardToDeck(state, 0, crawlid)!;
+    expect(state).not.toBeNull();
+    expect(addCardToDeck(state, 0, crawlid)).toBeNull();
+
+    expect(state.decks[0].cards).toEqual([cardKey(crawlid)]);
+    expect(quantityOf(state.collection, crawlid)).toBe(1);
+  });
+
+  it('lets three held copies in three times, and refuses the fourth', () => {
+    let state = holding(crawlid, 3);
+    for (let i = 0; i < 3; i++) {
       const next = addCardToDeck(state, 0, crawlid);
       expect(next).not.toBeNull();
       state = next!;
     }
+    expect(addCardToDeck(state, 0, crawlid)).toBeNull();
+    expect(state.decks[0].cards).toEqual(Array(3).fill(cardKey(crawlid)));
+  });
 
-    expect(state.decks[0].cards).toHaveLength(DECK_SIZE);
-    expect(quantityOf(state.collection, crawlid)).toBe(1);
+  it('allows the add again once a copy is removed from an exhausted deck', () => {
+    let state = addCardToDeck(withDecks([emptyDeck()]), 0, crawlid)!;
+    expect(addRefusal(state, 0, crawlid)).toBe('exhausted');
+
+    state = removeCardFromDeck(state, 0, 0)!;
+    expect(addRefusal(state, 0, crawlid)).toBeNull();
+    expect(addCardToDeck(state, 0, crawlid)).not.toBeNull();
+  });
+
+  it('leaves the state untouched when an over-limit add is refused', () => {
+    const state = addCardToDeck(withDecks([emptyDeck()]), 0, crawlid)!;
+    const decksBefore = state.decks;
+    const deckBefore = state.decks[0];
+
+    expect(addCardToDeck(state, 0, crawlid)).toBeNull();
+    expect(state.decks).toBe(decksBefore);
+    expect(state.decks[0]).toBe(deckBefore);
   });
 
   it('serves several decks from one held copy', () => {
@@ -216,6 +267,41 @@ describe('removing a card from a deck', () => {
   });
 });
 
+describe('the reason an addition is refused', () => {
+  it('reports each of the five outcomes', () => {
+    const fresh = withDecks([emptyDeck()]);
+    expect(addRefusal(fresh, 0, crawlid)).toBeNull();
+    expect(addRefusal(fresh, 3, crawlid)).toBe('no-deck');
+    expect(addRefusal(fresh, 0, goam)).toBe('unowned');
+    expect(addRefusal(withDecks([deckOf(...lowKeys(DECK_SIZE))]), 0, crawlid)).toBe('full');
+    expect(addRefusal(withDecks([deckOf(cardKey(crawlid))]), 0, crawlid)).toBe('exhausted');
+  });
+
+  it('agrees with the operation in every case', () => {
+    const cases: [UserState, number, Card][] = [
+      [withDecks([emptyDeck()]), 0, crawlid],
+      [withDecks([emptyDeck()]), 3, crawlid],
+      [withDecks([emptyDeck()]), 0, goam],
+      [withDecks([deckOf(...lowKeys(DECK_SIZE))]), 0, crawlid],
+      [withDecks([deckOf(cardKey(crawlid))]), 0, crawlid],
+    ];
+    for (const [state, deck, card] of cases) {
+      expect(addCardToDeck(state, deck, card) === null).toBe(
+        addRefusal(state, deck, card) !== null,
+      );
+    }
+  });
+});
+
+describe('copies in a deck', () => {
+  it('counts only the copies of that card', () => {
+    const deck = deckOf(cardKey(crawlid), cardKey(vengefly), cardKey(crawlid));
+    expect(copiesInDeck(deck, crawlid)).toBe(2);
+    expect(copiesInDeck(deck, vengefly)).toBe(1);
+    expect(copiesInDeck(deck, gruzzer)).toBe(0);
+  });
+});
+
 describe('every deck operation', () => {
   it('leaves its input state, its deck list, and its decks untouched', () => {
     const state = withDecks([deckOf(cardKey(crawlid)), emptyDeck()]);
@@ -250,7 +336,7 @@ describe('every deck operation', () => {
       check();
     }
     for (let deck = 0; deck < 4; deck++) {
-      for (const card of [crawlid, vengefly, gruzzer, crawlid]) {
+      for (const card of [crawlid, vengefly, gruzzer, tiktik]) {
         state = addCardToDeck(state, deck, card)!;
         check();
       }
@@ -381,24 +467,40 @@ describe('battle eligibility', () => {
 });
 
 describe('building past the rarity limit', () => {
-  /** A seeded user who also holds one Goam. */
-  function holdingGoam(): UserState {
+  /** A second four-star card, distinct from Goam; the catalogue holds only one. */
+  const other4 = rated(4, 99);
+
+  /** A seeded user who also holds `goams` Goam and one of the test four-star card. */
+  function holdingGoam(goams = 1): UserState {
     const user = seedUser();
-    return { ...user, collection: new Map([...user.collection, [cardKey(goam), 1]]) };
+    return {
+      ...user,
+      collection: new Map([...user.collection, [cardKey(goam), goams], [cardKey(other4), 1]]),
+    };
   }
 
-  it('accepts a second four-star card and the deck becomes Invalid', () => {
+  it('accepts a second, different four-star card and the deck becomes Invalid', () => {
     let state = holdingGoam();
+    state = addCardToDeck(state, 0, goam)!;
+    state = addCardToDeck(state, 0, other4)!;
+
+    expect(state).not.toBeNull();
+    expect(state.decks[0].cards).toEqual([cardKey(goam), cardKey(other4)]);
+    const standing = deckStanding(state.decks[0], lookupWith(other4));
+    expect(standing.problems[0].kind).toBe('invalid');
+  });
+
+  it('accepts a second copy of a four-star card held twice', () => {
+    let state = holdingGoam(2);
     state = addCardToDeck(state, 0, goam)!;
     state = addCardToDeck(state, 0, goam)!;
 
-    expect(state).not.toBeNull();
     expect(state.decks[0].cards).toEqual([cardKey(goam), cardKey(goam)]);
     expect(deckStanding(state.decks[0]).problems[0].kind).toBe('invalid');
   });
 
   it('becomes valid again when one is removed', () => {
-    let state = holdingGoam();
+    let state = holdingGoam(2);
     state = addCardToDeck(state, 0, goam)!;
     state = addCardToDeck(state, 0, goam)!;
     state = removeCardFromDeck(state, 0, 1)!;

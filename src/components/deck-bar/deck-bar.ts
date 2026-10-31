@@ -15,6 +15,7 @@ import { DECK_SIZE, Deck, DeckProblem, MAX_DECKS, deckName, deckStanding } from 
 import { fitOverlay } from '../../model/fit';
 import { CardComponent } from '../card/card';
 import { CardMenu } from '../card-menu/card-menu';
+import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
 
 /** One of the deck's nine positions, filled or free. */
 interface Position {
@@ -70,7 +71,7 @@ function standingLine(problem: DeckProblem): StandingLine {
 const DECK_CARD_WIDTH = 128;
 
 /**
- * The pinned region at the top of the Cards page: the deck tabs, the selected
+ * The pinned region at the top of the Cards page: the deck buttons, the selected
  * deck's nine positions, and the controls that create and delete a deck.
  *
  * It holds no user state of its own. Which deck is selected is the page's, and
@@ -79,7 +80,7 @@ const DECK_CARD_WIDTH = 128;
  */
 @Component({
   selector: 'app-deck-bar',
-  imports: [CardComponent, CardMenu],
+  imports: [CardComponent, CardMenu, ConfirmDialog],
   templateUrl: './deck-bar.html',
   styleUrl: './deck-bar.css',
   host: {
@@ -107,11 +108,11 @@ export class DeckBar {
   readonly deckCardWidth = DECK_CARD_WIDTH;
   readonly maxDecks = MAX_DECKS;
 
+  /** Why the create control is disabled at the limit — its tooltip and its description. */
+  readonly limitText = `${MAX_DECKS} decks is the limit`;
+
   /** Raised while the player is being asked to confirm a deletion. */
   readonly confirming = signal(false);
-
-  /** Which tab the roving tabindex currently rests on. */
-  readonly focusedTab = signal(0);
 
   private readonly region = viewChild<ElementRef<HTMLElement>>('region');
   private readonly regionWrap = viewChild<ElementRef<HTMLElement>>('regionWrap');
@@ -148,7 +149,7 @@ export class DeckBar {
       : [{ kind: 'ready', word: '', text: 'Ready for battle' }];
   });
 
-  /** At the limit the control is absent, not disabled — the page says why. */
+  /** At the limit the control stays in place, disabled, and says why. */
   readonly canCreate = computed(() => this.decks().length < MAX_DECKS);
 
   readonly selectedName = computed(() => {
@@ -184,21 +185,10 @@ export class DeckBar {
     this.destroyRef.onDestroy(() => observer.disconnect());
   }
 
-  onTabKeydown(event: KeyboardEvent, index: number): void {
-    const count = this.decks().length;
-    if (count === 0) return;
-
-    let next: number | null = null;
-    if (event.key === 'ArrowRight') next = (index + 1) % count;
-    else if (event.key === 'ArrowLeft') next = (index - 1 + count) % count;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = count - 1;
-    if (next === null) return;
-
-    event.preventDefault();
-    this.focusedTab.set(next);
-    this.selectDeck.emit(next);
-    this.focusTab(next);
+  /** The click guard for the disabled state; the model would refuse anyway. */
+  onCreate(): void {
+    if (!this.canCreate()) return;
+    this.createDeck.emit();
   }
 
   askToDelete(): void {
@@ -210,11 +200,6 @@ export class DeckBar {
     const index = this.selectedIndex();
     this.confirming.set(false);
     if (index !== null) this.deleteDeck.emit(index);
-  }
-
-  private focusTab(index: number): void {
-    const tabs = this.host.nativeElement.querySelectorAll<HTMLElement>('.deck-tab');
-    tabs[index]?.focus();
   }
 
   /**

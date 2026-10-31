@@ -1,12 +1,40 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CARD_BY_KEY, Card } from '../../model/card';
-import { DEFAULT_SORT, SORTS, SortKey, ownedCards, sortOwned } from '../../model/collection';
-import { DECK_SIZE, deckName } from '../../model/deck';
+import {
+  DEFAULT_SORT_STATE,
+  OwnedCard,
+  SORTS,
+  SortKey,
+  SortState,
+  groupByRarity,
+  nextSort,
+  ownedCards,
+  sortOwned,
+} from '../../model/collection';
+import { AddRefusal, addRefusal, copiesInDeck, deckName } from '../../model/deck';
 import { createParticleField, particleVars } from '../../model/particle';
 import { UserService } from '../../services/user.service';
 import { CardReader } from '../card-reader/card-reader';
 import { CollectionGrid } from '../collection-grid/collection-grid';
+import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
 import { DeckBar } from '../deck-bar/deck-bar';
+
+/** One collection tile: the card, how many are held, and what the selected deck makes of it. */
+export interface Tile extends OwnedCard {
+  /** How many copies the selected deck uses; zero when no deck is selected. */
+  readonly used: number;
+  /** Why adding is withheld, in the page's words; empty when it is on offer. */
+  readonly addReason: string;
+}
+
+/** A run of tiles, labelled with its star rating when the order is rarity. */
+export interface TileSection {
+  /** The rating this section holds, or null for the single unlabelled run. */
+  readonly stars: number | null;
+  /** The flat index of the section's first tile. */
+  readonly start: number;
+  readonly tiles: readonly Tile[];
+}
 
 /** Which of the page's two regions a selection is in. */
 type Region = 'deck' | 'collection';
@@ -33,7 +61,7 @@ interface Selection {
  */
 @Component({
   selector: 'app-collection',
-  imports: [CardReader, CollectionGrid, DeckBar],
+  imports: [CardReader, CollectionGrid, ConfirmDialog, DeckBar],
   templateUrl: './collection.html',
   styleUrl: './collection.css',
   host: {
@@ -49,8 +77,18 @@ export class Collection {
 
   readonly decks = this.users.decks;
 
-  /** How the collection is ordered. The page opens on the rarest first. */
-  readonly sort = signal<SortKey>(DEFAULT_SORT);
+  /** How the collection is ordered, and which way. The page opens on the rarest first. */
+  readonly sort = signal<SortState>(DEFAULT_SORT_STATE);
+
+  /**
+   * Bumped on every change of order or direction. The grid keys its tiles on
+   * it, so a reorder recreates every tile and every one replays its entrance —
+   * not only the ones the DOM diff happened to move.
+   */
+  readonly sortGeneration = signal(0);
+
+  /** Raised while the player is being asked to confirm a reset. */
+  readonly confirmingReset = signal(false);
 
   /** The deck on screen. Screen state: nothing else in the application reads it. */
   readonly selectedDeck = signal<number | null>(0);
@@ -62,14 +100,21 @@ export class Collection {
   readonly reading = signal<Selection | null>(null);
 
   /** The cards the player holds, in the order in effect. */
-  readonly owned = computed(() => sortOwned(ownedCards(this.users.collection()), this.sort()));
+  readonly owned = computed(() => {
+    const { key, direction } = this.sort();
+    return sortOwned(ownedCards(this.users.collection()), key, direction);
+  });
 
   readonly selectedDeckCards = computed(() => {
     const index = this.selectedDeck();
     return index === null ? [] : (this.decks()[index]?.cards ?? []);
   });
 
-  readonly deckIsFull = computed(() => this.selectedDeckCards().length >= DECK_SIZE);
+  /** The selected deck's name, or null when there is none — the badge words its count by it. */
+  readonly selectedDeckName = computed(() => {
+    const index = this.selectedDeck();
+    return index === null ? null : deckName(index);
+  });
 
   /** What the collection's add action is called, naming the deck it fills. */
   readonly addLabel = computed(() => {
@@ -77,13 +122,37 @@ export class Collection {
     return index === null ? 'Add to deck' : `Add to ${deckName(index)}`;
   });
 
-  readonly canAdd = computed(() => this.selectedDeck() !== null && !this.deckIsFull());
+  /**
+   * Every tile, with what the selected deck makes of its card. The menu and
+   * the reader both read from here, so the two cannot disagree about whether
+   * a card can be added, or why not.
+   */
+  readonly tiles = computed<Tile[]>(() => {
+    const state = this.users.state();
+    const index = this.selectedDeck();
+    const deck = index === null ? null : (state.decks[index] ?? null);
+    return this.owned().map((entry) => ({
+      ...entry,
+      used: deck ? copiesInDeck(deck, entry.card) : 0,
+      addReason: reasonText(
+        index === null ? 'no-deck' : addRefusal(state, index, entry.card),
+        index,
+      ),
+    }));
+  });
 
-  /** Why adding is not on offer — the same words wherever it is withheld. */
-  readonly addReason = computed(() => {
-    if (this.selectedDeck() === null) return 'Create a deck first.';
-    if (this.deckIsFull()) return `${deckName(this.selectedDeck()!)} is full.`;
-    return '';
+  /**
+   * The tiles in sections: one per star rating when ordered by rarity, and a
+   * single unlabelled run otherwise. Tiles keep their flat index throughout.
+   */
+  readonly sections = computed<TileSection[]>(() => {
+    const tiles = this.tiles();
+    if (this.sort().key !== 'rarity') return [{ stars: null, start: 0, tiles }];
+    return groupByRarity(tiles).map((section) => ({
+      stars: section.stars,
+      start: section.start,
+      tiles: section.entries,
+    }));
   });
 
   /** The card the reader is showing, resolved from whichever region opened it. */
@@ -96,6 +165,13 @@ export class Collection {
   });
 
   readonly readingFromDeck = computed(() => this.reading()?.region === 'deck');
+
+  /** Why the reader's add is withheld — the same tile entry the menu reads. */
+  readonly readingAddReason = computed(() => {
+    const selection = this.reading();
+    if (!selection || selection.region !== 'collection') return '';
+    return this.tiles()[selection.index]?.addReason ?? '';
+  });
 
   /** The deck position whose menu is open, when the open menu is the deck's. */
   readonly openDeckPosition = computed(() => this.positionOf('deck'));
@@ -163,8 +239,27 @@ export class Collection {
   }
 
   onSort(key: SortKey): void {
-    this.sort.set(key);
+    this.sort.update((current) => nextSort(current, key));
+    this.sortGeneration.update((g) => g + 1);
     this.closeMenu();
+  }
+
+  // ─── Reset ────────────────────────────────────────────────────────────────
+
+  askToReset(): void {
+    this.closeMenu();
+    this.confirmingReset.set(true);
+  }
+
+  /** Replaces the player's data with a new player's, and shows it as one arrives. */
+  onReset(): void {
+    this.confirmingReset.set(false);
+    this.users.reset();
+    this.selectedDeck.set(0);
+    this.sort.set(DEFAULT_SORT_STATE);
+    this.sortGeneration.update((g) => g + 1);
+    this.openMenu.set(null);
+    this.reading.set(null);
   }
 
   // ─── Reading ──────────────────────────────────────────────────────────────
@@ -250,13 +345,34 @@ export class Collection {
    */
   private restoreFocus(selection: Selection): void {
     queueMicrotask(() => {
-      const container =
+      // Collection tiles are split across a grid per rarity section, so they
+      // are found by their flat index rather than as one container's children.
+      const holder =
         selection.region === 'deck'
-          ? document.querySelector('app-deck-bar .deck-row')
-          : document.querySelector('app-collection-grid .grid');
-      const holders = container?.children ?? [];
-      const holder = holders[selection.index] as HTMLElement | undefined;
+          ? (document.querySelector('app-deck-bar .deck-row')?.children[selection.index] as
+              HTMLElement | undefined)
+          : document.querySelector<HTMLElement>(
+              `app-collection-grid .tile[data-index="${selection.index}"]`,
+            );
       holder?.querySelector<HTMLElement>('button')?.focus();
     });
+  }
+}
+
+/** The page's words for why adding is withheld; empty when it is on offer. */
+function reasonText(refusal: AddRefusal | null, deckIndex: number | null): string {
+  switch (refusal) {
+    case null:
+      return '';
+    case 'no-deck':
+      return 'Create a deck first.';
+    case 'full':
+      return `${deckName(deckIndex!)} is full.`;
+    case 'exhausted':
+      return `Every copy you hold is already in ${deckName(deckIndex!)}.`;
+    case 'unowned':
+      // Unreachable from a tile — the collection lists only held cards — but
+      // stated, so a new reason cannot arrive here silently as "on offer".
+      return 'You hold no copy of this card.';
   }
 }

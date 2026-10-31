@@ -245,15 +245,20 @@ export function fromPersisted(persisted: PersistedUser): UserState {
   }
 
   // A deck position survives only if the catalogue still holds the card *and*
-  // the restored collection does. The second is the important one: it means no
-  // load can produce a deck using a card the player has not unlocked, so the
-  // rest of the application never has to defend against one.
+  // the deck has not already kept as many copies of it as the restored
+  // collection holds. That means no load can produce a deck using a card the
+  // player has not unlocked, or more copies than they hold, so the rest of the
+  // application never has to defend against either. The count is per deck —
+  // the copy limit is not shared — and the earliest copies are the ones kept.
   const decks: Deck[] = persisted.decks.slice(0, MAX_DECKS).map((deck) => {
     const cards: CardKey[] = [];
+    const kept = new Map<CardKey, number>();
     for (const ref of deck.slice(0, DECK_SIZE)) {
       const key = cardKeyOf(ref.set, ref.number);
       if (!CARD_BY_KEY.has(key)) continue;
-      if ((collection.get(key) ?? 0) < 1) continue;
+      const copies = kept.get(key) ?? 0;
+      if (copies >= (collection.get(key) ?? 0)) continue;
+      kept.set(key, copies + 1);
       cards.push(key);
     }
     return { cards };

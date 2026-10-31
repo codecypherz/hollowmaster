@@ -68,6 +68,18 @@ export class UserService {
     this.persist();
   }
 
+  /**
+   * Replaces the player's data with a brand-new player's, and persists it.
+   *
+   * A testing aid, offered on the Cards page. It takes the same route `load()`
+   * takes for a player with no stored data, so "exactly what a new player
+   * holds" is true by construction rather than by a second description of one.
+   */
+  reset(): void {
+    this._state.set(seedUser());
+    this.persist();
+  }
+
   /** Adds Geo to the purse. A non-positive amount is not a credit and is refused. */
   creditGeo(amount: number): void {
     if (!Number.isInteger(amount) || amount <= 0) return;

@@ -63,14 +63,23 @@
   min-height: 0;
 }
 
+/* Three columns, so the order control stays centred on the page whatever the
+   reset control's width: the empty first track balances the third, which
+   holds the reset control at the row's trailing end. */
 .sort-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  gap: 16px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--color-section-border);
+}
+
+.sort-group {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .sort-label {
@@ -82,11 +91,13 @@
 
 .sort-options {
   display: flex;
-  flex-wrap: wrap;
   gap: 4px;
 }
 
 .sort-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 4px 10px;
   font-family: var(--font-ui);
   font-size: 0.58rem;
@@ -119,6 +130,70 @@
   background: var(--color-surface);
 }
 
+/* The direction in effect: down for descending, turned up for ascending. */
+.sort-chevron {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: rotate var(--dur-fast) ease;
+}
+
+.sort-chevron.is-asc {
+  rotate: 180deg;
+}
+
+/* ─── The reset control ───────────────────────────────────────────────────────
+   Tooling, not game: a dashed border and a chip set it apart from every other
+   control on the page.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.reset-data {
+  grid-column: 3;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px 4px 5px;
+  font-family: var(--font-ui);
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px dashed var(--color-section-border);
+  border-radius: 2px;
+  transition:
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+
+.reset-data:hover {
+  color: var(--color-crimson);
+  border-color: var(--color-crimson-dim);
+}
+
+.reset-data:focus-visible {
+  outline: 2px solid var(--color-soul);
+  outline-offset: 2px;
+}
+
+.debug-chip {
+  padding: 1px 5px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--color-void);
+  background: var(--color-text-dim);
+  border-radius: 1px;
+}
+
 /* ─── The collection ──────────────────────────────────────────────────────── */
 
 .collection-region {
@@ -127,7 +202,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sort-option {
+  .sort-option,
+  .sort-chevron,
+  .reset-data {
     transition: none;
   }
 }

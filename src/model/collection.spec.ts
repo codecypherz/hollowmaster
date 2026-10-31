@@ -1,5 +1,16 @@
 import { CARD_BY_KEY, CARD_DB, CardKey, cardKey, cardKeyOf } from './card';
-import { DEFAULT_SORT, OwnedCard, SORTS, SortKey, ownedCards, sortOwned } from './collection';
+import {
+  DEFAULT_SORT,
+  DEFAULT_SORT_STATE,
+  OwnedCard,
+  SORTS,
+  SortDirection,
+  SortKey,
+  groupByRarity,
+  nextSort,
+  ownedCards,
+  sortOwned,
+} from './collection';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // 1 star
 const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
@@ -68,10 +79,11 @@ describe('the orders', () => {
 
   it('states rarity as the order the collection arrives in', () => {
     expect(DEFAULT_SORT).toBe('rarity');
+    expect(DEFAULT_SORT_STATE).toEqual({ key: 'rarity', direction: 'desc' });
   });
 
   it('descends on the four numeric orders and ascends on name', () => {
-    const direction = (key: SortKey) => SORTS.find((s) => s.key === key)!.direction;
+    const direction = (key: SortKey) => SORTS.find((s) => s.key === key)!.defaultDirection;
     expect(direction('rarity')).toBe('desc');
     expect(direction('quantity')).toBe('desc');
     expect(direction('attack')).toBe('desc');
@@ -182,5 +194,138 @@ describe('sortOwned', () => {
 
     expect(sorted).not.toBe(owned);
     expect(keys(owned)).toEqual(before);
+  });
+});
+
+// ─── Direction ──────────────────────────────────────────────────────────────
+
+describe('reversing an order', () => {
+  const tied = ownedCards(new Map(CARD_DB.map((card, i) => [cardKey(card), (i % 3) + 1] as const)));
+  const everyKey = SORTS.map((s) => s.key);
+  const opposite = (d: SortDirection): SortDirection => (d === 'asc' ? 'desc' : 'asc');
+
+  function primary(entry: OwnedCard, key: SortKey): number | string {
+    switch (key) {
+      case 'rarity':
+        return entry.card.stars;
+      case 'quantity':
+        return entry.quantity;
+      case 'attack':
+        return entry.card.attack;
+      case 'defense':
+        return entry.card.defense;
+      case 'name':
+        return entry.card.name;
+    }
+  }
+
+  it('reverses the primary value for each of the five keys', () => {
+    for (const key of everyKey) {
+      const forward = sortOwned(tied, key).map((e) => primary(e, key));
+      const def = SORTS.find((s) => s.key === key)!.defaultDirection;
+      const back = sortOwned(tied, key, opposite(def)).map((e) => primary(e, key));
+      expect(back).toEqual([...forward].reverse());
+    }
+  });
+
+  it('keeps tied cards in their relative order', () => {
+    for (const key of everyKey) {
+      const forward = keys(sortOwned(tied, key, 'desc'));
+      const back = sortOwned(tied, key, 'asc');
+      // Group both by primary value: within each value, the run must match.
+      const runs = new Map<number | string, CardKey[]>();
+      for (const e of back) {
+        const v = primary(e, key);
+        runs.set(v, [...(runs.get(v) ?? []), cardKey(e.card)]);
+      }
+      for (const run of runs.values()) {
+        const inForward = forward.filter((k) => run.includes(k));
+        expect(run).toEqual(inForward);
+      }
+    }
+  });
+
+  it('reads name descending Z to A', () => {
+    const names = sortOwned(tied, 'name', 'desc').map((o) => o.card.name);
+    expect(names).toEqual([...names].sort((a, b) => b.localeCompare(a, 'en')));
+  });
+
+  it("defaults to the key's own direction when none is given", () => {
+    for (const sort of SORTS) {
+      expect(keys(sortOwned(tied, sort.key))).toEqual(
+        keys(sortOwned(tied, sort.key, sort.defaultDirection)),
+      );
+    }
+  });
+});
+
+describe('choosing an order', () => {
+  it('flips the direction when the same key is chosen again', () => {
+    expect(nextSort({ key: 'attack', direction: 'desc' }, 'attack')).toEqual({
+      key: 'attack',
+      direction: 'asc',
+    });
+    expect(nextSort({ key: 'attack', direction: 'asc' }, 'attack')).toEqual({
+      key: 'attack',
+      direction: 'desc',
+    });
+  });
+
+  it('opens a new key in its default direction', () => {
+    expect(nextSort({ key: 'attack', direction: 'asc' }, 'name')).toEqual({
+      key: 'name',
+      direction: 'asc',
+    });
+    expect(nextSort({ key: 'name', direction: 'desc' }, 'rarity')).toEqual({
+      key: 'rarity',
+      direction: 'desc',
+    });
+  });
+});
+
+// ─── Rarity sections ────────────────────────────────────────────────────────
+
+describe('grouping by rarity', () => {
+  const whole = ownedCards(new Map(CARD_DB.map((card) => [cardKey(card), 1] as const)));
+
+  it('follows the direction of its input', () => {
+    const down = groupByRarity(sortOwned(whole, 'rarity', 'desc')).map((s) => s.stars);
+    const up = groupByRarity(sortOwned(whole, 'rarity', 'asc')).map((s) => s.stars);
+    expect(down).toEqual([...down].sort((a, b) => b - a));
+    expect(up).toEqual([...down].reverse());
+  });
+
+  it('presents no empty section and no rating twice', () => {
+    const owned = ownedCards(
+      new Map([
+        [cardKey(crawlid), 1],
+        [cardKey(goam), 1],
+      ]),
+    );
+    const sections = groupByRarity(sortOwned(owned, 'rarity'));
+    expect(sections.map((s) => s.stars)).toEqual([4, 1]);
+    for (const s of sections) expect(s.entries.length).toBeGreaterThan(0);
+  });
+
+  it("states each section's first flat index", () => {
+    const sorted = sortOwned(whole, 'rarity');
+    for (const section of groupByRarity(sorted)) {
+      expect(sorted[section.start]).toBe(section.entries[0]);
+    }
+  });
+
+  it('reproduces its input exactly when the sections are concatenated', () => {
+    const sorted = sortOwned(whole, 'rarity', 'asc');
+    expect(groupByRarity(sorted).flatMap((s) => s.entries)).toEqual(sorted);
+  });
+
+  it('holds only cards of its own rating in each section', () => {
+    for (const section of groupByRarity(sortOwned(whole, 'rarity'))) {
+      for (const entry of section.entries) expect(entry.card.stars).toBe(section.stars);
+    }
+  });
+
+  it('returns nothing for an empty collection', () => {
+    expect(groupByRarity([])).toEqual([]);
   });
 });

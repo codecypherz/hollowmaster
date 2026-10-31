@@ -1,34 +1,78 @@
-<div class="grid">
-  @for (entry of owned(); track entry.card) {
-    <div class="tile" [style.--index]="$index">
-      <app-card
-        [card]="entry.card"
-        interactive
-        selectable
-        [selected]="openIndex() === $index"
-        (select)="selectCard.emit($index)"
-      />
-
-      <!-- Straddling the card's lower rim in the gap between the S and SE
-           chevrons, so nothing the renderer drew is covered. Shown for every
-           tile, a card held once included. -->
-      <span class="badge" [attr.aria-label]="entry.quantity + ' held'">
-        <span aria-hidden="true">×{{ entry.quantity }}</span>
-      </span>
-
-      @if (openIndex() === $index) {
-        <app-card-menu
-          [label]="addLabel()"
-          [available]="addAvailable()"
-          [reason]="addReason()"
-          [cardName]="entry.card.name"
-          (primary)="addCard.emit($index)"
-          (read)="readCard.emit($index)"
-          (dismiss)="dismissMenu.emit()"
-        />
-      }
-    </div>
-  } @empty {
+@let all = keyed();
+@if (all.length === 0 || (all.length === 1 && all[0].tiles.length === 0)) {
+  <div class="grid">
     <p class="grid-empty">Your collection is empty.</p>
+  </div>
+} @else if (all.length === 1 && all[0].stars === null) {
+  <!-- Every order but rarity: one run, no headings. -->
+  <div class="grid">
+    @for (entry of all[0].tiles; track entry.key) {
+      <ng-container
+        *ngTemplateOutlet="tileTpl; context: { $implicit: entry.tile, index: entry.index }"
+      />
+    }
+  </div>
+} @else {
+  @for (section of all; track section.stars) {
+    <section class="rarity-section" [attr.aria-labelledby]="'rarity-' + section.stars">
+      <!-- Scrolls with the collection; not sticky. The glyphs are for the eye,
+           the words for assistive technology. -->
+      <h2 class="section-head" [id]="'rarity-' + section.stars">
+        <span class="section-stars" aria-hidden="true">{{ starGlyphs(section.stars!) }}</span>
+        <span class="section-words">{{ starsText(section.stars!) }}</span>
+      </h2>
+      <div class="grid">
+        @for (entry of section.tiles; track entry.key) {
+          <ng-container
+            *ngTemplateOutlet="tileTpl; context: { $implicit: entry.tile, index: entry.index }"
+          />
+        }
+      </div>
+    </section>
   }
-</div>
+}
+
+<ng-template #tileTpl let-tile let-index="index">
+  <div class="tile" [attr.data-index]="index" [style.--index]="index">
+    <app-card
+      [card]="tile.card"
+      interactive
+      selectable
+      [selected]="openIndex() === index"
+      (select)="selectCard.emit(index)"
+    />
+
+    <!-- Straddling the card's lower rim in the gap between the S and SE
+         chevrons, so nothing the renderer drew is covered. Shown for every
+         tile, a card held once included. With a deck selected it reads
+         used / held — the held figure the heavier — and when every copy is
+         used it inverts and gains a check, so exhaustion survives with colour
+         removed. -->
+    @let exhausted = deckName() !== null && tile.used >= tile.quantity;
+    <span class="badge" [class.is-exhausted]="exhausted" [attr.aria-label]="badgeLabel(tile)">
+      @if (deckName() === null) {
+        <span aria-hidden="true">×{{ tile.quantity }}</span>
+      } @else {
+        <span aria-hidden="true">
+          @if (exhausted) {
+            <span class="badge-mark">✓</span>
+          }
+          <span class="used">{{ tile.used }}</span
+          ><span class="badge-sep">/</span><span class="held">{{ tile.quantity }}</span></span
+        >
+      }
+    </span>
+
+    @if (openIndex() === index) {
+      <app-card-menu
+        [label]="addLabel()"
+        [available]="tile.addReason === ''"
+        [reason]="tile.addReason"
+        [cardName]="tile.card.name"
+        (primary)="addCard.emit(index)"
+        (read)="readCard.emit(index)"
+        (dismiss)="dismissMenu.emit()"
+      />
+    }
+  </div>
+</ng-template>

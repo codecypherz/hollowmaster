@@ -150,20 +150,50 @@ export function deleteDeck(state: UserState, deckIndex: number): UserState | nul
   return { ...state, decks: state.decks.filter((_, i) => i !== deckIndex) };
 }
 
+/** How many copies of `card` that deck holds. */
+export function copiesInDeck(deck: Deck, card: Card): number {
+  const key = cardKey(card);
+  let copies = 0;
+  for (const held of deck.cards) if (held === key) copies++;
+  return copies;
+}
+
+/** A reason an addition is refused. */
+export type AddRefusal = 'no-deck' | 'full' | 'unowned' | 'exhausted';
+
+/**
+ * Why adding `card` to that deck would be refused, or `null` when it would not.
+ *
+ * - `no-deck`: the index names no deck.
+ * - `full`: the deck already holds `DECK_SIZE` cards.
+ * - `unowned`: the collection holds no copy of the card.
+ * - `exhausted`: the deck already holds as many copies as the collection does.
+ *
+ * `addCardToDeck` reads its refusal from here, so the page's "why not" can
+ * never disagree with the operation itself. The rarity limit is deliberately
+ * absent: it governs the deck's standing, not what editing allows.
+ */
+export function addRefusal(state: UserState, deckIndex: number, card: Card): AddRefusal | null {
+  if (!holdsDeck(state, deckIndex)) return 'no-deck';
+  const deck = state.decks[deckIndex];
+  if (deck.cards.length >= DECK_SIZE) return 'full';
+  const held = quantityOf(state.collection, card);
+  if (held === 0) return 'unowned';
+  if (copiesInDeck(deck, card) >= held) return 'exhausted';
+  return null;
+}
+
 /**
  * The user with `card` in that deck's first free position, or `null`.
  *
- * Refused when the index names no deck, when the deck is already full, or when
- * the collection holds no copy of the card. Quantity is *not* a limit beyond
- * that: one copy held permits nine in this deck and the same card in every
- * other deck at once, and nothing about the collection changes.
+ * Refused for any reason `addRefusal` gives. The quantity held bounds how many
+ * copies *this* deck may hold, and only this deck: the bound is not shared, so
+ * one copy held permits that card once in every deck at the same time. Nothing
+ * about the collection changes — a card placed in a deck is not spent.
  */
 export function addCardToDeck(state: UserState, deckIndex: number, card: Card): UserState | null {
-  if (!holdsDeck(state, deckIndex)) return null;
+  if (addRefusal(state, deckIndex, card) !== null) return null;
   const deck = state.decks[deckIndex];
-  if (deck.cards.length >= DECK_SIZE) return null;
-  if (quantityOf(state.collection, card) === 0) return null;
-
   return replaceDeck(state, deckIndex, { cards: [...deck.cards, cardKey(card)] });
 }
 

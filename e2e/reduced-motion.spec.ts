@@ -206,21 +206,41 @@ test('the Cards page presents its cards, menus, and reader without animation', a
   await page.keyboard.press('Escape');
 
   // And every state the motion would have carried is still distinguishable:
-  // the selected tab, the selected card, and the card's place in the deck.
-  const marks = await deckTabs(page).evaluateAll((els) =>
+  // the selected deck button, the selected card, and the card's place in the
+  // deck. The selected button's face — filled and heavier — is not motion.
+  const faces = await deckTabs(page).evaluateAll((els) =>
     els.map((el) => ({
-      selected: el.getAttribute('aria-selected'),
-      markOpacity: getComputedStyle(el.querySelector('.tab-mark')!).opacity,
+      pressed: el.getAttribute('aria-pressed'),
+      weight: getComputedStyle(el).fontWeight,
+      ground: getComputedStyle(el).backgroundColor,
     })),
   );
-  for (const mark of marks) {
-    expect(Number(mark.markOpacity)).toBe(mark.selected === 'true' ? 1 : 0);
-  }
+  const selected = faces.find((f) => f.pressed === 'true')!;
+  const other = faces.find((f) => f.pressed === 'false')!;
+  expect(selected.weight).not.toBe(other.weight);
+  expect(selected.ground).not.toBe(other.ground);
 
   await openCardMenu(tile);
   await expect(tile.locator('app-card button')).toHaveAttribute('aria-pressed', 'true');
   await expect(deckCards(page)).toHaveCount(1);
   await expect(page.locator('app-deck-bar .slot-empty')).toHaveCount(8);
+  await page.keyboard.press('Escape');
+
+  // A reorder is immediate: the tiles are in their new order with nothing
+  // running on any of them.
+  await page
+    .locator('.sort-options')
+    .getByRole('button', { name: /^Name\b/ })
+    .click();
+  await expect(page.locator('.sort-option.is-active')).toHaveText(/^\s*Name\b/);
+  const moving = await collectionTiles(page).evaluateAll((els) =>
+    els.map((el) => ({
+      animations: el.getAnimations().length,
+      opacity: getComputedStyle(el).opacity,
+    })),
+  );
+  expect(moving.length).toBeGreaterThan(0);
+  for (const tile of moving) expect(tile).toEqual({ animations: 0, opacity: '1' });
 
   await expectNoScroll(page);
 });

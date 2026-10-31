@@ -31,6 +31,50 @@
   padding: 20px 16px 32px;
 }
 
+/* ─── Rarity sections ─────────────────────────────────────────────────────────
+   Inside the one scrolling region and not sticky: a heading scrolls away with
+   its section. Each section's grid drops the outer grid's top padding so the
+   heading, not a gap, introduces it.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.rarity-section .grid {
+  padding-top: 10px;
+  padding-bottom: 12px;
+}
+
+.rarity-section:last-child .grid {
+  padding-bottom: 32px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  padding: 16px 16px 0;
+  font-family: var(--font-ui);
+  font-size: 0.58rem;
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+/* A hairline either side, so the label reads as a divider, not a title. */
+.section-head::before,
+.section-head::after {
+  content: '';
+  flex: 0 1 120px;
+  height: 1px;
+  background: var(--color-section-border);
+}
+
+.section-stars {
+  letter-spacing: 0.1em;
+  color: var(--color-gold-dim);
+}
+
 .tile {
   /* The positioning context the action menu is placed within, so raising one
      cannot reflow the grid around it. */
@@ -74,6 +118,40 @@
   border: 1px solid var(--color-gold-dim);
   border-radius: 10px;
   pointer-events: none;
+  white-space: nowrap;
+}
+
+/* used / held: the used figure in soul at regular weight, the held figure in
+   gold and heavier, so held reads as the primary number. */
+.badge .used {
+  color: var(--color-soul);
+}
+
+.badge .badge-sep {
+  margin: 0 0.25em;
+  color: var(--color-text-dim);
+}
+
+.badge .held {
+  font-weight: 700;
+}
+
+/* Every held copy is in this deck: the pill inverts — a luminance cue — and
+   gains a check — a shape cue — so the state survives with colour removed. */
+.badge.is-exhausted {
+  color: var(--color-void);
+  background: var(--color-gold-light);
+  border-color: var(--color-gold-light);
+}
+
+.badge.is-exhausted .used,
+.badge.is-exhausted .badge-sep {
+  color: inherit;
+}
+
+.badge-mark {
+  margin-right: 0.3em;
+  font-weight: 700;
 }
 
 .grid-empty {
@@ -87,6 +165,50 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* ─── Rarity sections ─────────────────────────────────────────────────────────
+   Inside the one scrolling region and not sticky: a heading scrolls away with
+   its section. Each section's grid drops the outer grid's top padding so the
+   heading, not a gap, introduces it.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+  .rarity-section .grid {
+    padding-top: 10px;
+    padding-bottom: 12px;
+  }
+
+  .rarity-section:last-child .grid {
+    padding-bottom: 32px;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0;
+    padding: 16px 16px 0;
+    font-family: var(--font-ui);
+    font-size: 0.58rem;
+    font-weight: 400;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+  }
+
+  /* A hairline either side, so the label reads as a divider, not a title. */
+  .section-head::before,
+  .section-head::after {
+    content: '';
+    flex: 0 1 120px;
+    height: 1px;
+    background: var(--color-section-border);
+  }
+
+  .section-stars {
+    letter-spacing: 0.1em;
+    color: var(--color-gold-dim);
+  }
+
   .tile {
     animation: none;
   }

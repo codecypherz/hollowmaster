@@ -1,71 +1,68 @@
 <div class="bar">
-  <!-- ─── The tabs ──────────────────────────────────────────────────────────
-       One tab per deck, named by its position. The roving tabindex is what
-       makes the strip one tab stop: arrow keys move between decks inside it,
-       so the whole strip does not stand between the player and the deck. -->
+  <!-- ─── The deck buttons and their controls ───────────────────────────────
+       One centred row: a button per deck, then the separator and the two
+       controls as one unit that never splits, so a wrap cannot strand the
+       separator away from the controls it introduces. -->
   <div class="tab-row">
-    <div class="tab-strip">
-      @if (decks().length > 0) {
-        <div class="tabs" role="tablist" aria-label="Your decks">
-          @for (name of names(); track $index) {
-            <!-- Only the selected tab spells out "Deck"; the others show the
-                 numeral alone. The accessible name is the full name either
-                 way, so a screen reader never hears a bare number. -->
-            <button
-              type="button"
-              class="deck-tab"
-              role="tab"
-              [class.is-selected]="selectedIndex() === $index"
-              [attr.aria-selected]="selectedIndex() === $index"
-              [attr.aria-label]="name"
-              [tabindex]="focusedTab() === $index ? 0 : -1"
-              (click)="focusedTab.set($index); selectDeck.emit($index)"
-              (keydown)="onTabKeydown($event, $index)"
-            >
-              <!-- The mark is the non-colour cue: present on the selected tab
-                   and absent on the others, so the selection survives with
-                   colour removed. -->
-              <span class="tab-mark" aria-hidden="true"></span>
-              <span class="tab-label">{{ selectedIndex() === $index ? name : $index + 1 }}</span>
-            </button>
-          }
-        </div>
-      }
-    </div>
+    @if (decks().length > 0) {
+      <div class="deck-buttons" role="group" aria-label="Your decks">
+        @for (name of names(); track $index) {
+          <!-- Only the selected button spells out "Deck"; the others show the
+               numeral alone. The accessible name is the full name either way,
+               so a screen reader never hears a bare number. -->
+          <button
+            type="button"
+            class="deck-btn"
+            [class.is-selected]="selectedIndex() === $index"
+            [attr.aria-pressed]="selectedIndex() === $index"
+            [attr.aria-label]="name"
+            (click)="selectDeck.emit($index)"
+          >
+            {{ selectedIndex() === $index ? name : $index + 1 }}
+          </button>
+        }
+      </div>
+    }
 
-    <!-- The controls are their own group behind a rule, pinned to the row's
-         end, so neither reads as another tab however many tabs there are. -->
-    <span class="controls-sep" aria-hidden="true"></span>
-    <div class="deck-controls" role="group" aria-label="Deck controls">
-      @if (canCreate()) {
+    <div class="deck-controls-unit">
+      <span class="controls-sep" aria-hidden="true"></span>
+      <div class="deck-controls" role="group" aria-label="Deck controls">
+        <!-- At the limit the control stays where it is, disabled: the place
+             the player looks for it still answers, with the reason. Not the
+             native `disabled`, which would take it out of the tab order and
+             in some browsers suppress the hover that shows the tooltip. -->
         <button
           type="button"
           class="icon-btn create-deck"
+          [class.is-disabled]="!canCreate()"
           aria-label="New deck"
-          data-tip="New deck"
-          (click)="createDeck.emit()"
+          [attr.aria-disabled]="canCreate() ? null : 'true'"
+          [attr.aria-describedby]="canCreate() ? null : 'deck-limit-reason'"
+          [attr.data-tip]="canCreate() ? 'New deck' : limitText"
+          (click)="onCreate()"
         >
           <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
             <path d="M8 2.5v11M2.5 8h11" />
           </svg>
         </button>
-      } @else {
-        <p class="bar-note">{{ maxDecks }} decks is the limit.</p>
-      }
+        @if (!canCreate()) {
+          <span id="deck-limit-reason" class="sr-only">{{ limitText }}</span>
+        }
 
-      @if (selectedIndex() !== null) {
-        <button
-          type="button"
-          class="icon-btn delete-deck"
-          [attr.aria-label]="'Delete ' + selectedName()"
-          [attr.data-tip]="'Delete ' + selectedName()"
-          (click)="askToDelete()"
-        >
-          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-            <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.75 6.5v4.5M9.25 6.5v4.5" />
-          </svg>
-        </button>
-      }
+        @if (selectedIndex() !== null) {
+          <button
+            type="button"
+            class="icon-btn delete-deck"
+            [attr.aria-label]="'Delete ' + selectedName()"
+            [attr.data-tip]="'Delete ' + selectedName()"
+            (click)="askToDelete()"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.75 6.5v4.5M9.25 6.5v4.5" />
+            </svg>
+          </button>
+        }
+      </div>
     </div>
   </div>
 
@@ -136,19 +133,11 @@
 </div>
 
 @if (confirming()) {
-  <div class="confirm-scrim" aria-hidden="true" (click)="confirming.set(false)"></div>
-  <div
-    class="confirm"
-    role="alertdialog"
-    aria-modal="true"
-    [attr.aria-label]="'Delete ' + selectedName()"
-  >
-    <p class="confirm-text">Delete {{ selectedName() }}? Its cards stay in your collection.</p>
-    <div class="confirm-actions">
-      <button type="button" class="bar-control confirm-yes" (click)="confirmDelete()">
-        Delete {{ selectedName() }}
-      </button>
-      <button type="button" class="bar-control" (click)="confirming.set(false)">Keep it</button>
-    </div>
-  </div>
+  <app-confirm-dialog
+    [message]="'Delete ' + selectedName() + '? Its cards stay in your collection.'"
+    [confirmLabel]="'Delete ' + selectedName()"
+    cancelLabel="Keep it"
+    (confirm)="confirmDelete()"
+    (cancel)="confirming.set(false)"
+  />
 }

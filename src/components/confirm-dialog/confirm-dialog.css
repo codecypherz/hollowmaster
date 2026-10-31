@@ -1,0 +1,103 @@
+/* ─── The confirmation overlay ────────────────────────────────────────────────
+   Fixed to the viewport, above everything on the page, so asking a question
+   never moves anything under the player.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.confirm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--color-scrim);
+  animation: fadeIn var(--dur-fast) ease both;
+}
+
+.confirm {
+  position: fixed;
+  z-index: 71;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: max-content;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 20px 24px;
+  background: linear-gradient(180deg, var(--color-deep) 0%, var(--color-void) 100%);
+  border: 1px solid var(--color-section-border);
+  box-shadow: var(--elev-overlay);
+  animation: fadeIn var(--dur-fast) ease both;
+}
+
+.confirm.is-danger {
+  border-color: var(--color-crimson-dim);
+}
+
+.confirm-text {
+  margin: 0;
+  font-family: var(--font-flavor);
+  font-size: 0.9rem;
+  color: var(--color-text-bright);
+  text-align: center;
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.confirm-btn {
+  padding: 6px 12px;
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--color-text-bright);
+  background: var(--color-surface);
+  border: 1px solid var(--color-section-border);
+  border-radius: 2px;
+  transition:
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+}
+
+.confirm-btn:hover {
+  color: var(--color-soul-bright);
+  border-color: var(--color-soul-dim);
+  box-shadow: var(--elev-glow-soul);
+}
+
+.confirm-btn:focus-visible {
+  outline: 2px solid var(--color-soul);
+  outline-offset: 2px;
+}
+
+.is-danger .confirm-yes:hover {
+  color: var(--color-crimson);
+  border-color: var(--color-crimson-dim);
+  box-shadow: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-scrim,
+  .confirm {
+    animation: none;
+  }
+
+  .confirm-btn {
+    transition: none;
+  }
+}

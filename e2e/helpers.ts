@@ -263,9 +263,14 @@ export async function openCards(page: Page): Promise<void> {
   await expect(collectionTiles(page).first()).toBeVisible();
 }
 
-/** The deck tabs, in the order the strip lays them out. */
+/** The deck buttons, in the order the row lays them out. */
 export function deckTabs(page: Page): Locator {
-  return page.locator('app-deck-bar .deck-tab');
+  return page.locator('app-deck-bar .deck-btn');
+}
+
+/** The button for one deck, by its full positional name. */
+export function deckButton(page: Page, name: string): Locator {
+  return page.locator('app-deck-bar').getByRole('button', { name, exact: true });
 }
 
 /** The selected deck's nine positions, filled or free. */
@@ -333,10 +338,22 @@ export function collectionTiles(page: Page): Locator {
   return page.locator('app-collection-grid .tile');
 }
 
-/** The count a tile's badge states. */
+/**
+ * The held count a tile's badge states. With a deck selected the badge reads
+ * `used / held`, and this is the held figure; with none it reads `×held`.
+ */
 export async function badgeCount(tile: Locator): Promise<number> {
-  const text = await tile.locator('.badge').innerText();
+  const badge = tile.locator('.badge');
+  const held = badge.locator('.held');
+  const text = (await held.count()) > 0 ? await held.innerText() : await badge.innerText();
   return Number(text.replace(/\D/g, ''));
+}
+
+/** The collection tile for the card of that name. */
+export function tileNamed(page: Page, name: string): Locator {
+  return collectionTiles(page).filter({
+    has: page.locator('.cf-name-text', { hasText: new RegExp(`^${name}$`, 'i') }),
+  });
 }
 
 /** The one open action menu, if any. */

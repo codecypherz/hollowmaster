@@ -14,6 +14,7 @@ import {
   deckTabs,
   expectNoScroll,
   expectPartsOnScreen,
+  deckButton,
   deckControls,
   deckStanding,
   openCardsAs,
@@ -22,6 +23,8 @@ import {
   openCardMenu,
   openCards,
   openMenu,
+  purse,
+  tileNamed,
   type Size,
 } from './helpers';
 
@@ -48,18 +51,33 @@ const DEFAULT: Size = { width: 1440, height: 900 };
 /** One of the five ordering controls, by the name it states. */
 function sortControl(page: Page, order: string) {
   // Scoped to the control: a card's own accessible label states its attack and
-  // its defense, so an unscoped search by those names finds cards too.
-  return page.locator('.sort-options').getByRole('button', { name: order, exact: true });
+  // its defense, so an unscoped search by those names finds cards too. The
+  // active order's name goes on to state its direction, so the match is on
+  // the leading word.
+  return page.locator('.sort-options').getByRole('button', { name: new RegExp(`^${order}\\b`) });
 }
 
-/** Chooses an order and waits for the page to be showing it. */
+/**
+ * Chooses an order and waits for the page to be showing it. Choosing the order
+ * already in effect reverses it, so a caller that wants the default direction
+ * chooses a different order first.
+ */
 async function chooseOrder(page: Page, order: string): Promise<void> {
   await sortControl(page, order).click();
-  // The label is drawn uppercase with padding whitespace, so the match is on
-  // the word rather than on the node's exact text.
-  await expect(page.locator('.sort-option.is-active')).toHaveText(
-    new RegExp(`^\\s*${order}\\s*$`, 'i'),
-  );
+  await expect(sortControl(page, order)).toHaveAttribute('aria-pressed', 'true');
+}
+
+/** The direction the active order states to assistive technology. */
+async function activeDirection(page: Page): Promise<string> {
+  const name = await page.locator('.sort-option.is-active').evaluate((el) => el.textContent ?? '');
+  return /ascending/.test(name) ? 'asc' : /descending/.test(name) ? 'desc' : '';
+}
+
+/** Whether the active order's chevron is turned up. */
+async function chevronTurned(page: Page): Promise<boolean> {
+  return page
+    .locator('.sort-option.is-active .sort-chevron')
+    .evaluate((el) => getComputedStyle(el).rotate === '180deg');
 }
 
 /** The collection's cards, in the order the grid reads them. */
@@ -77,6 +95,8 @@ function pinnedParts(page: Page) {
     remove: page.getByRole('button', { name: /^Delete Deck/ }),
     standing: page.locator('app-deck-bar .deck-standing'),
     sort: page.locator('.sort-option'),
+    chevron: page.locator('.sort-option .sort-chevron'),
+    reset: page.getByRole('button', { name: 'Reset data' }),
     deckRow: page.locator('app-deck-bar .deck-row'),
   };
 }
@@ -115,7 +135,7 @@ test.describe('the Cards page', () => {
     page,
   }) => {
     const active = page.locator('.sort-option.is-active');
-    await expect(active).toHaveText('Rarity');
+    await expect(active).toHaveText(/^\s*Rarity\b/);
 
     const starsOf = () =>
       collectionTiles(page).evaluateAll((els) =>
@@ -127,8 +147,10 @@ test.describe('the Cards page', () => {
     // Every order is offered by name, and choosing one reorders the grid.
     // The labels are drawn uppercase by the stylesheet, so the comparison is
     // of the words rather than of their casing.
+    // The active option goes on to state its direction to assistive
+    // technology, so only the leading word is the order's name.
     const names = await page.locator('.sort-option').allInnerTexts();
-    expect(names.map((n) => n.trim().toLowerCase())).toEqual([
+    expect(names.map((n) => n.split(',')[0].trim().toLowerCase())).toEqual([
       'rarity',
       'quantity',
       'name',
@@ -143,19 +165,22 @@ test.describe('the Cards page', () => {
     expect(byName).toEqual([...byName].sort((a, b) => a.localeCompare(b, 'en')));
 
     // Every one of the five takes effect and is marked as the one in effect.
+    // Each iteration starts from a different order than the one it chooses,
+    // so every choice applies that order's default direction.
     for (const order of ['Rarity', 'Quantity', 'Name', 'Attack', 'Defense']) {
+      const other = order === 'Name' ? 'Rarity' : 'Name';
       await chooseOrder(page, order);
       await expect(page.locator('.sort-option.is-active')).toHaveCount(1);
       // The sequence the grid reads in is the one that order asks for, and it
       // is the same sequence every time that order is chosen.
       const once = await tileNames(page);
-      await chooseOrder(page, 'Rarity');
+      await chooseOrder(page, other);
       await chooseOrder(page, order);
       expect(await tileNames(page)).toEqual(once);
     }
 
     // And the deck on screen is untouched by a reorder.
-    await expect(deckTabs(page).first()).toHaveClass(/is-selected/);
+    await expect(deckTabs(page).first()).toHaveAttribute('aria-pressed', 'true');
     await expect(deckCards(page)).toHaveCount(0);
   });
 });
@@ -205,51 +230,128 @@ test.describe('the width bands', () => {
 
 // ─── 13.4 The count badge ───────────────────────────────────────────────────
 
-test('a badge states the count and obscures nothing the card draws', async ({ page }) => {
-  await page.setViewportSize(DEFAULT);
-  await openCards(page);
+/** The starter collection, one copy each, plus one Goam (FC 6, four stars). */
+const STARTERS = [1, 7, 8, 9, 10, 11, 12, 13, 14].map((number) => ({
+  set: 'FC',
+  number,
+  quantity: 1,
+}));
+const GOAM = { set: 'FC', number: 6 };
+const CRAWLID = { set: 'FC', number: 1 };
 
-  // Every card is held once at the seed; two more copies of one of them make a
-  // count worth stating, granted the way a pack would grant them.
-  await page.evaluate(() => localStorage.clear());
-  await openCards(page);
+/** The starters, with Crawlid raised to `quantity`. */
+function startersWithCrawlid(quantity: number) {
+  return STARTERS.map((entry) => (entry.number === 1 ? { ...entry, quantity } : entry));
+}
 
-  const first = collectionTiles(page).first();
-  expect(await badgeCount(first)).toBe(1);
+for (const widest of [false, true]) {
+  const title = widest ? ' at 9 / 9' : '';
+  test(`a badge states the count and obscures nothing the card draws${title}`, async ({ page }) => {
+    await page.setViewportSize(DEFAULT);
+    if (widest) {
+      // The widest figure a seeded collection reaches: nine held, nine used.
+      await openCardsAs(page, {
+        collection: startersWithCrawlid(9),
+        decks: [Array(DECK_SIZE).fill(CRAWLID)],
+      });
+    } else {
+      await openCards(page);
+      await page.evaluate(() => localStorage.clear());
+      await openCards(page);
+    }
 
-  // The badge is drawn over the card, and everything the renderer draws is
-  // still on screen underneath it.
-  const visible = await first.evaluate((tile) => {
-    const badge = tile.querySelector('.badge')!.getBoundingClientRect();
-    const hidden = (el: Element) => {
-      const box = el.getBoundingClientRect();
-      if (box.width === 0 || box.height === 0) return true;
-      // Wholly behind the badge.
-      return (
-        box.left >= badge.left &&
-        box.right <= badge.right &&
-        box.top >= badge.top &&
-        box.bottom <= badge.bottom
+    const first = widest ? tileNamed(page, 'Crawlid') : collectionTiles(page).first();
+    expect(await badgeCount(first)).toBe(widest ? 9 : 1);
+    if (widest) await expect(first.locator('.badge')).toHaveClass(/is-exhausted/);
+
+    // The badge is drawn over the card, and everything the renderer draws is
+    // still on screen underneath it.
+    const visible = await first.evaluate((tile) => {
+      const badge = tile.querySelector('.badge')!.getBoundingClientRect();
+      const hidden = (el: Element) => {
+        const box = el.getBoundingClientRect();
+        if (box.width === 0 || box.height === 0) return true;
+        // Wholly behind the badge.
+        return (
+          box.left >= badge.left &&
+          box.right <= badge.right &&
+          box.top >= badge.top &&
+          box.bottom <= badge.bottom
+        );
+      };
+      const parts = {
+        name: [...tile.querySelectorAll('app-card .cf-name-text')],
+        stars: [...tile.querySelectorAll('app-card .star')],
+        bars: [...tile.querySelectorAll('app-card .stat-bar')],
+        chevrons: [...tile.querySelectorAll('app-card .arr')],
+      };
+      return Object.fromEntries(
+        Object.entries(parts).map(([key, els]) => [
+          key,
+          { count: els.length, obscured: els.filter(hidden).length },
+        ]),
       );
-    };
-    const parts = {
-      name: [...tile.querySelectorAll('app-card .cf-name-text')],
-      stars: [...tile.querySelectorAll('app-card .star')],
-      bars: [...tile.querySelectorAll('app-card .stat-bar')],
-      chevrons: [...tile.querySelectorAll('app-card .arr')],
-    };
-    return Object.fromEntries(
-      Object.entries(parts).map(([key, els]) => [
-        key,
-        { count: els.length, obscured: els.filter(hidden).length },
-      ]),
-    );
-  });
+    });
 
-  expect(visible['name']).toEqual({ count: 1, obscured: 0 });
-  expect(visible['stars']).toEqual({ count: 5, obscured: 0 });
-  expect(visible['bars']).toEqual({ count: 2, obscured: 0 });
-  expect(visible['chevrons']).toEqual({ count: 8, obscured: 0 });
+    expect(visible['name']).toEqual({ count: 1, obscured: 0 });
+    expect(visible['stars']).toEqual({ count: 5, obscured: 0 });
+    expect(visible['bars']).toEqual({ count: 2, obscured: 0 });
+    expect(visible['chevrons']).toEqual({ count: 8, obscured: 0 });
+
+    if (widest) await first.screenshot({ path: 'test-results/cards-badge-9-of-9.png' });
+  });
+}
+
+test('the badge states used of held, per deck', async ({ page }) => {
+  await page.setViewportSize(DEFAULT);
+  await openCardsAs(page, { collection: startersWithCrawlid(3), decks: [[], []] });
+
+  const crawlid = tileNamed(page, 'Crawlid');
+  const badge = crawlid.locator('.badge');
+  await expect(badge).toHaveAttribute('aria-label', '0 of 3 in Deck 1');
+
+  for (let i = 0; i < 2; i++) {
+    await openCardMenu(crawlid);
+    await page.getByRole('button', { name: 'Add to Deck 1' }).click();
+  }
+  await expect(badge).toHaveAttribute('aria-label', '2 of 3 in Deck 1');
+  await expect(badge).not.toHaveClass(/is-exhausted/);
+  // Used first and subordinate, held second and heavier.
+  await expect(badge.locator('.used')).toHaveText('2');
+  await expect(badge.locator('.held')).toHaveText('3');
+  const weights = await badge.evaluate((el) => ({
+    used: Number(getComputedStyle(el.querySelector('.used')!).fontWeight),
+    held: Number(getComputedStyle(el.querySelector('.held')!).fontWeight),
+  }));
+  expect(weights.held).toBeGreaterThan(weights.used);
+
+  await openCardMenu(crawlid);
+  await page.getByRole('button', { name: 'Add to Deck 1' }).click();
+  await expect(badge).toHaveAttribute('aria-label', '3 of 3 in Deck 1');
+  await expect(badge).toHaveClass(/is-exhausted/);
+  await expect(badge).toContainText('✓');
+
+  const menu = await openCardMenu(crawlid);
+  await expect(menu.locator('.action-primary')).toHaveCount(0);
+  await expect(menu.locator('.reason')).toHaveText('Every copy you hold is already in Deck 1.');
+  await page.keyboard.press('Escape');
+
+  await deckButton(page, 'Deck 2').click();
+  await expect(badge).toHaveAttribute('aria-label', '0 of 3 in Deck 2');
+  await expect(badge).not.toHaveClass(/is-exhausted/);
+  const offered = await openCardMenu(crawlid);
+  await expect(offered.getByRole('button', { name: 'Add to Deck 2' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // With no deck at all, the badge states the held count alone.
+  for (const name of ['Delete Deck 2', 'Delete Deck 1']) {
+    await page.getByRole('button', { name, exact: true }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name }).click();
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  }
+  await expect(deckTabs(page)).toHaveCount(0);
+  await expect(badge).toHaveAttribute('aria-label', '3 held');
+  await expect(badge).toHaveText(/×3/);
 });
 
 // ─── 13.5 Building a deck ───────────────────────────────────────────────────
@@ -261,15 +363,15 @@ test('a deck is built, filled, trimmed, and survives a reload', async ({ page })
   // A second deck, created from the page and selected on arrival.
   await page.getByRole('button', { name: 'New deck', exact: true }).click();
   await expect(deckTabs(page)).toHaveCount(2);
-  await expect(deckTabs(page).nth(1)).toHaveClass(/is-selected/);
+  await expect(deckTabs(page).nth(1)).toHaveAttribute('aria-pressed', 'true');
   await expect(deckCards(page)).toHaveCount(0);
 
   const tile = collectionTiles(page).first();
   const name = (await tile.locator('app-card .cf-name-text').innerText()).trim();
 
-  // The same card nine times, from one held copy.
+  // The nine starters, one copy each — every card the seeded player holds.
   for (let i = 0; i < DECK_SIZE; i++) {
-    await openCardMenu(tile);
+    await openCardMenu(collectionTiles(page).nth(i));
     await page.getByRole('button', { name: `Add to Deck 2` }).click();
     await expect(deckCards(page)).toHaveCount(i + 1);
   }
@@ -298,7 +400,7 @@ test('a deck is built, filled, trimmed, and survives a reload', async ({ page })
   // And none of it needed saving.
   await page.reload();
   await openCards(page);
-  await page.getByRole('tab', { name: 'Deck 2' }).click();
+  await deckButton(page, 'Deck 2').click();
   await expect(deckCards(page)).toHaveCount(DECK_SIZE - 1);
   await expect(deckCards(page).first().locator('.cf-name-text')).toHaveText(
     new RegExp(`^${name}$`, 'i'),
@@ -329,7 +431,7 @@ test('the reader withholds the add with the same reason the menu states', async 
 
   const tile = collectionTiles(page).first();
   for (let i = 0; i < DECK_SIZE; i++) {
-    await openCardMenu(tile);
+    await openCardMenu(collectionTiles(page).nth(i));
     await page.getByRole('button', { name: 'Add to Deck 1' }).click();
   }
   await expect(deckCards(page)).toHaveCount(DECK_SIZE);
@@ -353,10 +455,11 @@ test('the reader withholds the add with the same reason the menu states', async 
 
 test('removing the second of three copies leaves the other two in order', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCards(page);
+  // Three copies held, so a deck may hold three.
+  await openCardsAs(page, { collection: startersWithCrawlid(3), decks: [[]] });
 
-  const first = collectionTiles(page).first();
-  const second = collectionTiles(page).nth(1);
+  const first = tileNamed(page, 'Crawlid');
+  const second = tileNamed(page, 'Vengefly');
   for (const tile of [first, first, first, second]) {
     await openCardMenu(tile);
     await page.getByRole('button', { name: 'Add to Deck 1' }).click();
@@ -401,14 +504,18 @@ test('deleting a deck is confirmed, renumbers the rest, and costs no cards', asy
   await expect(deckTabs(page)).toHaveCount(3);
 
   // A card in the deck that is about to go, so its loss is observable.
-  await page.getByRole('tab', { name: 'Deck 2' }).click();
+  await deckButton(page, 'Deck 2').click();
   await openCardMenu(collectionTiles(page).first());
   await page.getByRole('button', { name: 'Add to Deck 2' }).click();
   await expect(deckCards(page)).toHaveCount(1);
 
-  const countsBefore = await collectionTiles(page).evaluateAll((els) =>
-    els.map((el) => el.querySelector('.badge')!.textContent!.trim()),
-  );
+  // The held counts: the used count follows whichever deck is on screen, so
+  // it is not what "costs no cards" is about.
+  const heldCounts = () =>
+    collectionTiles(page).evaluateAll((els) =>
+      els.map((el) => el.querySelector('.badge .held')!.textContent!.trim()),
+    );
+  const countsBefore = await heldCounts();
 
   // Declining leaves the deck exactly as it was, and still on screen.
   await page.getByRole('button', { name: 'Delete Deck 2' }).click();
@@ -429,12 +536,10 @@ test('deleting a deck is confirmed, renumbers the rest, and costs no cards', asy
     'Deck 1',
     'Deck 2',
   ]);
-  await expect(page.locator('app-deck-bar .deck-tab.is-selected')).toHaveCount(1);
+  await expect(page.locator('app-deck-bar .deck-btn[aria-pressed="true"]')).toHaveCount(1);
 
   // The cards it held are all still in the collection, at the same counts.
-  const countsAfter = await collectionTiles(page).evaluateAll((els) =>
-    els.map((el) => el.querySelector('.badge')!.textContent!.trim()),
-  );
+  const countsAfter = await heldCounts();
   expect(countsAfter).toEqual(countsBefore);
 });
 
@@ -458,17 +563,48 @@ test('deleting the last deck leaves the no-decks state', async ({ page }) => {
   await expect(menu.locator('.reason')).toContainText(/create a deck/i);
 });
 
-test('the create control is absent at the deck limit', async ({ page }) => {
+test('the create control is disabled at the deck limit', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
   await openCards(page);
+  const { create } = deckControls(page);
 
-  for (let i = 1; i < MAX_DECKS; i++) {
-    await page.getByRole('button', { name: 'New deck', exact: true }).click();
-  }
+  for (let i = 1; i < MAX_DECKS; i++) await create.click();
   await expect(deckTabs(page)).toHaveCount(MAX_DECKS);
 
-  await expect(page.getByRole('button', { name: 'New deck', exact: true })).toHaveCount(0);
-  await expect(page.locator('app-deck-bar .bar-note')).toContainText(`${MAX_DECKS} decks`);
+  // Still there, in the same place, presented as unavailable.
+  await expect(create).toHaveCount(1);
+  await expect(create).toHaveAttribute('aria-disabled', 'true');
+  await expect(create).toHaveAccessibleDescription(`${MAX_DECKS} decks is the limit`);
+  await expect(page.locator('app-deck-bar .bar-note')).toHaveCount(0);
+
+  // Activating it does nothing. Forced, because Playwright treats an
+  // `aria-disabled` control as not clickable — the page's own guard is what
+  // is under test here.
+  await create.click({ force: true });
+  await expect(deckTabs(page)).toHaveCount(MAX_DECKS);
+
+  // Focus still reaches it, and its tooltip states the limit.
+  await page.mouse.move(0, 0);
+  await deckTabs(page).last().focus();
+  await page.keyboard.press('Tab');
+  await expect(create).toBeFocused();
+  const tip = () =>
+    create.evaluate((el) => ({
+      opacity: getComputedStyle(el, '::after').opacity,
+      content: getComputedStyle(el, '::after').content,
+    }));
+  await expect.poll(tip).toEqual({ opacity: '1', content: `"${MAX_DECKS} decks is the limit"` });
+
+  // Deleting one deck re-enables it.
+  await page.getByRole('button', { name: /^Delete Deck/ }).click();
+  await page
+    .getByRole('alertdialog')
+    .getByRole('button', { name: /^Delete Deck/ })
+    .click();
+  await expect(deckTabs(page)).toHaveCount(MAX_DECKS - 1);
+  await expect(create).not.toHaveAttribute('aria-disabled', 'true');
+  await create.click();
+  await expect(deckTabs(page)).toHaveCount(MAX_DECKS);
 });
 
 // ─── 13.2 The fit ladder ────────────────────────────────────────────────────
@@ -485,6 +621,18 @@ test.describe('the Cards page fits the viewport', () => {
 
       await expectNoScroll(page);
       await expectPartsOnScreen(page, size, pinnedParts(page));
+
+      // The order control and the reset control share one line: every part
+      // of the sort row overlaps every other vertically.
+      const rows = await page.locator('.sort-row').evaluate((row) =>
+        [...row.querySelectorAll('.sort-label, .sort-option, .reset-data')].map((el) => {
+          const box = el.getBoundingClientRect();
+          return { top: box.top, bottom: box.bottom };
+        }),
+      );
+      const lowestTop = Math.max(...rows.map((r) => r.top));
+      const highestBottom = Math.min(...rows.map((r) => r.bottom));
+      expect(lowestTop, `sort row is one line at ${label(size)}`).toBeLessThan(highestBottom);
 
       // No deck position is ever laid out below the renderer's minimum: where
       // the viewport cannot host the row, the region is scaled as a whole
@@ -546,13 +694,23 @@ test('the whole screen is operable by keyboard', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
   await openCards(page);
 
-  // The tabs are one stop, and the selection moves inside it with the arrows.
+  // Each deck button is its own stop, and choosing one needs no pointer.
   await page.getByRole('button', { name: 'New deck', exact: true }).click();
   await expect(deckTabs(page)).toHaveCount(2);
-  await deckTabs(page).nth(1).focus();
-  await page.keyboard.press('ArrowLeft');
+  await deckTabs(page).first().focus();
+  await page.keyboard.press('Tab');
+  await expect(deckTabs(page).nth(1)).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
   await expect(deckTabs(page).first()).toBeFocused();
-  await expect(deckTabs(page).first()).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Enter');
+  await expect(deckTabs(page).first()).toHaveAttribute('aria-pressed', 'true');
+
+  // The active order reverses from the keyboard.
+  await sortControl(page, 'Rarity').focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => activeDirection(page)).toBe('asc');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => activeDirection(page)).toBe('desc');
 
   // A card's menu opens from the keyboard, and focus lands in it.
   const card = collectionTiles(page).first().locator('app-card button');
@@ -609,37 +767,48 @@ test('the whole screen is operable by keyboard', async ({ page }) => {
   await expect(deckTabs(page)).toHaveCount(2);
 });
 
-// ─── The selected tab, without colour ───────────────────────────────────────
+// ─── The selected deck button, without colour ───────────────────────────────
 
-test('the selected tab is marked by more than colour', async ({ page }) => {
+test('the selected deck button is marked by more than colour', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
   await openCards(page);
   await page.getByRole('button', { name: 'New deck', exact: true }).click();
 
-  // The mark is drawn for the selected tab and not for the others, so the
-  // distinction survives colour being taken away.
-  const marks = await deckTabs(page).evaluateAll((els) =>
-    els.map((el) => ({
-      selected: el.getAttribute('aria-selected'),
-      markOpacity: getComputedStyle(el.querySelector('.tab-mark')!).opacity,
-    })),
-  );
+  // A filled ground and a heavier weight, neither of which is a hue. Polled,
+  // because the ground eases between states and the selection just moved.
+  const faces = () =>
+    deckTabs(page).evaluateAll((els) => {
+      const read = (el: Element) => ({
+        weight: getComputedStyle(el).fontWeight,
+        ground: getComputedStyle(el).backgroundColor,
+      });
+      const selected = els.find((el) => el.getAttribute('aria-pressed') === 'true')!;
+      const other = els.find((el) => el.getAttribute('aria-pressed') === 'false')!;
+      return { selected: read(selected), other: read(other) };
+    });
+  await expect.poll(async () => (await faces()).other.ground).toBe('rgba(0, 0, 0, 0)');
+  const { selected, other } = await faces();
+  expect(selected.weight).not.toBe(other.weight);
+  expect(selected.ground).not.toBe(other.ground);
 
-  expect(marks).toHaveLength(2);
-  for (const mark of marks) {
-    expect(Number(mark.markOpacity)).toBe(mark.selected === 'true' ? 1 : 0);
+  // And no diamond or other ornament beside any label.
+  await expect(page.locator('app-deck-bar .tab-mark')).toHaveCount(0);
+  for (const button of await deckTabs(page).all()) {
+    await expect(button.locator('*')).toHaveCount(0);
   }
 });
 
 // ─── Tabs, controls, and the deck's standing ────────────────────────────────
 
-test('only the selected tab says "Deck", and every tab keeps its full name', async ({ page }) => {
+test('only the selected deck button says "Deck", and every one keeps its full name', async ({
+  page,
+}) => {
   await page.setViewportSize(DEFAULT);
   await openCards(page);
   const { create } = deckControls(page);
   await create.click();
   await create.click();
-  await page.getByRole('tab', { name: 'Deck 1' }).click();
+  await deckButton(page, 'Deck 1').click();
 
   const visible = () =>
     deckTabs(page).evaluateAll((els) => els.map((el) => el.textContent!.trim()));
@@ -648,12 +817,14 @@ test('only the selected tab says "Deck", and every tab keeps its full name', asy
   await expect.poll(visible).toEqual(['Deck 1', '2', '3']);
   expect(await names()).toEqual(['Deck 1', 'Deck 2', 'Deck 3']);
 
-  await page.getByRole('tab', { name: 'Deck 2' }).click();
+  await deckButton(page, 'Deck 2').click();
   await expect.poll(visible).toEqual(['1', 'Deck 2', '3']);
   expect(await names()).toEqual(['Deck 1', 'Deck 2', 'Deck 3']);
 });
 
-test('the deck controls are named icons, set apart from the tabs', async ({ page }) => {
+test('the deck controls are named icons, beside the deck buttons behind a separator', async ({
+  page,
+}) => {
   await page.setViewportSize(DEFAULT);
   await openCards(page);
   const { create, remove, group } = deckControls(page);
@@ -676,7 +847,7 @@ test('the deck controls are named icons, set apart from the tabs', async ({ page
   await expect.poll(() => tipOpacity(create)).toBe('1');
   expect(await tipText(create)).toBe('"New deck"');
 
-  // …and on keyboard focus: from the tab strip, Tab reaches the + next.
+  // …and on keyboard focus: from the deck buttons, Tab reaches the + next.
   await page.mouse.move(0, 0);
   await deckTabs(page).first().focus();
   await page.keyboard.press('Tab');
@@ -687,55 +858,61 @@ test('the deck controls are named icons, set apart from the tabs', async ({ page
   await expect.poll(() => tipOpacity(remove)).toBe('1');
   expect(await tipText(remove)).toBe('"Delete Deck 1"');
 
-  // A rule and more space stand between the last tab and the first control.
+  // A rule and more space stand between the last deck button and the first
+  // control, which follow it directly; and the whole row is centred.
   const apart = async () =>
     page.evaluate(() => {
-      const tabs = [...document.querySelectorAll('app-deck-bar .deck-tab')];
-      const last = tabs[tabs.length - 1].getBoundingClientRect();
-      const first = tabs[0].getBoundingClientRect();
-      const second = tabs[1]?.getBoundingClientRect();
+      const buttons = [...document.querySelectorAll('app-deck-bar .deck-btn')];
+      const last = buttons[buttons.length - 1].getBoundingClientRect();
+      const first = buttons[0].getBoundingClientRect();
+      const second = buttons[1]?.getBoundingClientRect();
       const sep = document.querySelector('app-deck-bar .controls-sep')!.getBoundingClientRect();
       const controls = document
         .querySelector('app-deck-bar .deck-controls')!
         .getBoundingClientRect();
+      const bar = document.querySelector('app-deck-bar .bar')!.getBoundingClientRect();
       return {
-        tabGap: second ? second.left - first.right : 4,
+        buttonGap: second ? second.left - first.right : 4,
         controlGap: controls.left - last.right,
+        sepAfterLast: sep.left > last.right,
         sepBetween: sep.left >= last.right && sep.right <= controls.left && sep.height > 0,
         sepVisible: getComputedStyle(document.querySelector('app-deck-bar .controls-sep')!)
           .backgroundColor,
-        groupRight: controls.right,
+        sameLine: Math.abs(sep.top + sep.height / 2 - (last.top + last.height / 2)) < 4,
+        offCentre: Math.abs((first.left + controls.right) / 2 - (bar.left + bar.right) / 2),
       };
     });
   const one = await apart();
+  expect(one.sepAfterLast).toBe(true);
   expect(one.sepBetween).toBe(true);
   expect(one.sepVisible).not.toBe('rgba(0, 0, 0, 0)');
-  expect(one.controlGap).toBeGreaterThan(one.tabGap);
-  await expect(group.locator('.deck-tab')).toHaveCount(0);
+  expect(one.controlGap).toBeGreaterThan(one.buttonGap);
+  expect(one.offCentre).toBeLessThanOrEqual(2);
+  await expect(group.locator('.deck-btn')).toHaveCount(0);
 
-  // The group keeps its place at the end as decks are added up to the limit,
-  // where the + gives way to the limit note inside the same group.
-  for (let i = 1; i < MAX_DECKS; i++) await create.click();
+  for (let i = 1; i < 5; i++) await create.click();
+  await expect(deckTabs(page)).toHaveCount(5);
+  const five = await apart();
+  expect(five.sepAfterLast).toBe(true);
+  expect(five.sepBetween).toBe(true);
+  expect(five.offCentre).toBeLessThanOrEqual(2);
+
+  // The group stays directly after the last button up to the limit, where the
+  // + is still present, disabled.
+  for (let i = 5; i < MAX_DECKS; i++) await create.click();
   await expect(deckTabs(page)).toHaveCount(MAX_DECKS);
   const nine = await apart();
   expect(nine.sepBetween).toBe(true);
-  expect(nine.controlGap).toBeGreaterThan(nine.tabGap);
-  expect(Math.abs(nine.groupRight - one.groupRight)).toBeLessThan(1);
-  await expect(create).toHaveCount(0);
-  await expect(group.locator('.bar-note')).toContainText(`${MAX_DECKS} decks is the limit`);
+  expect(nine.sameLine).toBe(true);
+  expect(nine.controlGap).toBeGreaterThan(nine.buttonGap);
+  await expect(create).toHaveCount(1);
+  await expect(create).toHaveAttribute('aria-disabled', 'true');
 });
-
-/** The starter collection, one copy each, plus one Goam (FC 6, four stars). */
-const STARTERS = [1, 7, 8, 9, 10, 11, 12, 13, 14].map((number) => ({
-  set: 'FC',
-  number,
-  quantity: 1,
-}));
-const GOAM = { set: 'FC', number: 6 };
 
 test('the deck states its standing: error, warning, or ready', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openCardsAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 1 }], decks: [[]] });
+  // Two Goam held, so one deck may hold both and break the rarity limit.
+  await openCardsAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 2 }], decks: [[]] });
 
   // An empty deck is a warning, and nothing is an error.
   expect(await deckStanding(page)).toEqual([
@@ -792,10 +969,10 @@ test('the deck states its standing: error, warning, or ready', async ({ page }) 
   await expect(deckCards(page)).toHaveCount(1);
   expect((await deckStanding(page)).map((l) => l.kind)).toEqual(['incomplete']);
 
-  // Filled to nine within the limit, the deck is ready.
-  const low = collectionTiles(page).nth(1);
+  // Filled to nine within the limit, the deck is ready: eight one-star
+  // starters after the one Goam, a copy of each.
   for (let i = 1; i < DECK_SIZE; i++) {
-    await openCardMenu(low);
+    await openCardMenu(collectionTiles(page).nth(i));
     await page.getByRole('button', { name: 'Add to Deck 1' }).click();
   }
   await expect(deckCards(page)).toHaveCount(DECK_SIZE);
@@ -803,4 +980,218 @@ test('the deck states its standing: error, warning, or ready', async ({ page }) 
 
   // And nowhere does the page count positions.
   await expect(page.getByText(/positions filled/i)).toHaveCount(0);
+});
+
+// ─── Sort direction, rarity sections, and the reorder motion ────────────────
+
+/** Each tile's attack, read from the card's own accessible description. */
+async function tileAttacks(page: Page): Promise<number[]> {
+  return collectionTiles(page).evaluateAll((els) =>
+    els.map((el) => {
+      const label = el.querySelector('app-card [aria-label]')!.getAttribute('aria-label')!;
+      return Number(/attack (\d+)/.exec(label)![1]);
+    }),
+  );
+}
+
+test('the active order shows its direction and reverses on a second choice', async ({ page }) => {
+  await page.setViewportSize(DEFAULT);
+  await openCardsAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 1 }], decks: [[]] });
+
+  // On arrival only Rarity carries a chevron, and it is announced descending.
+  await expect(page.locator('.sort-option .sort-chevron')).toHaveCount(1);
+  await expect(sortControl(page, 'Rarity').locator('.sort-chevron')).toHaveCount(1);
+  await expect(sortControl(page, 'Rarity')).toHaveAccessibleName(/descending/);
+  expect(await chevronTurned(page)).toBe(false);
+
+  // Attack opens highest first; a second choice reverses it.
+  await chooseOrder(page, 'Attack');
+  const down = await tileAttacks(page);
+  expect(down).toEqual([...down].sort((a, b) => b - a));
+  expect(await activeDirection(page)).toBe('desc');
+
+  await sortControl(page, 'Attack').click();
+  await expect(sortControl(page, 'Attack')).toHaveAccessibleName(/ascending/);
+  const up = await tileAttacks(page);
+  expect(up).toEqual([...up].sort((a, b) => a - b));
+  await expect.poll(() => chevronTurned(page)).toBe(true);
+  await expect(page.locator('.sort-option .sort-chevron')).toHaveCount(1);
+
+  // A new order opens in its own default: Name, A to Z.
+  await chooseOrder(page, 'Name');
+  await expect(sortControl(page, 'Name')).toHaveAccessibleName(/ascending/);
+  const names = await tileNames(page);
+  expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'en')));
+
+  await page
+    .locator('app-collection .sort-row')
+    .screenshot({ path: 'test-results/cards-sort-row.png' });
+});
+
+test('ordering by rarity sections the collection', async ({ page }) => {
+  await page.setViewportSize(DEFAULT);
+  // The one-star starters, one two-star card (FC 4), and Goam at four stars.
+  // Nothing at three, so no three-star section may appear.
+  await openCardsAs(page, {
+    collection: [...STARTERS, { set: 'FC', number: 4, quantity: 1 }, { ...GOAM, quantity: 1 }],
+    decks: [[]],
+  });
+
+  const heads = page.locator('app-collection-grid .section-head');
+  const headWords = () =>
+    heads.evaluateAll((els) =>
+      els.map((el) => el.querySelector('.section-words')!.textContent!.trim()),
+    );
+  const sectionStars = () =>
+    page
+      .locator('app-collection-grid .rarity-section')
+      .evaluateAll((sections) =>
+        sections.map((section) => [
+          ...new Set(
+            [...section.querySelectorAll('.tile')].map(
+              (tile) => tile.querySelectorAll('app-card .star.lit').length,
+            ),
+          ),
+        ]),
+      );
+
+  // Sectioned on arrival, rarest first, and each section holds only its rating.
+  await expect(heads).toHaveCount(3);
+  expect(await headWords()).toEqual(['4 stars', '2 stars', '1 star']);
+  expect(await sectionStars()).toEqual([[4], [2], [1]]);
+  await expect(heads.first()).toHaveAccessibleName('4 stars');
+  await expect(page.getByRole('heading', { level: 2, name: '4 stars' })).toHaveCount(1);
+  // No section, heading, or gap for a rating not held.
+  await expect(page.getByRole('heading', { name: /3 stars?/ })).toHaveCount(0);
+
+  const oneStarsDown = await page
+    .locator('app-collection-grid .rarity-section')
+    .last()
+    .locator('.cf-name-text')
+    .allInnerTexts();
+
+  // Reversing reverses the sections, and the tiles inside keep their order.
+  await sortControl(page, 'Rarity').click();
+  await expect.poll(() => activeDirection(page)).toBe('asc');
+  expect(await headWords()).toEqual(['1 star', '2 stars', '4 stars']);
+  expect(await sectionStars()).toEqual([[1], [2], [4]]);
+  const oneStarsUp = await page
+    .locator('app-collection-grid .rarity-section')
+    .first()
+    .locator('.cf-name-text')
+    .allInnerTexts();
+  expect(oneStarsUp).toEqual(oneStarsDown);
+
+  await cardsSettled(page);
+  await page.screenshot({ path: 'test-results/cards-rarity-sections.png' });
+
+  // Every other order is one run with no headings.
+  for (const order of ['Name', 'Quantity', 'Attack', 'Defense']) {
+    await chooseOrder(page, order);
+    await expect(heads).toHaveCount(0);
+    await expect(collectionTiles(page)).toHaveCount(11);
+  }
+});
+
+test('a reorder animates every tile', async ({ page }) => {
+  await page.setViewportSize(DEFAULT);
+  await openCards(page);
+  await cardsSettled(page);
+
+  // The nine starters are all one-star, so rarity and name read the same
+  // sequence: no tile changes place, and every one must still move.
+  const before = await tileNames(page);
+  await sortControl(page, 'Name').click();
+
+  // Every tile is replaying `tileIn` (by suffix: Angular scopes keyframe names
+  // to the component). A tile the reorder left in place would never run it
+  // again, so polling until all of them are cannot pass by luck.
+  const allRunning = () =>
+    collectionTiles(page).evaluateAll((els) =>
+      els.map((el) =>
+        el
+          .getAnimations()
+          .some(
+            (a) =>
+              /tileIn$/.test((a as CSSAnimation).animationName) &&
+              (a.playState === 'running' || a.playState === 'pending'),
+          ),
+      ),
+    );
+  await expect.poll(allRunning).toEqual(Array(9).fill(true));
+  expect(await tileNames(page)).toEqual(before);
+
+  // A reversal animates too.
+  await cardsSettled(page);
+  await sortControl(page, 'Name').click();
+  await expect.poll(allRunning).toEqual(Array(9).fill(true));
+  expect(await tileNames(page)).toEqual([...before].reverse());
+});
+
+// ─── Reset ──────────────────────────────────────────────────────────────────
+
+test('reset restores a new player after confirmation', async ({ page }) => {
+  await page.setViewportSize(DEFAULT);
+  await openCardsAs(page, {
+    geo: 750,
+    collection: [...startersWithCrawlid(3), { ...GOAM, quantity: 2 }],
+    decks: [[CRAWLID, CRAWLID, GOAM], [CRAWLID], []],
+  });
+  await chooseOrder(page, 'Name');
+  await deckButton(page, 'Deck 2').click();
+
+  const reset = page.getByRole('button', { name: 'Reset data' });
+  await expect(reset).toBeVisible();
+  // Marked as a debug tool on its face.
+  await expect(reset).toContainText(/debug/i);
+  expect(await reset.evaluate((el) => getComputedStyle(el).borderStyle)).toBe('dashed');
+
+  // Declining changes nothing.
+  await reset.click();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toBeVisible();
+  // Nothing has been reset merely by asking.
+  await expect(deckTabs(page)).toHaveCount(3);
+  await expect(dialog).toContainText(/cards, Geo, and decks/);
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(deckTabs(page)).toHaveCount(3);
+  await expect(collectionTiles(page)).toHaveCount(10);
+  await expect(deckButton(page, 'Deck 2')).toHaveAttribute('aria-pressed', 'true');
+
+  // Escape declines as well, and focus returns to the control.
+  await reset.click();
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(reset).toBeFocused();
+  await expect(deckTabs(page)).toHaveCount(3);
+
+  // Confirming replaces everything with a new player's, at once.
+  await reset.click();
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Reset data' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(deckTabs(page)).toHaveCount(1);
+  await expect(deckButton(page, 'Deck 1')).toHaveAttribute('aria-pressed', 'true');
+  await expect(deckCards(page)).toHaveCount(0);
+  await expect(collectionTiles(page)).toHaveCount(9);
+  for (const tile of await collectionTiles(page).all()) expect(await badgeCount(tile)).toBe(1);
+  await expect(sortControl(page, 'Rarity')).toHaveAttribute('aria-pressed', 'true');
+  expect(await activeDirection(page)).toBe('desc');
+
+  // The balance reads zero elsewhere, without a reload.
+  await page
+    .getByRole('navigation', { name: 'Primary' })
+    .getByRole('link', { name: 'Shop' })
+    .click();
+  await expect(purse(page)).toHaveText('0');
+
+  // And it is durable.
+  await page.reload();
+  await openCards(page);
+  await expect(deckTabs(page)).toHaveCount(1);
+  await expect(collectionTiles(page)).toHaveCount(9);
+  await expect(deckCards(page)).toHaveCount(0);
 });

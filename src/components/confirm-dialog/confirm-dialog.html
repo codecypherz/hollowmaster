@@ -1,0 +1,19 @@
+<div class="confirm-scrim" aria-hidden="true" (click)="cancel.emit()"></div>
+<div
+  #panel
+  class="confirm is-{{ tone() }}"
+  role="alertdialog"
+  aria-modal="true"
+  aria-labelledby="confirm-text"
+  (keydown)="onKeydown($event)"
+>
+  <p class="confirm-text" id="confirm-text">{{ message() }}</p>
+  <div class="confirm-actions">
+    <button type="button" class="confirm-btn confirm-yes" (click)="confirm.emit()">
+      {{ confirmLabel() }}
+    </button>
+    <button #cancelButton type="button" class="confirm-btn confirm-no" (click)="cancel.emit()">
+      {{ cancelLabel() }}
+    </button>
+  </div>
+</div>

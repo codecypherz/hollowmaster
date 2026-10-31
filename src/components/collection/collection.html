@@ -42,31 +42,59 @@
       />
 
       <div class="sort-row">
-        <span class="sort-label" id="sort-label">Order by</span>
-        <div class="sort-options" role="group" aria-labelledby="sort-label">
-          @for (order of sorts; track order.key) {
-            <button
-              type="button"
-              class="sort-option"
-              [class.is-active]="sort() === order.key"
-              [attr.aria-pressed]="sort() === order.key"
-              (click)="onSort(order.key)"
-            >
-              {{ order.label }}
-            </button>
-          }
+        <div class="sort-group">
+          <span class="sort-label" id="sort-label">Order by</span>
+          <div class="sort-options" role="group" aria-labelledby="sort-label">
+            @for (order of sorts; track order.key) {
+              @let active = sort().key === order.key;
+              <button
+                type="button"
+                class="sort-option"
+                [class.is-active]="active"
+                [attr.aria-pressed]="active"
+                (click)="onSort(order.key)"
+              >
+                {{ order.label }}
+                @if (active) {
+                  <!-- The direction in effect, drawn on the active order only:
+                       down for descending, turned up for ascending. The words
+                       beside it carry the same fact to assistive technology. -->
+                  <svg
+                    class="sort-chevron"
+                    [class.is-asc]="sort().direction === 'asc'"
+                    viewBox="0 0 10 10"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M2 3.75 5 6.75 8 3.75" />
+                  </svg>
+                  <span class="sr-only">{{
+                    sort().direction === 'asc' ? ', ascending' : ', descending'
+                  }}</span>
+                }
+              </button>
+            }
+          </div>
         </div>
+
+        <!-- A testing aid, present in every build. Its dashed border and chip
+             mark it as tooling rather than part of the game, and it sits at
+             the row's far end, away from the deck controls. -->
+        <button type="button" class="reset-data" (click)="askToReset()">
+          <span class="debug-chip" aria-hidden="true">Debug</span>
+          Reset data
+        </button>
       </div>
     </section>
 
     <!-- ─── The scrolling collection ────────────────────────────────────── -->
     <app-collection-grid
       class="collection-region"
-      [owned]="owned()"
+      [sections]="sections()"
+      [generation]="sortGeneration()"
+      [deckName]="selectedDeckName()"
       [openIndex]="openCollectionIndex()"
       [addLabel]="addLabel()"
-      [addAvailable]="canAdd()"
-      [addReason]="addReason()"
       (selectCard)="onSelectCollectionCard($event)"
       (addCard)="onAddToDeck($event)"
       (readCard)="onRead('collection', $event)"
@@ -79,9 +107,19 @@
   <app-card-reader
     [card]="card"
     [actionLabel]="readingFromDeck() ? 'Remove' : addLabel()"
-    [actionAvailable]="readingFromDeck() || canAdd()"
-    [actionReason]="readingFromDeck() ? '' : addReason()"
+    [actionAvailable]="readingFromDeck() || readingAddReason() === ''"
+    [actionReason]="readingFromDeck() ? '' : readingAddReason()"
     (action)="onReaderAction()"
     (close)="closeReader()"
+  />
+}
+
+@if (confirmingReset()) {
+  <app-confirm-dialog
+    message="Reset all data? Your cards, Geo, and decks will be replaced with a new player's."
+    confirmLabel="Reset data"
+    cancelLabel="Cancel"
+    (confirm)="onReset()"
+    (cancel)="confirmingReset.set(false)"
   />
 }

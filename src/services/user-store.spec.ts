@@ -208,7 +208,7 @@ describe('persisted decks', () => {
   ];
   const holdings = new Map([
     [cardKey(crawlid), 2],
-    [cardKey(goam), 1],
+    [cardKey(goam), DECK_SIZE],
   ]);
 
   it('writes a version 2 record carrying its decks', () => {
@@ -322,7 +322,7 @@ describe('persisted decks', () => {
     const parsed = parsePersistedUser({
       version: 2,
       geo: 0,
-      collection: [{ set: 'FC', number: 1, quantity: 1 }],
+      collection: [{ set: 'FC', number: 1, quantity: DECK_SIZE + 4 }],
       decks: Array.from({ length: MAX_DECKS + 3 }, () =>
         Array.from({ length: DECK_SIZE + 4 }, () => ({ set: 'FC', number: 1 })),
       ),
@@ -331,6 +331,67 @@ describe('persisted decks', () => {
     const state = fromPersisted(parsed);
     expect(state.decks).toHaveLength(MAX_DECKS);
     for (const deck of state.decks) expect(deck.cards).toHaveLength(DECK_SIZE);
+  });
+
+  it('keeps the first copies up to the quantity held, the rest in order', () => {
+    const c = { set: 'FC', number: 1 };
+    const g = { set: 'FC', number: 6 };
+    const v = { set: 'FC', number: 7 };
+    const parsed = parsePersistedUser({
+      version: 2,
+      geo: 0,
+      collection: [
+        { set: 'FC', number: 1, quantity: 2 },
+        { set: 'FC', number: 6, quantity: 1 },
+        { set: 'FC', number: 7, quantity: 1 },
+      ],
+      decks: [[c, g, c, v, c, c]],
+    })!;
+
+    expect(fromPersisted(parsed).decks[0].cards).toEqual([
+      cardKey(crawlid),
+      cardKey(goam),
+      cardKey(crawlid),
+      cardKeyOf('FC', 7),
+    ]);
+  });
+
+  it('trims copies per deck, so two decks may each keep the one held copy', () => {
+    const parsed = parsePersistedUser({
+      version: 2,
+      geo: 0,
+      collection: [{ set: 'FC', number: 1, quantity: 1 }],
+      decks: [[{ set: 'FC', number: 1 }], [{ set: 'FC', number: 1 }]],
+    })!;
+
+    const state = fromPersisted(parsed);
+    expect(state.decks.map((d) => d.cards)).toEqual([[cardKey(crawlid)], [cardKey(crawlid)]]);
+  });
+
+  it('never restores more copies in a deck than the collection holds', () => {
+    const state = fromPersisted(
+      parsePersistedUser({
+        version: 2,
+        geo: 0,
+        collection: [
+          { set: 'FC', number: 1, quantity: 3 },
+          { set: 'FC', number: 6, quantity: 1 },
+        ],
+        decks: [
+          Array.from({ length: DECK_SIZE }, (_, i) => ({ set: 'FC', number: i % 2 ? 1 : 6 })),
+        ],
+      })!,
+    );
+
+    for (const deck of state.decks) {
+      const counts = new Map<string, number>();
+      for (const key of deck.cards) counts.set(key, (counts.get(key) ?? 0) + 1);
+      for (const [key, copies] of counts) {
+        expect(state.collection.get(key as ReturnType<typeof cardKey>) ?? 0).toBeGreaterThanOrEqual(
+          copies,
+        );
+      }
+    }
   });
 
   it('loses only the decks when the field is not an array at all', () => {
