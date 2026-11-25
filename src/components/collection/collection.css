@@ -248,30 +248,37 @@
    A fixed label cell and the bar, so the two rows line up whatever they hold.
    The cell stacks the label over the price, and both the warning's slot and the
    price's line are there whether or not they have anything in them.
+
+   What reads as the label's column is the space from the frame to the bar, so
+   the cell reaches 6px into the frame's padding to sit 4px clear of each and
+   share that space's centre.
    ──────────────────────────────────────────────────────────────────────────── */
 
 .rows {
   display: grid;
   gap: 8px;
   margin-top: 26px;
+  margin-left: -6px;
 }
 
 .row {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-columns: 52px minmax(0, 1fr);
   align-items: center;
   column-gap: 4px;
 }
 
+/* Equal outer tracks keep the label centred; the warning's slot in the last is
+   balanced by the empty first one rather than counted. */
 .row-head {
   display: grid;
-  grid-template-columns: auto 11px;
-  justify-content: start;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 3px 4px;
+  gap: 3px;
 }
 
 .row-label {
+  grid-column: 2;
   font-size: 0.6rem;
   line-height: 1;
   letter-spacing: 0.06em;
@@ -285,11 +292,14 @@
   font-size: 0.64rem;
   line-height: 0.8rem;
   font-variant-numeric: tabular-nums;
+  text-align: center;
   color: var(--color-text-bright);
 }
 
 .warn-slot {
   display: inline-flex;
+  justify-self: start;
+  width: 11px;
   height: 11px;
 }
 

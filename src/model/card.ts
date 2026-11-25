@@ -334,11 +334,12 @@ export function indexByKey(cards: readonly Card[]): ReadonlyMap<CardKey, Card> {
 export const CARD_BY_KEY: ReadonlyMap<CardKey, Card> = indexByKey(CARD_DB);
 
 /**
- * A card's collection number as the player reads it, e.g. `FC #1`: never
- * padded. Not an identity — `cardKey` is — and never parsed back.
+ * A card's collection number as the player reads it, e.g. `FC#1`: never
+ * padded. Display text that happens to match `cardKey`, which is the identity:
+ * this is never stored, looked up, or parsed back.
  */
 export function collectionNumber(card: Card): string {
-  return `${card.set} #${card.number}`;
+  return `${card.set}#${card.number}`;
 }
 
 // ─── Sets ───────────────────────────────────────────────────────────────────

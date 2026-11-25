@@ -501,7 +501,6 @@ button.frame {
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 0.4em;
   height: var(--plate-h);
   max-width: 62%;
   /* The text wraps against this margin, so it never touches the plate. */

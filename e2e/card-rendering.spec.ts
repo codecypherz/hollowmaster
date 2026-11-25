@@ -57,6 +57,15 @@ test.describe('the card renderer, on the style guide', () => {
     );
   });
 
+  test('no gap separates the set from its number on the plate', async ({ page }) => {
+    for (const width of [ABILITY_GATE, 260]) {
+      const demo = page.locator('.scale-row .card-demo').nth(LADDER.indexOf(width));
+      const set = (await demo.locator('.cf-set').boundingBox())!;
+      const number = (await demo.locator('.cf-number').boundingBox())!;
+      expect(Math.abs(number.x - (set.x + set.width))).toBeLessThanOrEqual(0.5);
+    }
+  });
+
   test('no card on the page is rendered below the minimum supported width', async ({ page }) => {
     const slots = page.locator('.scale-row .card-slot');
     const widths: number[] = [];

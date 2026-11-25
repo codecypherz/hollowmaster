@@ -182,8 +182,8 @@ describe('the Collection page', () => {
 
   it('shows the collection number unpadded and keeps it, and the rows, off the card', async () => {
     await open();
-    expect(tile('FC-1').querySelector('.tile-number')!.textContent!.trim()).toBe('FC #1');
-    expect(tile('FC-10').querySelector('.tile-number')!.textContent!.trim()).toBe('FC #10');
+    expect(tile('FC-1').querySelector('.tile-number')!.textContent!.trim()).toBe('FC#1');
+    expect(tile('FC-10').querySelector('.tile-number')!.textContent!.trim()).toBe('FC#10');
     expect(tile('FC-1').querySelector('.tile-card .tile-number, .tile-card .row')).toBeNull();
     // The veil covers the card and nothing else of the frame.
     expect(tile('FC-2').querySelector('.veil')!.parentElement!.className).toBe('tile-card');

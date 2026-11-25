@@ -213,10 +213,10 @@ describe('card identity', () => {
     expect(cardKeyOf('FC', 1)).toBe(cardKey(crawlid));
   });
 
-  it('is not how the player reads a collection number, which is never padded', () => {
+  it('is matched by the collection number the player reads, which is never padded', () => {
     const numbered = (number: number) => CARD_BY_KEY.get(cardKeyOf('FC', number))!;
-    expect(collectionNumber(numbered(1))).toBe('FC #1');
-    expect(collectionNumber(numbered(10))).toBe('FC #10');
+    expect(collectionNumber(numbered(1))).toBe('FC#1');
+    expect(collectionNumber(numbered(10))).toBe('FC#10');
     expect(cardKey(numbered(10))).toBe('FC#10');
   });
 

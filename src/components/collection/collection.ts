@@ -76,7 +76,7 @@ export interface ExchangeTile {
   readonly key: CardKey;
   /** A DOM-safe form of the key, for ids and `data-` hooks. */
   readonly slug: string;
-  /** The set code and the number within it, as `FC #1`. */
+  /** The set code and the number within it, as `FC#1`. */
   readonly number: string;
   /** Copies held; zero for a card not owned. Unaffected by anything pending. */
   readonly quantity: number;

@@ -255,7 +255,7 @@ describe('CardComponent', () => {
       const label = host.querySelector('button')!.getAttribute('aria-label')!;
       expect(label).toContain('attack 45');
       expect(label).toContain('defense 40');
-      expect(label).toMatch(/, FC #2$/);
+      expect(label).toMatch(/, FC#2$/);
     });
   });
 

@@ -184,7 +184,14 @@ for (const size of [LARGE, SMALL]) {
 
     // The warning's arrival moves nothing in its row.
     const warned = sell(exchangeTile(page, 'FC', 3));
-    const still = [warned.lower, warned.value, warned.raise, warned.target];
+    const still = [
+      warned.row.locator('.row-label'),
+      warned.row.locator('.row-price app-rosary'),
+      warned.lower,
+      warned.value,
+      warned.raise,
+      warned.target,
+    ];
     const before = await Promise.all(still.map((part) => part.boundingBox()));
     await warned.raise.click();
     await expect(warned.warning).toBeVisible();
@@ -204,6 +211,8 @@ for (const size of [LARGE, SMALL]) {
         return {
           frame: rect(tile),
           border: parseFloat(getComputedStyle(tile).borderTopWidth),
+          innerLeft:
+            tile.getBoundingClientRect().left + parseFloat(getComputedStyle(tile).borderLeftWidth),
           number: rect(tile.querySelector('.tile-number')!),
           card: rect(tile.querySelector('app-card')!),
           badge: rect(tile.querySelector('.badge')!),
@@ -252,6 +261,13 @@ for (const size of [LARGE, SMALL]) {
         expect(price.right).toBeLessThanOrEqual(bar.left);
         expect(price.bottom).toBeLessThanOrEqual(tile.rows[i].bottom + 0.5);
         expect(bar.right).toBeLessThanOrEqual(tile.frame.right);
+
+        // The label and the price are centred between the frame and the bar,
+        // warned or not.
+        const middle = (tile.innerLeft + bar.left) / 2;
+        for (const part of [label, price]) {
+          expect(Math.abs((part.left + part.right) / 2 - middle)).toBeLessThanOrEqual(1);
+        }
       });
 
       // One bar: each segment starts on the rule the one before it ends with.
