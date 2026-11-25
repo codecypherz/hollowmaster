@@ -139,6 +139,15 @@ collection or their Geo because the shape around it grew.
   in full
 - **AND** the record is rewritten at the current version, so a further reload restores it directly
 
+#### Scenario: A record written before the battle deck was remembered is upgraded
+
+- **WHEN** stored data carries the version written with milestones but before the remembered battle
+  deck was part of the user record
+- **THEN** the collection, both balances, every deck, and the milestones it holds are restored in
+  full
+- **AND** the restored user has no remembered battle deck
+- **AND** the record is rewritten at the current version, so a further reload restores it directly
+
 ### Requirement: Unreadable stored data yields a fresh user rather than a failure
 
 Stored data that is absent, malformed, of an unrecognised version, or structurally invalid SHALL
@@ -271,3 +280,28 @@ it SHALL be restored as what is proved, and the rest of the record SHALL be rest
   fractional, or not a number
 - **THEN** that milestone is restored as what the balance and collection prove
 - **AND** the collection, both balances, and every deck are restored in full
+
+### Requirement: The remembered battle deck is persisted and read defensively
+
+The user's remembered battle deck SHALL be part of the persisted record, stored as the deck's
+position or as none. It SHALL survive a page load. A stored value that is not a whole number, or
+that names a position no restored deck occupies, SHALL be read as no remembered deck. That costs
+only the remembered deck, never the rest of the record. A stored deck that is restored but not
+eligible for battle SHALL still be read as remembered, as `user/decks` states.
+
+#### Scenario: The remembered deck survives a reload
+
+- **WHEN** the user remembers Deck 2 and the page is reloaded
+- **THEN** the restored user remembers Deck 2
+
+#### Scenario: An impossible stored value is read as none
+
+- **WHEN** a current-version record's remembered battle deck is negative, fractional, or not a
+  number
+- **THEN** the restored user has no remembered battle deck
+- **AND** the collection, balances, decks, and milestones are restored as they would otherwise be
+
+#### Scenario: A stored position beyond the restored decks is read as none
+
+- **WHEN** a record remembers Deck 4 but only three decks are restored
+- **THEN** the restored user has no remembered battle deck
