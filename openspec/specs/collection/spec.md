@@ -28,10 +28,10 @@ it. At every viewport the page supports, the header SHALL occupy a single line.
 
 The Collection page SHALL show the player's current Rosary balance in the top-right corner of the
 page, rendered through the Rosary amount primitive. The balance SHALL be shown whenever the page is
-shown, including when it is zero. It SHALL show the user's actual balance and SHALL update as soon
-as that balance changes, without the page being reloaded. The purse MUST NOT overlap the screen
-header's title. It SHALL stay in place while the sections scroll, and assistive technology SHALL
-announce it as the player's Rosaries.
+shown, including when it is zero. It SHALL show the user's actual balance, unaffected by anything
+pending in the cart, and SHALL update as soon as that balance changes, without the page being
+reloaded. The purse MUST NOT overlap the screen header's title. It SHALL stay in place while the
+sections scroll, and assistive technology SHALL announce it as the player's Rosaries.
 
 #### Scenario: The purse is in the top-right corner
 
@@ -46,9 +46,10 @@ announce it as the player's Rosaries.
 
 #### Scenario: The purse follows an exchange
 
-- **WHEN** the player sells a card and then buys one
-- **THEN** the purse rises by the sale price and then falls by the purchase price
-- **AND** neither change needs the page to be reloaded
+- **WHEN** the player adds a sale to the cart and then confirms the cart
+- **THEN** the purse is unchanged while the sale is pending and rises by the sale's amount on
+  confirmation
+- **AND** the change does not need the page to be reloaded
 
 #### Scenario: The purse stays put while the sections scroll
 
@@ -61,9 +62,10 @@ The Collection page SHALL present one section for each named card set, in the or
 stated. Each section SHALL be headed by the set's display name, such as `Forgotten Crossroads`. The
 heading SHALL state how much of the set the player has collected, as the number of the set's
 distinct cards held at least once and the number of cards the set holds, such as `9 / 15`. Its
-accessible name SHALL put that in words, such as `9 of 15 collected`. A named set the catalogue
-holds no cards for SHALL still be presented as a section headed by its name and marked as
-forthcoming. It SHALL present no tiles, prices, or controls.
+accessible name SHALL put that in words, such as `9 of 15 collected`. Cards pending in the cart
+SHALL NOT affect it. A named set the catalogue holds no cards for SHALL still be presented as a
+section headed by its name and marked as forthcoming. It SHALL present no tiles, prices, or
+controls.
 
 #### Scenario: Each set has its own section
 
@@ -84,9 +86,9 @@ forthcoming. It SHALL present no tiles, prices, or controls.
 
 #### Scenario: Progress follows an exchange
 
-- **WHEN** the player buys a card of a set they did not hold any copy of
+- **WHEN** the player confirms a cart that buys a card of a set they did not hold any copy of
 - **THEN** that set's progress rises by one without the page being reloaded
-- **AND** when they sell their last copy of it, the progress falls by one
+- **AND** when they confirm a cart that sells their last copy of it, the progress falls by one
 
 #### Scenario: A set with no cards yet is forthcoming
 
@@ -118,13 +120,15 @@ page's scrolling content.
 
 ### Requirement: A tile distinguishes owned cards from unowned ones
 
-A tile for a card the player holds SHALL show, as a badge over the bottom of the tile, how many
+A tile for a card the player holds SHALL show, as a badge over the bottom of the card, how many
 copies are held, including a single copy. Its accessible name SHALL state the count in words, such
 as `3 held`. A tile for a card the player does not hold SHALL be marked as not owned, both by a
 visual treatment that recedes the card and by a cue that survives colour removal, such as a `Not
 owned` label in place of the count. Its accessible name SHALL state that the card is not owned. The
-marks SHALL follow the collection without the page being reloaded. They MUST NOT obscure the card's
-name, its star track, either stat bar, or any of its eight chevrons.
+marks SHALL follow the collection without the page being reloaded, and SHALL NOT be affected by what
+is pending in the cart. They MUST NOT obscure the card's name, its star track, either stat bar, or
+any of its eight chevrons, and the treatment that recedes the card MUST NOT cover the tile's
+collection number or its rows.
 
 #### Scenario: A held card states its count
 
@@ -144,13 +148,18 @@ name, its star track, either stat bar, or any of its eight chevrons.
 
 #### Scenario: Buying the first copy marks it owned
 
-- **WHEN** the player buys a card they did not hold
+- **WHEN** the player confirms a cart that buys one copy of a card they did not hold
 - **THEN** its tile stops being marked as not owned and states one held
 
 #### Scenario: Selling the last copy marks it unowned
 
-- **WHEN** the player sells their only copy of a card
+- **WHEN** the player confirms a cart that sells their only copy of a card
 - **THEN** its tile is marked as not owned
+
+#### Scenario: Pending cards do not change the count
+
+- **WHEN** a player holding two copies of a card has one of them pending for sale
+- **THEN** its tile still states two held
 
 #### Scenario: The marks obscure nothing
 
@@ -186,140 +195,160 @@ placement, rarity stars, and numeral-free stat bars.
 - **THEN** the card beneath the page's treatment is unchanged in structure, proportions, and
   internal layout
 
-### Requirement: Every card in a set can be bought for Rosaries
+### Requirement: Each card sits in a frame headed by its collection number
 
-Every tile SHALL offer a control that buys one copy of its card. That includes a card the player
-already holds, at any quantity. The control SHALL be labelled `Buy` followed by the card's purchase
-price as a Rosary amount, and its accessible name SHALL name the card and the price, such as
-`Buy Crawlid for 100 Rosaries`. Buying SHALL spend exactly that price and add one copy to the
-collection as one settled outcome. Where the player's Rosary balance is below the price, the
-control SHALL remain in place, showing its price, but be presented as unavailable. Activating it
-SHALL do nothing, and the reason, not enough Rosaries, SHALL be available as the control's tooltip
-and to assistive technology. The control SHALL remain focusable so that reason can be read. A
-control that becomes affordable SHALL become available without the page being reloaded.
+Every tile SHALL draw a visible frame around its card. Inside the frame, from top to bottom, SHALL
+be the card's collection number, the card, its held or not-owned badge, the Sell row, and the Buy
+row. The collection number SHALL be the card's set code followed by its number within the set padded
+to three digits, such as `FC 001`, at the frame's top left. The collection number and the rows belong
+to the frame and MUST NOT be drawn inside or over the card. The card within the frame SHALL be drawn
+exactly as the shared card renderer draws it, at a width that satisfies the requirement that a tile
+render its card without its ability text. Every tile SHALL have the same size, whatever is held or
+pending.
 
-#### Scenario: Buying a card the player does not hold
+#### Scenario: The frame's contents read in order
 
-- **WHEN** a player holding 150 Rosaries buys a one-star card they do not hold
-- **THEN** their balance is 50
-- **AND** the card's tile states one held
+- **WHEN** a tile is rendered
+- **THEN** its collection number, card, badge, Sell row, and Buy row appear in that order inside one
+  visible frame
 
-#### Scenario: Buying more of a card already held
+#### Scenario: The collection number is padded
 
-- **WHEN** a player holding two copies of a card buys it again
-- **THEN** its tile states three held
-- **AND** the balance falls by its purchase price
+- **WHEN** the first Forgotten Crossroads card's tile is rendered
+- **THEN** its frame reads `FC 001`
 
-#### Scenario: The price is shown on the control
+#### Scenario: The frame leaves the card alone
 
-- **WHEN** a three-star card's tile is presented
-- **THEN** its buy control reads `Buy` followed by 300 and the Rosary mark
+- **WHEN** a framed card is rendered
+- **THEN** no part of the collection number or of either row overlaps the card
+- **AND** the card's structure, proportions, and internal layout are those the renderer gives it at
+  that width
 
-#### Scenario: An unaffordable card cannot be bought
+#### Scenario: Tiles share one size
 
-- **WHEN** a player holding 99 Rosaries activates the buy control of a one-star card
-- **THEN** nothing is bought and the balance is still 99
-- **AND** the control is presented as unavailable, still showing its price
-- **AND** its tooltip and accessible description state that there are not enough Rosaries
+- **WHEN** tiles for an unowned card, a card held twelve times, and a card with a warned pending sale
+  are rendered
+- **THEN** all three frames have the same width and height
 
-#### Scenario: A card becomes buyable when the balance reaches its price
+### Requirement: A tile's Sell row sets how many copies are pending for sale
 
-- **WHEN** the player's balance rises to a card's purchase price
-- **THEN** that card's buy control becomes available without the page being reloaded
+Every tile SHALL present a row labelled `Sell` holding a minus control, the quantity of the card
+pending for sale, a plus control, and, to their right, a control whose face is a down arrow and the
+numeral 9. The plus control SHALL raise the quantity by one and SHALL be unavailable when every copy
+held is pending. The minus control SHALL lower it by one and SHALL be unavailable at zero. The `↓9`
+control SHALL set the quantity so that exactly nine copies would remain, and SHALL be unavailable
+where the player holds nine copies or fewer. Each control's accessible name SHALL state what it does
+and the card, such as `Sell down to 9 Crawlid`. The sale price per copy SHALL be available as the
+row's tooltip and to assistive technology. An unavailable plus or `↓9` control SHALL give its reason
+as its tooltip and to assistive technology. The row SHALL be presented for a card the player does not
+hold, with every control unavailable.
 
-### Requirement: Every card the player holds can be sold for Rosaries
+#### Scenario: Stepping the quantity
 
-Every tile for a card the player holds SHALL offer a control that sells one copy of it, labelled
-`Sell` followed by the card's sale price as a Rosary amount. Its accessible name SHALL name the
-card and the price, such as `Sell Crawlid for 10 Rosaries`. Selling SHALL remove one copy from the
-collection, credit exactly the sale price, and trim any deck the sale leaves over the quantity held,
-as one settled outcome. A tile for a card the player does not hold SHALL NOT offer the sell
-control. Its absence MUST NOT shift the tile's other controls or its neighbours.
+- **WHEN** a player holding three copies of a card activates its sell plus control twice and its sell
+  minus control once
+- **THEN** its Sell row reads 1
 
-Where selling a copy would trim one or more decks, the sell control SHALL say so before it is
-activated. It SHALL carry a warning mark that does not rely on colour, and its tooltip and
-accessible description SHALL name every deck the sale would take the card out of, such as
-`Selling removes it from Deck 1 and Deck 3`. The sale SHALL then proceed on a single activation,
-with no confirmation step. Where the sale would trim no deck, the control SHALL carry no warning.
+#### Scenario: Selling is bounded by what is held
 
-#### Scenario: Selling a duplicate
+- **WHEN** a player holding two copies of a card has 2 pending for sale
+- **THEN** its sell plus control is unavailable
 
-- **WHEN** a player holding three copies of a two-star card, with no deck using it, sells one
-- **THEN** its tile states two held
-- **AND** the Rosary balance rises by 20
+#### Scenario: Selling down to nine
 
-#### Scenario: Selling the last copy
+- **WHEN** a player holding 14 copies of a card activates `↓9`
+- **THEN** its Sell row reads 5
 
-- **WHEN** a player sells their only copy of a card
-- **THEN** its tile is marked as not owned
-- **AND** it no longer offers the sell control, while its buy control stays where it was
+#### Scenario: Selling down replaces the quantity
 
-#### Scenario: A sale that would trim decks warns first
+- **WHEN** a player holding 14 copies of a card has 8 pending for sale and activates `↓9`
+- **THEN** its Sell row reads 5
 
-- **WHEN** a player holding one copy of a card used by Deck 1 and Deck 3 views that card's tile
-- **THEN** its sell control carries a warning mark
+#### Scenario: Selling down is unavailable at nine or fewer
+
+- **WHEN** a player holds nine copies of one card and two of another
+- **THEN** both cards' `↓9` controls are unavailable, and activating them changes nothing
+
+#### Scenario: An unowned card cannot be sold
+
+- **WHEN** a card the player holds no copy of is presented
+- **THEN** its Sell row reads 0 and each of the row's controls is unavailable
+
+### Requirement: A tile's Buy row sets how many copies are pending for purchase
+
+Every tile SHALL present a row labelled `Buy` holding a minus control, the quantity of the card
+pending for purchase, a plus control, and, to their right, a control whose face is an up arrow and
+the numeral 9. The plus control SHALL raise the quantity by one and SHALL be unavailable at 99. The
+minus control SHALL lower it by one and SHALL be unavailable at zero. The `↑9` control SHALL set the
+quantity so that the player would hold exactly nine copies, and SHALL be unavailable where the player
+holds nine copies or more. The player's balance SHALL NOT limit any of them: what the player can
+afford is decided when the cart is confirmed. Each control's accessible name SHALL state what it does
+and the card, such as `Buy up to 9 Crawlid`. The purchase price per copy SHALL be available as the
+row's tooltip and to assistive technology. An unavailable plus or `↑9` control SHALL give its reason
+as its tooltip and to assistive technology.
+
+#### Scenario: Stepping the quantity
+
+- **WHEN** the player activates a card's buy plus control three times and its buy minus control once
+- **THEN** its Buy row reads 2
+
+#### Scenario: Buying up to nine
+
+- **WHEN** a player holding two copies of a card activates `↑9`
+- **THEN** its Buy row reads 7
+
+#### Scenario: Buying an unowned card up to nine
+
+- **WHEN** a player holding no copy of a card activates `↑9`
+- **THEN** its Buy row reads 9
+
+#### Scenario: Buying up is unavailable at nine or more
+
+- **WHEN** a player holds nine copies of one card and fourteen of another
+- **THEN** both cards' `↑9` controls are unavailable, and activating them changes nothing
+
+#### Scenario: Buying is not limited by the balance
+
+- **WHEN** a player holding no Rosaries activates a card's buy plus control
+- **THEN** its Buy row reads 1
+
+#### Scenario: The rows exclude each other
+
+- **WHEN** a card has 3 pending for purchase and the player activates its sell plus control
+- **THEN** its Sell row reads 1 and its Buy row reads 0
+
+### Requirement: A Sell row warns when its pending sale would trim decks
+
+Where a card's pending sale would take copies of it out of one or more decks, its Sell row SHALL carry
+a warning mark that does not rely on colour, with a tooltip and accessible description naming every
+deck that would lose copies, such as `Selling removes it from Deck 1 and Deck 3`. Where the pending
+sale would trim no deck, or nothing is pending for sale, the row SHALL carry no warning. The mark's
+appearance MUST NOT move the row's controls.
+
+#### Scenario: A trimming sale is marked
+
+- **WHEN** a player's only copy of a card used by Deck 1 and Deck 3 is pending for sale
+- **THEN** its Sell row carries a warning mark
 - **AND** its tooltip and accessible description name Deck 1 and Deck 3
-
-#### Scenario: The warned sale trims the named decks
-
-- **WHEN** that player sells the card
-- **THEN** neither Deck 1 nor Deck 3 holds it any longer
-- **AND** no other deck is changed
 
 #### Scenario: A sale that trims nothing carries no warning
 
-- **WHEN** a player holding three copies of a card, used twice by one deck, views its tile
-- **THEN** its sell control carries no warning, because two copies would remain
+- **WHEN** a player holding three copies of a card, used twice by one deck, has 1 pending for sale
+- **THEN** its Sell row carries no warning, because two copies would remain
 
-#### Scenario: Unowned cards offer no sale
+#### Scenario: Nothing pending, nothing warned
 
-- **WHEN** a card the player holds no copy of is presented
-- **THEN** its tile offers no sell control
-
-### Requirement: The outcome of an exchange is announced
-
-After each purchase or sale, the page SHALL announce the outcome to assistive technology without
-moving focus. The announcement SHALL name the card, what happened, and the amount, and, for a sale
-that trimmed decks, the decks it was removed from. Focus SHALL stay on the control that was
-activated. If the sale left that control absent, focus SHALL move to the same tile's buy control.
-
-#### Scenario: A purchase is announced
-
-- **WHEN** the player buys a Crawlid
-- **THEN** assistive technology announces that a Crawlid was bought for 100 Rosaries
-- **AND** focus remains on the buy control
-
-#### Scenario: A trimming sale is announced with its decks
-
-- **WHEN** the player sells their last Crawlid, which Deck 2 used
-- **THEN** assistive technology announces the sale, its price, and that it was removed from Deck 2
-- **AND** focus moves to that tile's buy control
-
-### Requirement: Exchanges take effect at once and are never saved by hand
-
-Every purchase and sale SHALL take effect immediately and SHALL be durable. It SHALL be visible
-without the page being reloaded wherever the user is read, including the Decks page's collection
-and decks. The page SHALL present no save control, no unsaved state, and no confirmation of
-persistence.
-
-#### Scenario: An exchange survives a reload
-
-- **WHEN** the player buys and sells cards and then reloads the application
-- **THEN** the Rosary balance, the collection, and the decks reflect those exchanges
-
-#### Scenario: No save step exists
-
-- **WHEN** the player views the Collection page
-- **THEN** no control that saves, applies, or commits an exchange is presented
+- **WHEN** a player's only copy of a card is used by a deck and is not pending for sale
+- **THEN** its Sell row carries no warning
 
 ### Requirement: The Collection page fits the viewport
 
 The Collection page SHALL fit within the viewport without clipping its content and SHALL make use
 of the space available to it. The page itself SHALL NOT scroll in either axis. The sections SHALL be
-the only region that scrolls, and the header and the purse SHALL keep their place. Tiles SHALL be
-laid out from the left edge of the scrolling region. A row with fewer tiles than the region holds
-SHALL leave its unused space on the right. Every section's heading SHALL begin at the same left
-edge as its first tile.
+the only region that scrolls, and the header, the cart control, and the purse SHALL keep their
+place. Tiles SHALL be laid out from the left edge of the scrolling region. A row with fewer tiles
+than the region holds SHALL leave its unused space on the right. Every section's heading SHALL begin
+at the same left edge as its first tile.
 
 #### Scenario: The page itself does not scroll
 
@@ -331,7 +360,7 @@ edge as its first tile.
 
 - **WHEN** the sections hold more tiles than their region can show
 - **THEN** that region scrolls
-- **AND** the header and the purse stay where they are
+- **AND** the header, the cart control, and the purse stay where they are
 
 #### Scenario: A short row sits against the left edge
 
@@ -357,33 +386,40 @@ particles) SHALL remain.
 
 ### Requirement: Every action on the Collection page is operable by keyboard
 
-Every buy and sell control SHALL be reachable and operable by keyboard, with a visible focus
-indicator. That includes an unavailable buy control, which SHALL remain focusable so its reason
-can be read. The order in which controls receive focus SHALL follow the reading order of the
-sections and their tiles.
+The cart control and every control in a tile's Sell and Buy rows SHALL be reachable and operable by
+keyboard, with a visible focus indicator. That includes an unavailable control, which SHALL remain
+focusable, so that focus is not lost when an activation makes the activated control unavailable, and
+so that its reason can be read where it has one. The order in which controls receive focus SHALL
+follow the page's reading order: the cart control, then the sections and their tiles, and within a
+tile the Sell row and then the Buy row.
 
 #### Scenario: Buying and selling without a pointer
 
-- **WHEN** the player tabs to a tile's buy control and activates it, then to its sell control and
-  activates that
-- **THEN** a copy is bought and then a copy is sold
+- **WHEN** the player, using only the keyboard, raises one card's buy quantity and another's sell
+  quantity, opens the cart, and confirms it
+- **THEN** the first card is bought and the second is sold
 - **AND** each control showed a visible focus indicator when focused
+
+#### Scenario: Focus survives reaching a bound
+
+- **WHEN** the player activates a tile's sell plus control until every copy held is pending
+- **THEN** the control becomes unavailable and still holds focus
 
 #### Scenario: The unavailable control can be focused
 
-- **WHEN** the player cannot afford a card and tabs to its buy control
+- **WHEN** a player holding nine or fewer copies of a card tabs to its `↓9` control
 - **THEN** the control receives focus and its reason is available
 
 ### Requirement: The Collection page honours a reduced-motion preference
 
 Where the player's environment asks for reduced motion, the page's entrances and transitions,
-including the tiles' arrival and any feedback on a count or the purse changing, SHALL be reduced to
-an immediate state change. Every state the motion would have carried SHALL remain distinguishable
-without it.
+including the tiles' arrival and any feedback on a count, a pending quantity, the cart control, or
+the purse changing, SHALL be reduced to an immediate state change. Every state the motion would have
+carried SHALL remain distinguishable without it.
 
 #### Scenario: Motion is removed, not the information
 
 - **WHEN** the Collection page is used with a reduced-motion preference expressed
-- **THEN** tiles and the purse appear without animation
-- **AND** owned and unowned tiles, counts, and the unavailable and warning treatments are all still
-  distinguishable
+- **THEN** tiles, the cart control, and the purse appear without animation
+- **AND** owned and unowned tiles, counts, pending quantities, and the unavailable and warning
+  treatments are all still distinguishable
