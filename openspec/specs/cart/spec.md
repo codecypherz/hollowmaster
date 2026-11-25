@@ -11,9 +11,9 @@ The cart SHALL hold, for each card with anything pending, one line: a direction,
 whole-number quantity of at least one. A card MUST NOT be pending in both directions. Raising a
 card's quantity in one direction SHALL set its quantity in the other to zero. A quantity brought to
 zero from the Collection page SHALL take the card out of the cart. A pending sale MUST NOT exceed
-the number of copies held. A pending purchase MUST NOT exceed 99 copies. A line's place in the cart
-SHALL be the order in which its card was first added, and changing its quantity or direction MUST
-NOT move it.
+the number of copies held. A pending purchase MUST NOT exceed 99 copies. A card whose rarity's rate
+the player does not know MUST NOT be pending for purchase. A line's place in the cart SHALL be the
+order in which its card was first added, and changing its quantity or direction MUST NOT move it.
 
 #### Scenario: Adding a card creates a line
 
@@ -40,6 +40,11 @@ NOT move it.
 
 - **WHEN** a card has 99 copies pending for purchase and the player asks for one more
 - **THEN** the pending purchase is still 99
+
+#### Scenario: A card whose rate is not known cannot be added
+
+- **WHEN** a player who does not know the rarity 6 rate asks to buy a six-star card
+- **THEN** the cart holds no line for that card
 
 ### Requirement: Nothing changes until the cart is confirmed
 
@@ -109,24 +114,26 @@ sections scroll. Activating it SHALL open the cart dialog.
 ### Requirement: The cart dialog lists each pending line as a row
 
 The cart dialog SHALL present one row per line, in the cart's order. A row SHALL state in words
-whether it is a sell or a buy, and SHALL show the card's name, its quantity with a control to lower
-it and a control to raise it, its effect on Rosaries, and a control that removes it. A row MUST NOT
-render the card. The effect SHALL be the quantity times the card's sale or purchase price, rendered
-through the Rosary amount primitive and preceded by a plus sign for a sale or a minus sign for a
-purchase, so that the direction does not rely on colour. Where the rows do not fit, the list of rows
-SHALL scroll inside the dialog, while the totals and the dialog's controls stay visible. Where the
-cart is empty, the dialog SHALL say so.
+whether it is a sell or a buy, and SHALL show the card's name, its quantity as an editable field
+with a control to lower it and a control to raise it, its effect on Rosaries, and a control that
+removes it. The quantity and its two controls SHALL be one joined bar through the design system's
+segmented control, accented as on the Collection page. A row MUST NOT render the card. The effect
+SHALL be the quantity times the card's sale or purchase price, rendered through the Rosary amount
+primitive and preceded by a plus sign for a sale or a minus sign for a purchase, so that the
+direction does not rely on colour. Where the rows do not fit, the list of rows SHALL scroll inside
+the dialog, while the totals and the dialog's controls stay visible. Where the cart is empty, the
+dialog SHALL say so.
 
 #### Scenario: A sale row
 
 - **WHEN** the cart holds a sale of 3 copies of a two-star card
-- **THEN** its row reads as a sell, names the card, shows a quantity of 3, and shows plus 60 followed
+- **THEN** its row reads as a sell, names the card, shows a quantity of 3, and shows plus 9 followed
   by the Rosary mark
 
 #### Scenario: A purchase row
 
 - **WHEN** the cart holds a purchase of 2 copies of a one-star card
-- **THEN** its row reads as a buy, names the card, shows a quantity of 2, and shows minus 200
+- **THEN** its row reads as a buy, names the card, shows a quantity of 2, and shows minus 8
   followed by the Rosary mark
 
 #### Scenario: No card is rendered
@@ -148,17 +155,21 @@ cart is empty, the dialog SHALL say so.
 
 ### Requirement: Rows can be adjusted and removed in the dialog
 
-Raising or lowering a row's quantity in the dialog SHALL change the cart at once, and the row's
-effect, the totals, the confirm control, the cart control, and that card's rows on the Collection
-page SHALL all follow. A row's quantity SHALL be bounded exactly as on the Collection page. The
-control that lowers it SHALL be unavailable at 1, so that a row leaves only by its remove control.
-Removing a row SHALL take its line out of the cart. Focus SHALL then move to the next row's remove
-control, else the previous row's, else the dialog's close control.
+Raising or lowering a row's quantity in the dialog, or typing one, SHALL change the cart at once,
+and the row's effect, the totals, the confirm control, the cart control, and that card's rows on the
+Collection page SHALL all follow. A row's quantity SHALL be bounded exactly as on the Collection
+page. The control that lowers it SHALL be unavailable at 1, so that a row leaves only by its remove
+control. A quantity SHALL be typed as on the Collection page, taking effect on Enter or on leaving
+the field, except that a typed zero SHALL become 1. Escape pressed in a field whose quantity is
+being edited SHALL abandon that edit and leave the dialog open. Otherwise Escape SHALL dismiss the
+dialog. The field's accessible name SHALL state the direction and the card. Removing a row SHALL
+take its line out of the cart. Focus SHALL then move to the next row's remove control, else the
+previous row's, else the dialog's close control.
 
 #### Scenario: Adjusting a quantity
 
 - **WHEN** a row selling 2 copies of a one-star card is raised to 3
-- **THEN** its effect reads plus 30
+- **THEN** its effect reads plus 3
 - **AND** the net change and the confirm control follow
 - **AND** the card's Sell row on the Collection page reads 3
 
@@ -183,6 +194,36 @@ control, else the previous row's, else the dialog's close control.
 - **WHEN** the player removes the only row
 - **THEN** the dialog stays open, stating that the cart is empty
 - **AND** focus is on its close control
+
+#### Scenario: Typing a quantity
+
+- **WHEN** the player types 12 into the quantity of a row buying 1 copy of a one-star card and
+  presses Enter
+- **THEN** its effect reads minus 48 and the totals, the confirm control, and the card's Buy row on
+  the Collection page follow
+- **AND** the dialog is still open with focus in the field
+
+#### Scenario: A typed quantity is bounded
+
+- **WHEN** the player types 200 into a row's quantity that buys a card and leaves the field
+- **THEN** it reads 99
+
+#### Scenario: A typed zero does not remove the row
+
+- **WHEN** the player types 0 into a row's quantity and presses Enter
+- **THEN** the row remains with a quantity of 1
+
+#### Scenario: Escape abandons an edit before it closes the dialog
+
+- **WHEN** the player types 7 into a quantity that held 2 and presses Escape
+- **THEN** the field reads 2 and the dialog is still open
+- **AND** pressing Escape again closes the dialog with 2 still pending
+
+#### Scenario: A typed quantity counts before confirming
+
+- **WHEN** the player types a quantity that makes the cart unaffordable and then activates the
+  confirm control without pressing Enter
+- **THEN** the typed quantity takes effect first and nothing is bought or sold
 
 ### Requirement: The dialog shows the cart's effect on the balance
 
@@ -261,7 +302,7 @@ settled, nothing SHALL change and the cart SHALL keep its lines.
 
 - **WHEN** a player holding 50 Rosaries and six copies of a one-star card confirms a cart selling 6
   of it and buying 1 of another one-star card
-- **THEN** the balance is 10
+- **THEN** the balance is 52
 - **AND** the first card is held 0 times and the other one more time than before
 - **AND** the cart is empty and the dialog is closed
 
@@ -305,9 +346,10 @@ The cart dialog SHALL be presented over the page as a modal dialog named `Cart`,
 within every viewport the page supports. On opening, focus SHALL move to its close control. Focus
 SHALL stay inside it while it is open. It SHALL be dismissed by its close control, by Escape, and by
 activating the area outside it. On dismissal or confirmation, focus SHALL return to the cart
-control. Every control in it SHALL be reachable and operable by keyboard with a visible focus
-indicator, and its accessible name SHALL name the card it acts on where it acts on one. Where a
-reduced-motion preference is expressed, the dialog SHALL appear and disappear without animation.
+control. Every control and quantity field in it SHALL be reachable and operable by keyboard with a
+visible focus indicator, and its accessible name SHALL name the card it acts on where it acts on
+one. Where a reduced-motion preference is expressed, the dialog SHALL appear and disappear without
+animation.
 
 #### Scenario: Opening and dismissing by keyboard
 

@@ -201,14 +201,15 @@ behaviour rather than a second way of drawing a card. No tile SHALL reimplement 
 Each collection tile SHALL display, as a badge overlaying the bottom of the tile, the number of
 copies of that card the collection holds and, while a deck is selected, the number of those copies
 the selected deck uses. The badge SHALL be shown for every tile, including a card held once and a
-card the deck does not use. Its wording or layout SHALL make clear which number is held and which
-is used, for example `2 / 3` with the used number first and visually subordinate to the held
-number. Where the two numbers are parted by a separator, such as the `/`, the separator SHALL be
-plainly visible at the badge's size, in both the normal and the exhausted treatment: drawn with
-at least the stroke weight and contrast of the used number, rather than as a faint hairline. Its
-accessible name SHALL state both in words, such as `2 of 3 in Deck 1`. Where every held copy is
-used, the badge SHALL show that the card is exhausted for this deck by a cue beyond colour. Where
-no deck is selected, the badge SHALL state only the held count.
+card the deck does not use. Its wording or layout SHALL make clear which number is held and which is
+used, for example `2 / 3` with the used number first and visually subordinate to the held number.
+Where the two numbers are parted by a separator, such as the `/`, the separator SHALL be plainly
+visible at the badge's size, in both the normal and the exhausted treatment: drawn with at least the
+stroke weight and contrast of the used number, rather than as a faint hairline. Its accessible name
+SHALL state both in words, such as `2 of 3 in Deck 1`. Where every held copy is used, the badge
+SHALL invert to a light fill with dark figures, so that the exhausted state differs in lightness as
+well as hue, and SHALL carry no checkmark or other added mark. Where no deck is selected, the badge
+SHALL state only the held count and SHALL NOT be inverted.
 
 The badge MUST NOT obscure the card's name, its star track, either stat bar, or any of its eight
 chevrons. It SHALL follow the collection and the selected deck without the page being reloaded,
@@ -236,7 +237,9 @@ including when the player switches decks.
 #### Scenario: An exhausted card is marked
 
 - **WHEN** the selected deck uses every held copy of a card
-- **THEN** the badge marks the card as exhausted for this deck by a cue that survives colour removal
+- **THEN** the badge is inverted, light with dark figures, and can be told from one that is not with
+  colour removed
+- **AND** it shows the two counts and no checkmark
 
 #### Scenario: Switching decks updates the used count
 
@@ -362,49 +365,124 @@ produce the same sequence every time.
   or holdings
 - **THEN** its sequence is unchanged
 
-### Requirement: Selecting a card raises an action menu over that card
+### Requirement: Selecting a card on the Decks page reads it
 
-Selecting a card on the Decks page SHALL raise a small menu over that card offering exactly the
-actions available for it: in the collection, adding the card to the selected deck and reading it;
-in the deck, removing that card from the deck and reading it. At most one menu SHALL be open at a
-time. The menu SHALL be dismissible without taking either action, and raising it MUST NOT reorder,
-resize, or reflow the collection or the deck around it.
+Selecting a card on the Decks page, in the collection or in the selected deck, SHALL open the
+reading presentation for that card at once, with no menu or other step between. Nothing SHALL be
+raised over the card itself. Opening and dismissing the presentation MUST NOT change, reorder,
+resize, or scroll the deck or the collection.
 
-#### Scenario: A collection card offers adding and reading
+#### Scenario: A collection card is read
 
 - **WHEN** the player selects a card in the collection
-- **THEN** a menu over that card offers adding it to the deck and reading it
+- **THEN** the reading presentation opens showing that card
 
-#### Scenario: A deck card offers removing and reading
+#### Scenario: A deck card is read
 
 - **WHEN** the player selects a card in the selected deck
-- **THEN** a menu over that card offers removing it from the deck and reading it
+- **THEN** the reading presentation opens showing that card
 
-#### Scenario: Only one menu at a time
+#### Scenario: No menu is raised
 
-- **WHEN** a menu is open and the player selects a different card
-- **THEN** the first menu closes and a menu opens over the newly selected card
+- **WHEN** the player selects any card on the page
+- **THEN** no action menu appears over it
 
-#### Scenario: A menu can be dismissed
+#### Scenario: The page does not move
 
-- **WHEN** the player dismisses an open menu
-- **THEN** it closes
-- **AND** neither the deck nor the collection has changed
+- **WHEN** the reading presentation is opened and dismissed
+- **THEN** every card on the page has the position and size it had before
 
-#### Scenario: The menu does not move the page
+### Requirement: Every collection tile offers adding its card
 
-- **WHEN** a menu opens over a card
-- **THEN** every other card on the page keeps its position and size
+Every collection tile SHALL show, beneath its card, a button that adds the card to the selected
+deck, without the player hovering, focusing, or selecting anything first. Its face SHALL name the
+deck, such as `Add to Deck 1`, and its accessible name SHALL also name the card. Where no deck is
+selected, its face SHALL read `Add to deck`. Where the add cannot be taken, the button SHALL stay in
+place and keep its face but be unavailable: it SHALL remain focusable, activating it SHALL do
+nothing, and the reason SHALL be available as its tooltip and to assistive technology. Availability
+MUST NOT be conveyed by colour alone, and MUST NOT change the size or position of the tile. The
+button MUST NOT overlap the card or its count badge. Activating it SHALL NOT open the reading
+presentation, and focus SHALL stay on it.
+
+#### Scenario: The button is always there
+
+- **WHEN** the Decks page renders with a deck selected
+- **THEN** every collection tile shows a button reading `Add to Deck 1` beneath its card
+
+#### Scenario: The button follows the selected deck
+
+- **WHEN** the player chooses the button for Deck 2
+- **THEN** every tile's button reads `Add to Deck 2`
+
+#### Scenario: Adding from the tile
+
+- **WHEN** the player activates a tile's add button
+- **THEN** the card takes the deck's next free position and no reading presentation opens
+- **AND** focus is still on that button
+
+#### Scenario: An unavailable add keeps its place
+
+- **WHEN** the selected deck uses every held copy of a card
+- **THEN** that card's button is still shown, with the same face, size, and position, and is
+  unavailable
+- **AND** its tooltip and accessible description state that every copy held is already in that deck
+
+#### Scenario: An unavailable add does nothing
+
+- **WHEN** the player activates an unavailable add button by pointer or keyboard
+- **THEN** the deck is unchanged
+
+#### Scenario: The button obscures nothing
+
+- **WHEN** a tile is rendered
+- **THEN** its add button overlaps neither the card nor the count badge
+
+### Requirement: Every filled deck position offers removing its card
+
+Every filled position of the selected deck SHALL show, beneath its card, a button reading `Remove`
+that takes out the copy at that position, without the player hovering, focusing, or selecting
+anything first. Its accessible name SHALL name the card and the deck. A free position SHALL show no
+button, and SHALL keep the same size as a filled one, so that filling or freeing a position moves
+nothing in the region. The button MUST NOT overlap the card. It SHALL be scaled with the rest of the
+pinned region where the region is scaled. Activating it SHALL NOT open the reading presentation.
+Focus SHALL then move to the remove button now at that position, else to that of the deck's last
+card, else to the selected deck's button.
+
+#### Scenario: The button is always there
+
+- **WHEN** a deck holding four cards is shown
+- **THEN** four positions show a `Remove` button and five show none
+
+#### Scenario: Removing from the position
+
+- **WHEN** the player activates the remove button of the second of three cards
+- **THEN** the second card is taken out and no reading presentation opens
+- **AND** focus is on the remove button of the card now second
+
+#### Scenario: Removing the last card in order
+
+- **WHEN** the player activates the remove button of the third of three cards
+- **THEN** focus is on the remove button of the second card
+
+#### Scenario: Removing the only card
+
+- **WHEN** the player activates the remove button of a deck's only card
+- **THEN** focus is on the selected deck's button
+
+#### Scenario: Filling a position moves nothing
+
+- **WHEN** a card is added to an empty deck
+- **THEN** every position keeps its size and the collection below keeps its place
 
 ### Requirement: Adding a card from the collection places it in the selected deck
 
 Adding a card SHALL place it in the selected deck's first free position and SHALL show it there
-immediately, without the page being reloaded. The collection SHALL be unchanged by the addition:
-the card's tile stays and its held count is the same, while its used count rises by one. Where
-there is no selected deck, where the selected deck is full, or where the selected deck already uses
-every held copy of that card, the add action SHALL NOT be offered, and the page SHALL state why.
-Adding a card that makes the deck Invalid SHALL be offered and SHALL succeed. The deck's standing
-then states the problem.
+immediately, without the page being reloaded. The collection SHALL be unchanged by the addition: the
+card's tile stays and its held count is the same, while its used count rises by one. Where there is
+no selected deck, where the selected deck is full, or where the selected deck already uses every
+held copy of that card, the add SHALL be unavailable wherever it is offered, and the page SHALL
+state why. Adding a card that makes the deck Invalid SHALL be offered and SHALL succeed. The deck's
+standing then states the problem.
 
 #### Scenario: An added card appears in the deck
 
@@ -426,38 +504,37 @@ then states the problem.
 
 #### Scenario: Using every copy withholds the action
 
-- **WHEN** the player selects a collection card whose every held copy the selected deck already
-  uses
-- **THEN** the menu does not offer adding it
+- **WHEN** the selected deck already uses every held copy of a collection card
+- **THEN** adding it is unavailable
 - **AND** the page states that every copy held is already in that deck
 
 #### Scenario: The copy limit is per deck
 
 - **WHEN** a player holding one copy of a card has it in Deck 1 and selects Deck 2
-- **THEN** the menu for that card offers adding it to Deck 2
+- **THEN** adding that card to Deck 2 is available
 
 #### Scenario: Removing a copy offers adding again
 
 - **WHEN** the deck uses every held copy of a card and the player removes one of them
-- **THEN** the menu for that card offers adding it again
+- **THEN** adding that card is available again
 
 #### Scenario: A card that breaks the rarity limit can still be added
 
-- **WHEN** the player selects a four-star card while the selected deck already holds a different
-  four-star card and has a free position
-- **THEN** the menu offers adding it
+- **WHEN** the selected deck holds a four-star card and has a free position, and the collection
+  holds a different four-star card
+- **THEN** adding that card is available
 - **AND** adding it places it in the deck and the region states the deck is invalid
 
 #### Scenario: A full deck does not offer the action
 
-- **WHEN** the player selects a collection card while the selected deck holds nine cards
-- **THEN** the menu does not offer adding it
+- **WHEN** the selected deck holds nine cards
+- **THEN** adding any collection card is unavailable
 - **AND** the page states that the deck is full
 
 #### Scenario: No deck means no adding
 
-- **WHEN** the player selects a collection card while holding no decks
-- **THEN** the menu does not offer adding it
+- **WHEN** the player holds no decks
+- **THEN** adding any collection card is unavailable
 - **AND** the page states that a deck must be created first
 
 ### Requirement: Removing a card from the deck frees exactly that position
@@ -486,9 +563,10 @@ cards in their order and freeing one position. The collection SHALL be unchanged
 
 Reading a card SHALL present it through the shared card renderer at a width at or above the width
 the renderer shows the ability section at, so that the ability text, the set, and the number are
-legible. The reading presentation SHALL be dismissible, SHALL offer the same deck action the card's
-menu offered — adding it when read from the collection, removing it when read from the deck — under
-the same conditions, and SHALL return the player to the page they were on when dismissed.
+legible. The reading presentation SHALL be dismissible, SHALL offer the same deck action the card
+offers on the page — adding it when read from the collection, removing it when read from the deck —
+under the same conditions and giving the same reasons, and SHALL return the player to the page they
+were on when dismissed.
 
 #### Scenario: The read card shows what the tile withheld
 
@@ -505,7 +583,8 @@ the same conditions, and SHALL return the player to the page they were on when d
 
 - **WHEN** the player reads a collection card and adds it from there
 - **THEN** it occupies the next free position of the selected deck
-- **AND** the same conditions that withhold the action in the menu withhold it here
+- **AND** the same conditions that make the tile's add unavailable withhold it here, with the same
+  reason
 
 #### Scenario: A card read from the deck offers removal
 
@@ -531,16 +610,16 @@ save control, no unsaved state, and no confirmation of persistence.
 ### Requirement: The Decks page honours a reduced-motion preference
 
 Where the player's environment asks for reduced motion, the page's entrances and transitions — the
-collection's arrival, the collection's reorder, a card taking its place in the deck, a menu,
-confirmation, or reading presentation opening — SHALL be reduced to an immediate state change.
+collection's arrival, the collection's reorder, a card taking its place in the deck, a confirmation
+or the reading presentation opening — SHALL be reduced to an immediate state change.
 Every state the motion would have carried SHALL remain distinguishable without it.
 
 #### Scenario: Motion is removed, not the information
 
 - **WHEN** the Decks page is used with a reduced-motion preference expressed
-- **THEN** cards, menus, and the reading presentation appear without animation
-- **AND** the selected deck button, the selected card, and a card's place in the deck are all
-  still distinguishable
+- **THEN** cards and the reading presentation appear without animation
+- **AND** the selected deck button, an unavailable add, and a card's place in the deck are all still
+  distinguishable
 
 #### Scenario: A reorder is immediate under reduced motion
 
@@ -552,18 +631,20 @@ Every state the motion would have carried SHALL remain distinguishable without i
 Every card the Decks page renders — in the collection, in a deck position, or read at full size —
 SHALL be rendered by the shared card renderer and SHALL follow the established card design
 contract: the 2.5:3.5 aspect ratio, the four sections, chevron placement, rarity stars, and
-numeral-free stat bars. The page's own overlays — the count badge, the action menu, the reading
-presentation's chrome — are the page's, not the card's, and MUST NOT alter what the renderer draws.
+numeral-free stat bars. The page's own additions — the count badge, the add and remove buttons, the
+reading presentation's chrome — are the page's, not the card's, and MUST NOT alter what the renderer
+draws.
 
 #### Scenario: A card is displayed
 
 - **WHEN** the Decks page displays a card
-- **THEN** that card is rendered by the shared card component and satisfies the card design constraints
+- **THEN** that card is rendered by the shared card component and satisfies the card design
+  constraints
 
 #### Scenario: The page's overlays leave the card alone
 
-- **WHEN** the page draws a count badge or an action menu over a card
-- **THEN** the card beneath it is unchanged in structure, proportions, and internal layout
+- **WHEN** the page draws a count badge over a card, or a button beneath it
+- **THEN** the card is unchanged in structure, proportions, and internal layout
 
 #### Scenario: The ratio holds at every size the page uses
 
@@ -711,9 +792,8 @@ card of. Every other order SHALL present the collection as a single run with no 
 
 Whenever the collection's order or direction changes, every tile in the collection SHALL replay
 the collection's entrance motion in its new place, staggered in the new reading order. No tile
-SHALL be left still because it kept its position or its neighbour. The motion SHALL NOT change
-which tile's menu is open, and the order SHALL be in effect as soon as it is chosen; the motion
-only presents the order and never holds it back.
+SHALL be left still because it kept its position or its neighbour. The order SHALL be in effect as
+soon as it is chosen; the motion only presents the order and never holds it back.
 
 #### Scenario: Every tile moves on a reorder
 
@@ -926,13 +1006,13 @@ wraps, the separator and controls SHALL stay together after the last deck button
 
 ### Requirement: Every action on the Decks page is operable by keyboard
 
-Every action the Decks page offers SHALL be reachable and operable by keyboard, with a visible
-focus indicator: choosing a deck button, creating and deleting a deck, choosing an order and
-reversing its direction, resetting the player's data, selecting a card, taking either action from
-the menu, and dismissing the menu, a confirmation, or the reading presentation. A disabled create
-control SHALL remain focusable so its reason can be read. While the reading presentation is open,
-keyboard focus SHALL be confined to it, and on dismissal SHALL return to the card it was opened
-from.
+Every action the Decks page offers SHALL be reachable and operable by keyboard, with a visible focus
+indicator: choosing a deck button, creating and deleting a deck, choosing an order and reversing its
+direction, resetting the player's data, reading a card, adding a card, removing a card, and
+dismissing a confirmation or the reading presentation. A disabled create control and an unavailable
+add SHALL remain focusable so their reasons can be read. Within a tile or a deck position, the card
+SHALL receive focus before its button. While the reading presentation is open, keyboard focus SHALL
+be confined to it, and on dismissal SHALL return to the card it was opened from.
 
 #### Scenario: The deck buttons are reachable by keyboard
 
@@ -953,8 +1033,14 @@ from.
 #### Scenario: A card's actions are reachable by keyboard
 
 - **WHEN** a card receives keyboard focus and is activated
-- **THEN** its menu opens and its actions can be reached and taken by keyboard
-- **AND** the menu can be dismissed by keyboard
+- **THEN** its reading presentation opens and can be dismissed by keyboard
+- **AND** the next stop after the card is its add or remove button, which can be activated by
+  keyboard
+
+#### Scenario: An unavailable add can be focused
+
+- **WHEN** the player tabs to a tile's unavailable add button
+- **THEN** it receives focus and its reason is available
 
 #### Scenario: Focus is managed around reading a card
 

@@ -8,7 +8,7 @@ capability and nothing else.
 
 ### Requirement: The user record outlives a page load
 
-The user's collection, Geo balance, Rosary balance, and decks SHALL be restored when the
+The user's collection, Geo balance, Rosary balance, decks, and milestones SHALL be restored when the
 application is loaded again on the same browser. A change to any of them SHALL be durable without
 the player taking any explicit save action. The cart of pending exchanges is not part of the user:
 it SHALL NOT be persisted, and what is pending in it is not an unsaved change to the user.
@@ -131,6 +131,14 @@ collection or their Geo because the shape around it grew.
   number
 - **THEN** it is treated as unreadable, the same as an impossible Geo balance
 
+#### Scenario: A record written before milestones existed is upgraded
+
+- **WHEN** stored data carries the version written with Rosaries but before milestones were part of
+  the user record
+- **THEN** the collection, the Geo balance, the Rosary balance, and every deck it holds are restored
+  in full
+- **AND** the record is rewritten at the current version, so a further reload restores it directly
+
 ### Requirement: Unreadable stored data yields a fresh user rather than a failure
 
 Stored data that is absent, malformed, of an unrecognised version, or structurally invalid SHALL
@@ -232,3 +240,34 @@ restored as an over-full record the rest of the application would have to defend
 - **WHEN** a stored record holds one deck that is not a list of card identities at all
 - **THEN** that deck is dropped
 - **AND** every other deck, the collection, and the balance are restored in full
+
+### Requirement: A restored milestone is never below what is held
+
+The persisted record SHALL carry the user's milestones. On restoring a user, each milestone SHALL be
+the higher of what the record states and what the restored balance and collection prove. A record
+written before milestones existed SHALL be restored with what its balance and collection prove. A
+milestone that is missing from a current record or is not a possible value SHALL cost only itself:
+it SHALL be restored as what is proved, and the rest of the record SHALL be restored in full.
+
+#### Scenario: Milestones survive a reload
+
+- **WHEN** a user whose highest balance is 9999 has spent it all, and the page is then reloaded
+- **THEN** the restored user's highest balance is 9999 and the rarity 6 rate is known
+
+#### Scenario: A record from before milestones
+
+- **WHEN** stored data written before milestones existed holds 12000 Rosaries and a four-star card
+  as its rarest
+- **THEN** the restored user's highest balance is 12000 and highest rating is 4
+
+#### Scenario: A milestone below what is held is raised
+
+- **WHEN** a current record states a highest balance of 10 and a balance of 300
+- **THEN** the restored user's highest balance is 300
+
+#### Scenario: An impossible milestone costs only itself
+
+- **WHEN** a current record states a highest rating of 9 or a highest balance that is negative,
+  fractional, or not a number
+- **THEN** that milestone is restored as what the balance and collection prove
+- **AND** the collection, both balances, and every deck are restored in full

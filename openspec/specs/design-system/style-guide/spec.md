@@ -58,6 +58,7 @@ The style guide SHALL render every shared primitive, including:
 - the Geo amount
 - the Rosary amount
 - the single-line screen header
+- the segmented control
 
 #### Scenario: Button variants and states are shown
 
@@ -73,7 +74,8 @@ The style guide SHALL render every shared primitive, including:
 #### Scenario: The Geo amount is shown
 
 - **WHEN** the style guide renders the Geo amount
-- **THEN** amounts spanning the range the application shows — including zero — appear as amount followed by the Geo mark
+- **THEN** amounts spanning the range the application shows — including zero — appear as amount
+  followed by the Geo mark
 - **AND** the same primitive is shown at the type sizes it is used at, including inside a button
 
 #### Scenario: The Rosary amount is shown
@@ -97,6 +99,13 @@ The style guide SHALL render every shared primitive, including:
 - **WHEN** the style guide renders the single-line screen header example
 - **THEN** the example does not replace or duplicate the style guide's own top-level heading for
   assistive technology
+
+#### Scenario: The segmented control is shown
+
+- **WHEN** the style guide renders the segmented control section
+- **THEN** it is shown in its gold and its soul accent, with and without a field
+- **AND** examples with a focused segment, an unavailable segment, and a field that cannot be edited
+  are visible for comparison
 
 ### Requirement: Card and card-face coverage
 
