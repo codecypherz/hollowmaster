@@ -1097,29 +1097,34 @@ test('the deck controls are named icons, beside the deck buttons behind a separa
 
 test('the deck states its standing: error, warning, or ready', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  // Two Goam held, so one deck may hold both and break the rarity limit.
-  await openDecksAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 2 }], decks: [[]] });
+  // Three Goam held, so one deck may hold all three and break the rarity limit.
+  await openDecksAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 3 }], decks: [[]] });
 
   // An empty deck is a warning, and nothing is an error.
   expect(await deckStanding(page)).toEqual([
     expect.objectContaining({ kind: 'incomplete', text: expect.stringMatching(/9 more cards/) }),
   ]);
 
-  // Rarity order puts Goam first. Two copies of it break the limit, and the
-  // error arrives without a reload, ahead of the warning.
+  // Rarity order puts Goam first. Two copies of it are within the limit.
   const goam = collectionTiles(page).first();
   await expect(goam.locator('.cf-name-text')).toHaveText(/goam/i);
   for (let i = 0; i < 2; i++) {
     await addButton(goam).click();
   }
   await expect(deckCards(page)).toHaveCount(2);
+  expect((await deckStanding(page)).map((l) => l.kind)).toEqual(['incomplete']);
+
+  // A third breaks it, and the error arrives without a reload, ahead of the
+  // warning.
+  await addButton(goam).click();
+  await expect(deckCards(page)).toHaveCount(3);
   const both = await deckStanding(page);
   expect(both.map((l) => l.kind)).toEqual(['invalid', 'incomplete']);
   expect(both[0].text).toMatch(/^Invalid/);
-  expect(both[0].text).toMatch(/only 1 is allowed/);
+  expect(both[0].text).toMatch(/only 2 are allowed/);
   expect(both[0].text).toMatch(/Remove 1/);
   expect(both[1].text).toMatch(/^Incomplete/);
-  expect(both[1].text).toMatch(/7 more cards/);
+  expect(both[1].text).toMatch(/6 more cards/);
 
   // Each in its own status colour, and the two are different colours.
   const colours = await page.evaluate(() => {
@@ -1150,12 +1155,12 @@ test('the deck states its standing: error, warning, or ready', async ({ page }) 
 
   // Removing one Goam clears the error.
   await removeButton(deckSlots(page).nth(1)).click();
-  await expect(deckCards(page)).toHaveCount(1);
+  await expect(deckCards(page)).toHaveCount(2);
   expect((await deckStanding(page)).map((l) => l.kind)).toEqual(['incomplete']);
 
-  // Filled to nine within the limit, the deck is ready: eight one-star
-  // starters after the one Goam, a copy of each.
-  for (let i = 1; i < DECK_SIZE; i++) {
+  // Filled to nine within the limit, the deck is ready: seven one-star
+  // starters after the two Goam, a copy of each.
+  for (let i = 1; i <= DECK_SIZE - 2; i++) {
     await addButton(collectionTiles(page).nth(i)).click();
   }
   await expect(deckCards(page)).toHaveCount(DECK_SIZE);

@@ -44,7 +44,7 @@ export const DECK_SIZE = HAND_SIZE;
  * cards through would be backwards. Both numbers live here and nowhere else —
  * the standing, its message, and battle eligibility all read them.
  */
-export const RARITY_LIMIT = Object.freeze({ minStars: 4, allowed: 1 });
+export const RARITY_LIMIT = Object.freeze({ minStars: 4, allowed: 2 });
 
 /** One thing wrong with a deck. Invalid outranks Incomplete. */
 export type DeckProblem =

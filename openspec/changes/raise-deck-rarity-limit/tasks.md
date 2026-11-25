@@ -1,6 +1,6 @@
 ## 1. The limit
 
-- [ ] 1.1 In `src/model/deck.ts`, set `RARITY_LIMIT.allowed` to 2. In `src/model/deck.spec.ts`, update
+- [x] 1.1 In `src/model/deck.ts`, set `RARITY_LIMIT.allowed` to 2. In `src/model/deck.spec.ts`, update
       the tests that reach the limit: the constant's test; a full deck with two high-rarity cards is
       Ready, both as two different cards and as two copies of Goam; three different four-star cards,
       three Goam, and two four-star cards plus a five- or six-star card are each Invalid, reporting
@@ -11,7 +11,7 @@
 
 ## 2. The error's wording
 
-- [ ] 2.1 In `standingLine` in `src/components/deck-bar/deck-bar.ts`, choose "is" or "are" from
+- [x] 2.1 In `standingLine` in `src/components/deck-bar/deck-bar.ts`, choose "is" or "are" from
       `problem.allowed`, so the error reads `3 cards of 4★ or more — only 2 are allowed. Remove 1.`
       In `e2e/decks.spec.ts`, update "the deck states its standing": hold three Goam; assert two in the
       deck raise no error; add the third and expect `only 2 are allowed`, `Remove 1`, and

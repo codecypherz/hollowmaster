@@ -42,12 +42,13 @@ function cardWord(count: number): string {
 function standingLine(problem: DeckProblem): StandingLine {
   if (problem.kind === 'invalid') {
     const over = problem.held - problem.allowed;
+    const verb = problem.allowed === 1 ? 'is' : 'are';
     return {
       kind: 'invalid',
       word: 'Invalid',
       text:
         `${problem.held} ${cardWord(problem.held)} of ${problem.minStars}★ or more — only ${problem.allowed} ` +
-        `is allowed. Remove ${over}.`,
+        `${verb} allowed. Remove ${over}.`,
     };
   }
   return {
