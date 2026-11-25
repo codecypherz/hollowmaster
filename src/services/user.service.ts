@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Card } from '../model/card';
 import { addCardToDeck, createDeck, deleteDeck, removeCardFromDeck } from '../model/deck';
-import { buyCard, sellCard } from '../model/exchange';
+import { OrderLine, settleOrder } from '../model/exchange';
 import {
   SCHEMA_VERSION,
   UserState,
@@ -123,20 +123,15 @@ export class UserService {
   // ─── Rosaries ─────────────────────────────────────────────────────────────
   //
   // The Collection page's exchange. The prices, the affordability check, and
-  // the deck trimming a sale brings all live in `exchange.ts`; each command
+  // the deck trimming a sale brings all live in `exchange.ts`; the command
   // commits that function's result in one step, or nothing.
 
-  /** Buys one copy of `card` for Rosaries. Refused when the balance is short. */
-  buyCard(card: Card): boolean {
-    return this.apply((s) => buyCard(s, card));
-  }
-
   /**
-   * Sells one copy of `card` for Rosaries, trimming any deck left holding more
-   * copies than remain. Refused for a card not held.
+   * Settles an order of sales and purchases: all of it, or none of it. Refused
+   * when it sells more than is held or its net is more than the balance.
    */
-  sellCard(card: Card): boolean {
-    return this.apply((s) => sellCard(s, card));
+  settle(order: readonly OrderLine[]): boolean {
+    return this.apply((s) => settleOrder(s, order));
   }
 
   // ─── Decks ────────────────────────────────────────────────────────────────

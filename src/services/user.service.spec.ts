@@ -3,6 +3,7 @@ import { effect } from '@angular/core';
 import { UserService } from './user.service';
 import { CARD_BY_KEY, Card, cardKey, cardKeyOf } from '../model/card';
 import { DECK_SIZE, MAX_DECKS } from '../model/deck';
+import { OrderLine } from '../model/exchange';
 import {
   PersistedUser,
   SCHEMA_VERSION,
@@ -30,6 +31,17 @@ const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
 const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 2))!;
 /** A starter card, so a freshly seeded user holds one. */
 const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
+
+const sell = (card: Card, quantity = 1): OrderLine => ({
+  key: cardKey(card),
+  action: 'sell',
+  quantity,
+});
+const buy = (card: Card, quantity = 1): OrderLine => ({
+  key: cardKey(card),
+  action: 'buy',
+  quantity,
+});
 
 /** Five cards to stand in for a pack. */
 const pack: Card[] = [crawlid, crawlid, goam, gruzMother, crawlid];
@@ -290,41 +302,41 @@ describe('UserService', () => {
       expect(us.rosaries()).toBe(0);
     });
 
-    it('sells a held card, persisting once, and refuses one not held without a write', () => {
+    it('settles a sale, persisting once, and refuses one not held without a write', () => {
       const store = new InMemoryUserStore();
       const users = withStore(store);
 
-      expect(users.sellCard(vengefly)).toBe(true);
+      expect(users.settle([sell(vengefly)])).toBe(true);
       expect(users.rosaries()).toBe(10);
       expect(quantityOf(users.collection(), vengefly)).toBe(0);
       expect(store.saved).toHaveLength(1);
       expect(store.saved[0].rosaries).toBe(10);
 
-      expect(users.sellCard(vengefly)).toBe(false);
+      expect(users.settle([sell(vengefly)])).toBe(false);
       expect(store.saved).toHaveLength(1);
     });
 
-    it('buys a card it can afford, persisting once, and refuses one it cannot', () => {
+    it('settles a purchase it can afford, persisting once, and refuses one it cannot', () => {
       const store = new InMemoryUserStore();
       const users = withStore(store);
 
-      expect(users.buyCard(crawlid)).toBe(false);
+      expect(users.settle([buy(crawlid)])).toBe(false);
       expect(store.saved).toHaveLength(0);
 
-      for (const key of STARTER_CARD_KEYS) users.sellCard(CARD_BY_KEY.get(key)!);
+      const starters = STARTER_CARD_KEYS.map((key) => CARD_BY_KEY.get(key)!);
+      expect(users.settle(starters.map((card) => sell(card)))).toBe(true);
       expect(users.rosaries()).toBe(90);
       store.saved = [];
-      expect(users.buyCard(crawlid)).toBe(false);
+      expect(users.settle([buy(crawlid)])).toBe(false);
       expect(store.saved).toHaveLength(0);
 
-      users.sellCard(crawlid); // not held any more: refused
-      users.grantCards([crawlid]);
-      users.sellCard(crawlid);
+      users.grantCards([vengefly]);
       store.saved = [];
-      expect(users.rosaries()).toBe(100);
-      expect(users.buyCard(crawlid)).toBe(true);
+      // The sale in the same order is what makes the purchase affordable.
+      expect(users.settle([buy(crawlid), sell(vengefly)])).toBe(true);
       expect(users.rosaries()).toBe(0);
       expect(quantityOf(users.collection(), crawlid)).toBe(1);
+      expect(quantityOf(users.collection(), vengefly)).toBe(0);
       expect(store.saved).toHaveLength(1);
     });
 
@@ -344,7 +356,7 @@ describe('UserService', () => {
         }),
       );
       TestBed.tick();
-      us.sellCard(crawlid);
+      us.settle([sell(crawlid)]);
       TestBed.tick();
       expect(us.decks().every((d) => d.cards.length === 0)).toBe(true);
       expect(seen.at(-1)).toEqual({ held: 0, inDecks: 0, rosaries: 10 });
@@ -389,7 +401,7 @@ describe('UserService', () => {
       users.createDeck();
       users.addCardToDeck(0, crawlid);
       users.addCardToDeck(1, goam);
-      users.sellCard(goam);
+      users.settle([sell(goam)]);
       expect(users.rosaries()).toBeGreaterThan(0);
 
       users.reset();

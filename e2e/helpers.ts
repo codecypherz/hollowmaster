@@ -497,6 +497,38 @@ export function exchangeTile(page: Page, set: string, number: number): Locator {
   return page.locator(`app-collection .tile[data-card="${set}-${number}"]`);
 }
 
+/** One of a tile's two rows, with the controls in it. */
+export function exchangeRow(tile: Locator, action: 'sell' | 'buy') {
+  const row = tile.locator(`[data-row^="${action}-"]`);
+  return {
+    row,
+    value: row.locator('.value'),
+    lower: row.locator('button.lower'),
+    raise: row.locator('button.raise'),
+    target: row.locator('button.target'),
+    warning: row.locator('.warn'),
+  };
+}
+
+/** The control that opens the cart. */
+export function cartControl(page: Page): Locator {
+  return page.getByTestId('cart-control');
+}
+
+/** The cart dialog, open or not. */
+export function cartDialog(page: Page): Locator {
+  return page.getByRole('dialog', { name: 'Cart', exact: true });
+}
+
+/** Opens the cart and waits out its entrance, so it is measured at rest. */
+export async function openCart(page: Page): Promise<Locator> {
+  await cartControl(page).click();
+  const dialog = cartDialog(page);
+  await expect(dialog).toBeVisible();
+  await expect.poll(() => dialog.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  return dialog;
+}
+
 /** The Rosary purse's amount. */
 export function rosaryPurse(page: Page): Locator {
   return page.locator('[data-testid="rosary-purse"]');

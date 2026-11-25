@@ -12,10 +12,27 @@
 
   <main class="content">
     <!-- ─── The pinned top bar ──────────────────────────────────────────────
-         A grid row that does not scroll. The header takes the first column
-         and its rules give way first; the purse holds the second, so the two
-         can never overlap. -->
+         A grid row that does not scroll. The cart holds the first column and
+         the purse the last; the header between them is what gives way, its
+         rules first, so nothing can overlap. -->
     <div class="top-bar">
+      <!-- Always shown, and an empty cart is offered like any other. -->
+      <button
+        type="button"
+        class="hk-btn sm cart-control"
+        data-testid="cart-control"
+        aria-haspopup="dialog"
+        [attr.aria-label]="cartLabel()"
+        (click)="openCart()"
+      >
+        <svg class="cart-mark" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path d="M1 2.2h2.1l1.7 8h7.4l1.6-5.7H3.7" />
+          <circle cx="5.8" cy="13" r="1.1" />
+          <circle cx="11.2" cy="13" r="1.1" />
+        </svg>
+        <span class="cart-count" aria-hidden="true">{{ pending() }}</span>
+      </button>
+
       <header class="screen-header">
         <span class="screen-header-rule" aria-hidden="true"></span>
         <h1 class="screen-header-title">Collection</h1>
@@ -56,6 +73,8 @@
                   [attr.data-card]="tile.slug"
                   [style.--index]="i"
                 >
+                  <span class="tile-number">{{ tile.number }}</span>
+
                   <div class="tile-card">
                     <app-card [card]="tile.card" />
 
@@ -73,53 +92,67 @@
                     }
                   </div>
 
-                  <div class="controls">
-                    <!-- Unaffordable stays focusable — not the native
-                         `disabled` — so its reason can be read. -->
-                    <button
-                      type="button"
-                      class="hk-btn sm exchange buy"
-                      [attr.data-buy]="tile.slug"
-                      [attr.aria-label]="buyLabel(tile)"
-                      [attr.aria-disabled]="tile.affordable ? null : 'true'"
-                      [attr.aria-describedby]="tile.affordable ? null : 'not-enough-rosaries'"
-                      [attr.title]="tile.affordable ? null : notEnough"
-                      (click)="onBuy(tile)"
-                    >
-                      Buy <app-rosary [amount]="tile.buyPrice" />
-                    </button>
-
-                    @if (tile.quantity > 0) {
-                      @let warns = tile.trims.length > 0;
-                      <button
-                        type="button"
-                        class="hk-btn sm exchange sell"
-                        [class.is-warning]="warns"
-                        [attr.data-sell]="tile.slug"
-                        [attr.aria-label]="sellLabel(tile)"
-                        [attr.aria-describedby]="warns ? 'trim-' + tile.slug : null"
-                        [attr.title]="warns ? trimText(tile) : null"
-                        (click)="onSell(tile)"
+                  <div class="rows">
+                    @for (row of tile.rows; track row.action) {
+                      @let hook = row.action + '-' + tile.slug;
+                      <!-- The price is the row's tooltip and description: it is
+                           not drawn on the tile. -->
+                      <div
+                        class="row"
+                        role="group"
+                        [attr.data-row]="hook"
+                        [attr.aria-label]="row.label + ' ' + tile.card.name"
+                        [attr.aria-describedby]="
+                          'price-' + hook + (row.warning ? ' trim-' + hook : '')
+                        "
+                        [attr.title]="row.priceTitle"
                       >
-                        @if (warns) {
-                          <svg
-                            class="warn-mark"
-                            viewBox="0 0 10 10"
-                            aria-hidden="true"
-                            focusable="false"
-                          >
-                            <path d="M5 1.2 9.2 8.8H0.8Z" />
-                          </svg>
+                        <span class="row-label" aria-hidden="true">{{ row.label }}</span>
+                        <!-- Always in the layout, so a warning arriving moves nothing. -->
+                        <span class="warn-slot">
+                          @if (row.warning) {
+                            <span class="warn" [attr.title]="row.warning">
+                              <svg
+                                class="warn-mark"
+                                viewBox="0 0 10 10"
+                                aria-hidden="true"
+                                focusable="false"
+                              >
+                                <path d="M5 1.2 9.2 8.8H0.8Z" />
+                                <path d="M5 4v2.2M5 7.4v.2" />
+                              </svg>
+                            </span>
+                            <span hidden [id]="'trim-' + hook">{{ row.warning }}</span>
+                          }
+                        </span>
+                        <app-quantity-stepper
+                          [value]="row.quantity"
+                          [canLower]="row.quantity > 0"
+                          [canRaise]="row.canRaise"
+                          [raiseReason]="row.raiseReason"
+                          [lowerLabel]="row.lowerLabel"
+                          [raiseLabel]="row.raiseLabel"
+                          (decrease)="onStep(tile, row, -1)"
+                          (increase)="onStep(tile, row, 1)"
+                        />
+                        <!-- Unavailable stays focusable — not the native
+                             `disabled` — so its reason can be read. -->
+                        <button
+                          type="button"
+                          class="hk-btn sm target"
+                          [attr.aria-label]="row.target.label"
+                          [attr.aria-disabled]="row.target.reason ? 'true' : null"
+                          [attr.aria-describedby]="row.target.reason ? 'target-' + hook : null"
+                          [attr.title]="row.target.reason || null"
+                          (click)="onTarget(tile, row)"
+                        >
+                          {{ row.target.face }}
+                        </button>
+                        <span hidden [id]="'price-' + hook">{{ row.priceText }}</span>
+                        @if (row.target.reason) {
+                          <span hidden [id]="'target-' + hook">{{ row.target.reason }}</span>
                         }
-                        Sell <app-rosary [amount]="tile.sellPrice" />
-                      </button>
-                      @if (warns) {
-                        <span class="sr-only" [id]="'trim-' + tile.slug">{{ trimText(tile) }}</span>
-                      }
-                    } @else {
-                      <!-- Holds the sell control's slot, so the buy control and
-                           the neighbours do not move. Not a control. -->
-                      <span class="exchange-spacer" aria-hidden="true"></span>
+                      </div>
                     }
                   </div>
                 </div>
@@ -131,6 +164,9 @@
     </div>
   </main>
 
-  <span id="not-enough-rosaries" class="sr-only">{{ notEnough }}</span>
   <p class="sr-only" aria-live="polite" data-testid="exchange-announcement">{{ announcement() }}</p>
+
+  @if (cartOpen()) {
+    <app-cart-dialog (confirm)="onConfirm()" (close)="closeCart()" />
+  }
 </div>

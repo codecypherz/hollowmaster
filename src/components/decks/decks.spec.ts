@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { CARD_BY_KEY, cardKeyOf } from '../../model/card';
 import { MAX_DECKS } from '../../model/deck';
 import { STARTER_CARD_KEYS } from '../../model/user';
+import { CartService } from '../../services/cart.service';
 import { UserService } from '../../services/user.service';
 import { Decks } from './decks';
 
@@ -197,6 +198,19 @@ describe('the Decks page', () => {
     expect(page.sort()).toEqual({ key: 'rarity', direction: 'desc' });
     expect(page.openMenu()).toBeNull();
     expect(page.reading()).toBeNull();
+  });
+
+  it('empties the cart on a reset', () => {
+    const cart = TestBed.inject(CartService);
+    cart.setQuantity(goam, 'buy', 2);
+    cart.setQuantity(crawlid, 'sell', 1);
+    expect(cart.count()).toBe(3);
+
+    page.askToReset();
+    expect(cart.count()).toBe(3);
+    page.onReset();
+
+    expect(cart.lines()).toEqual([]);
   });
 
   it('orders the collection rarest first on arrival', () => {

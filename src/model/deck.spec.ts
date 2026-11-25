@@ -14,6 +14,7 @@ import {
   deleteDeck,
   emptyDeck,
   isBattleReady,
+  listOf,
   removeCardFromDeck,
   trimDecks,
 } from './deck';
@@ -551,5 +552,13 @@ describe('trimming decks to a quantity', () => {
     const [trimmed] = trimDecks([full], c, 0);
     expect(trimmed.cards).toHaveLength(DECK_SIZE - 1);
     expect(deckStanding(trimmed).problems).toEqual([{ kind: 'incomplete', needed: 1 }]);
+  });
+});
+
+describe('listing deck names', () => {
+  it('reads as prose', () => {
+    expect(listOf(['Deck 1'])).toBe('Deck 1');
+    expect(listOf(['Deck 1', 'Deck 3'])).toBe('Deck 1 and Deck 3');
+    expect(listOf(['Deck 1', 'Deck 2', 'Deck 3'])).toBe('Deck 1, Deck 2, and Deck 3');
   });
 });

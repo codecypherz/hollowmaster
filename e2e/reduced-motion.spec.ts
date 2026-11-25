@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import {
   PACK_SIZE,
   buyPack,
+  cartControl,
+  cartDialog,
   collected,
   collectionTiles,
   deckCards,
@@ -11,6 +13,7 @@ import {
   expectNoScroll,
   expectNothingClipped,
   grantGeo,
+  exchangeRow,
   exchangeTile,
   exchangeTiles,
   openCardMenu,
@@ -270,7 +273,9 @@ test('the Decks page is left aligned under reduced motion as it is otherwise', a
   expect(aligned.sections).toHaveLength(3);
 });
 
-test('the Collection page presents its tiles and purse without animation', async ({ page }) => {
+test('the Collection page presents its tiles, cart, and purse without animation', async ({
+  page,
+}) => {
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
     true,
   );
@@ -299,11 +304,13 @@ test('the Collection page presents its tiles and purse without animation', async
     expect(tile.opacity).toBe('1');
   }
   await expect(rosaryPurse(page)).toHaveText('50');
-  const purse = await page.locator('app-collection .purse').evaluate((el) => ({
-    animation: getComputedStyle(el).animationName,
-    opacity: getComputedStyle(el).opacity,
-  }));
-  expect(purse).toEqual({ animation: 'none', opacity: '1' });
+  for (const corner of [page.locator('app-collection .purse'), cartControl(page)]) {
+    const still = await corner.evaluate((el) => {
+      const { animationName, opacity, transitionDuration } = getComputedStyle(el);
+      return { animationName, opacity, transitionDuration };
+    });
+    expect(still).toEqual({ animationName: 'none', opacity: '1', transitionDuration: '0s' });
+  }
 
   // Every treatment the motion might have carried is still there.
   const crawlid = exchangeTile(page, 'FC', 1);
@@ -312,12 +319,36 @@ test('the Collection page presents its tiles and purse without animation', async
   await expect(vengefly.locator('.badge')).toHaveAccessibleName('3 held');
   await expect(gruzMother.locator('.badge')).toHaveAccessibleName('Not owned');
   await expect(gruzMother.locator('.veil')).toBeVisible();
-  await expect(crawlid.locator('button.sell .warn-mark')).toBeVisible();
-  await expect(gruzMother.locator('button.buy')).toHaveAttribute('aria-disabled', 'true');
-  await expect(gruzMother.locator('button.buy')).toHaveAttribute('title', 'Not enough Rosaries');
+  const unowned = exchangeRow(gruzMother, 'sell');
+  await expect(unowned.raise).toHaveAttribute('aria-disabled', 'true');
+  await expect(unowned.raise).toHaveAttribute('title', 'You hold none to sell');
+  const controls = await exchangeRow(gruzMother, 'buy')
+    .row.locator('button')
+    .evaluateAll((els) => els.map((el) => getComputedStyle(el).transitionDuration));
+  expect(new Set(controls)).toEqual(new Set(['0s']));
 
-  // A count changing settles at once, too.
-  await vengefly.locator('button.sell').click();
+  // A pending quantity, its warning, and the cart's count settle at once.
+  await exchangeRow(crawlid, 'sell').raise.click();
+  await expect(exchangeRow(crawlid, 'sell').value).toHaveText('1');
+  await expect(exchangeRow(crawlid, 'sell').warning).toBeVisible();
+  await exchangeRow(vengefly, 'sell').raise.click();
+  await expect(cartControl(page)).toHaveAccessibleName('Cart, 2 cards pending');
+  await expect(vengefly.locator('.badge')).toHaveAccessibleName('3 held');
+
+  // The dialog is there, and then not, with nothing in between.
+  await cartControl(page).click();
+  const dialog = cartDialog(page);
+  await expect(dialog).toBeVisible();
+  for (const part of [dialog, page.locator('app-cart-dialog .cart-scrim')]) {
+    const still = await part.evaluate((el) => ({
+      animation: getComputedStyle(el).animationName,
+      opacity: getComputedStyle(el).opacity,
+    }));
+    expect(still).toEqual({ animation: 'none', opacity: '1' });
+  }
+  await expect(dialog.locator('.line-warning')).toBeVisible();
+  await dialog.locator('.cart-confirm').click();
+  await expect(dialog).toHaveCount(0);
   await expect(vengefly.locator('.badge')).toHaveAccessibleName('2 held');
-  await expect(rosaryPurse(page)).toHaveText('60');
+  await expect(rosaryPurse(page)).toHaveText('70');
 });

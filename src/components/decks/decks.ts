@@ -13,6 +13,7 @@ import {
 } from '../../model/collection';
 import { AddRefusal, addRefusal, copiesInDeck, deckName } from '../../model/deck';
 import { createParticleField, particleVars } from '../../model/particle';
+import { CartService } from '../../services/cart.service';
 import { UserService } from '../../services/user.service';
 import { CardReader } from '../card-reader/card-reader';
 import { CollectionGrid } from '../collection-grid/collection-grid';
@@ -70,6 +71,7 @@ interface Selection {
 })
 export class Decks {
   private readonly users = inject(UserService);
+  private readonly cart = inject(CartService);
 
   readonly particles = createParticleField(14, 0xc0115);
   readonly vars = particleVars;
@@ -251,10 +253,11 @@ export class Decks {
     this.confirmingReset.set(true);
   }
 
-  /** Replaces the player's data with a new player's, and shows it as one arrives. */
+  /** Replaces the player's data with a new player's, empties the cart, and starts over. */
   onReset(): void {
     this.confirmingReset.set(false);
     this.users.reset();
+    this.cart.clear();
     this.selectedDeck.set(0);
     this.sort.set(DEFAULT_SORT_STATE);
     this.sortGeneration.update((g) => g + 1);

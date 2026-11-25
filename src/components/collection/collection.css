@@ -6,7 +6,8 @@
    ──────────────────────────────────────────────────────────────────────────── */
 
 :host {
-  --tile-w: 150px;
+  --tile-w: 200px;
+  --card-w: 150px;
 
   display: block;
   position: relative;
@@ -34,19 +35,47 @@
 }
 
 /* ─── The top bar ─────────────────────────────────────────────────────────────
-   The header in a shrinkable first column and the purse in an `auto` second
-   one: the header's rules give way before anything overlaps, and the purse
-   keeps the top-right corner at every width.
+   The cart and the purse in `auto` end columns and the header shrinkable
+   between them: the header's rules give way before anything overlaps, and the
+   cart and the purse keep the top corners at every width.
    ──────────────────────────────────────────────────────────────────────────── */
 
 .top-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding-right: 16px;
+  padding: 0 16px 8px;
   border-bottom: 1px solid var(--color-section-border);
-  padding-bottom: 8px;
+}
+
+.cart-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  margin-top: 6px;
+  color: var(--color-gold-light);
+}
+
+.cart-mark {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Room for two digits, so the first few additions move nothing in the bar. */
+.cart-count {
+  min-width: 2.4ch;
+  font-size: 0.8rem;
+  line-height: 1;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .purse {
@@ -67,9 +96,10 @@
 }
 
 /* ─── The sections ────────────────────────────────────────────────────────────
-   The page's one scrolling region. A fixed 150px track, as on the Decks page,
-   keeps every card inside the renderer's no-ability band at any width; tiles
-   pack from the left and a short row leaves its unused width on the right.
+   The page's one scrolling region. A fixed track keeps every frame, and the
+   150px card inside it, one width at any viewport — well inside the renderer's
+   no-ability band; tiles pack from the left and a short row leaves its unused
+   width on the right.
    ──────────────────────────────────────────────────────────────────────────── */
 
 .sections-region {
@@ -124,17 +154,36 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, var(--tile-w));
   justify-content: start;
-  gap: 24px 16px;
+  gap: 16px 12px;
   padding: 14px 16px 10px;
 }
 
+/* ─── The frame ───────────────────────────────────────────────────────────────
+   The tile is a frame with a card in it: the collection number above, the
+   rows below, and neither touching what the renderer draws.
+   ──────────────────────────────────────────────────────────────────────────── */
+
 .tile {
+  box-sizing: border-box;
   width: var(--tile-w);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  padding: 8px 10px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-section-border);
+  border-radius: 3px;
   animation: tileIn var(--dur-entrance) var(--ease-out-soft) both;
   animation-delay: calc(min(var(--index), 24) * var(--dur-stagger) / 3);
+}
+
+.tile-number {
+  align-self: flex-start;
+  margin-bottom: 6px;
+  font-size: 0.64rem;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
 }
 
 @keyframes tileIn {
@@ -148,9 +197,12 @@
   }
 }
 
-/* The positioning context for the overlays, so neither can reflow the tile. */
+/* The positioning context for the overlays, so neither can reflow the tile,
+   and the width the renderer sees. */
 .tile-card {
   position: relative;
+  align-self: center;
+  width: var(--card-w);
 }
 
 /* ─── Owned and unowned ───────────────────────────────────────────────────────
@@ -169,7 +221,7 @@
 
 /* Centred on the card's lower rim, its top edge just below the chevron ring,
    so even the longer "Not owned" covers nothing the renderer draws. It hangs
-   into the gap above the controls, which is sized to take it. */
+   into the gap above the rows, which is sized to take it. */
 .badge {
   position: absolute;
   left: 50%;
@@ -196,55 +248,56 @@
   border-color: var(--color-text-dim);
 }
 
-/* ─── The exchange controls ───────────────────────────────────────────────────
-   Stacked, one per row at the tile's full width: side by side, a three-digit
-   price and its mark do not fit half of a 150px tile. Equal rows, so the buy
-   control sits in the same place whether or not the sell control is there; the
-   spacer holds the second row when it is not.
+/* ─── The Sell and Buy rows ───────────────────────────────────────────────────
+   Every column is fixed but the stepper's, which takes what is left, so the
+   two rows line up whatever they hold and the warning's slot is there whether
+   or not a warning is.
    ──────────────────────────────────────────────────────────────────────────── */
 
-.controls {
+.rows {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-auto-rows: 1fr;
   gap: 6px;
+  margin-top: 26px;
 }
 
-.exchange {
-  display: inline-flex;
+.row {
+  display: grid;
+  grid-template-columns: 26px 11px minmax(0, 1fr) 38px;
   align-items: center;
-  justify-content: center;
-  gap: 0.35em;
-  min-width: 0;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+  column-gap: 4px;
 }
 
-.exchange app-rosary {
-  flex: none;
-}
-
-.exchange.buy {
+.row-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--color-text-bright);
 }
 
-.exchange.sell.is-warning {
-  color: var(--color-warning);
-  border-color: var(--color-warning);
+.warn-slot {
+  display: inline-flex;
+  height: 11px;
 }
 
+.warn {
+  display: inline-flex;
+  color: var(--color-warning);
+}
+
+/* A triangle with a stroke inside it: a shape cue as well as a colour. */
 .warn-mark {
-  flex: none;
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.2;
+  stroke-width: 1.1;
+  stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.exchange-spacer {
-  display: block;
+.target {
+  white-space: nowrap;
+  color: var(--color-text-bright);
 }
 
 .sr-only {

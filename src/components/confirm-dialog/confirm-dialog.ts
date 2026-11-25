@@ -7,6 +7,7 @@ import {
   output,
   viewChild,
 } from '@angular/core';
+import { trapTab } from '../focus-trap';
 
 /**
  * Asking the player to confirm something that cannot be taken back.
@@ -63,20 +64,6 @@ export class ConfirmDialog implements AfterViewInit, OnDestroy {
       this.cancel.emit();
       return;
     }
-    if (event.key !== 'Tab') return;
-
-    const stops = [...this.panel().nativeElement.querySelectorAll<HTMLElement>('button')];
-    if (stops.length === 0) return;
-    const first = stops[0];
-    const last = stops[stops.length - 1];
-    const active = document.activeElement as HTMLElement | null;
-
-    if (event.shiftKey && (active === first || !stops.includes(active!))) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && (active === last || !stops.includes(active!))) {
-      event.preventDefault();
-      first.focus();
-    }
+    trapTab(event, this.panel().nativeElement);
   }
 }

@@ -1,6 +1,8 @@
 ## Purpose
 
-Establishes the Cards page as the place where the player will view the cards they own and assemble decks from them, delivering its route and a themed placeholder skeleton now so both experiences can be designed against a real page later.
+Defines the Collection page: the catalogue of every card, set by set, showing which the player owns
+and how many, the Rosary purse, and the controls on each card through which the player exchanges
+cards for Rosaries.
 
 ## Requirements
 

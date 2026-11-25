@@ -125,6 +125,12 @@ export function deckName(deckIndex: number): string {
   return `Deck ${deckIndex + 1}`;
 }
 
+/** `Deck 1`, `Deck 1 and Deck 3`, `Deck 1, Deck 2, and Deck 3`. */
+export function listOf(names: readonly string[]): string {
+  if (names.length <= 2) return names.join(' and ');
+  return `${names.slice(0, -1).join(', ')}, and ${names.at(-1)}`;
+}
+
 // ─── Operations ─────────────────────────────────────────────────────────────
 //
 // Every operation is a pure function over the whole `UserState` rather than

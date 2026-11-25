@@ -3,24 +3,28 @@ import {
   CARD_ABILITY_GATE,
   CARD_MIN_WIDTH,
   type Size,
+  cartControl,
+  cartDialog,
   collectionSettled,
   deckButton,
   deckCards,
+  exchangeRow,
   exchangeTile,
   exchangeTiles,
   expectNoScroll,
   label,
+  openCart,
   openCollection,
   openCollectionAs,
-  openDecks,
   rosaryPurse,
   rosaryPurseValue,
 } from './helpers';
 
 /**
- * The Collection page: every card of every set, owned or not, and the Rosary
- * exchange. What only a browser can answer lives here — fit, geometry, the
- * purse's corner, and round trips through storage and the other pages.
+ * The Collection page: every card of every set, owned or not, and the cart its
+ * trades are lined up in. What only a browser can answer lives here — fit,
+ * geometry, the top corners, and round trips through storage and the other
+ * pages.
  */
 
 const LARGE: Size = { width: 1920, height: 1080 };
@@ -37,11 +41,41 @@ function heldStarters(overrides: Record<number, number> = {}) {
   return STARTERS.map((entry) => ({ ...entry, quantity: overrides[entry.number] ?? 1 }));
 }
 
-const buy = (tile: Locator) => tile.locator('button.buy');
-const sell = (tile: Locator) => tile.locator('button.sell');
+const buy = (tile: Locator) => exchangeRow(tile, 'buy');
+const sell = (tile: Locator) => exchangeRow(tile, 'sell');
+const confirm = (dialog: Locator) => dialog.locator('.cart-confirm');
 const badge = (tile: Locator) => tile.locator('.badge');
 const progress = (page: Page) =>
   page.locator('app-collection .set-section').first().locator('.set-progress .sr-only');
+
+type Box = { x: number; y: number; width: number; height: number };
+
+const overlap = (a: Box, b: Box) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+async function goTo(page: Page, name: string): Promise<void> {
+  await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name }).click();
+}
+
+/** Tabs (or Shift+Tabs) until `target` holds focus, as a keyboard player would. */
+async function tabTo(page: Page, target: Locator, key: 'Tab' | 'Shift+Tab' = 'Tab') {
+  for (let i = 0; i < 40; i++) {
+    if (await target.evaluate((el) => el === document.activeElement)) return;
+    await page.keyboard.press(key);
+  }
+  await expect(target).toBeFocused();
+}
+
+/** The focused control draws a visible indicator. */
+async function expectFocusVisible(target: Locator): Promise<void> {
+  await expect(target).toBeFocused();
+  const outline = await target.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
+  });
+  expect(outline.style).not.toBe('none');
+  expect(outline.width).toBeGreaterThan(0);
+}
 
 // ─── Fit ────────────────────────────────────────────────────────────────────
 
@@ -58,9 +92,11 @@ for (const size of [LARGE, SMALL]) {
     const scrolls = await region.evaluate((el) => el.scrollHeight > el.clientHeight);
     if (scrolls) {
       const before = await rosaryPurse(page).boundingBox();
+      const cartBefore = await cartControl(page).boundingBox();
       await region.evaluate((el) => el.scrollTo(0, el.scrollHeight));
       await expect.poll(() => region.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
       expect(await rosaryPurse(page).boundingBox()).toEqual(before);
+      expect(await cartControl(page).boundingBox()).toEqual(cartBefore);
       await expectNoScroll(page);
       await region.evaluate((el) => el.scrollTo(0, 0));
     }
@@ -77,12 +113,16 @@ for (const size of [LARGE, SMALL]) {
     expect(purse.x + purse.width).toBeGreaterThan(size.width * 0.9);
     expect(purse.x + purse.width).toBeLessThanOrEqual(size.width);
     expect(purse.y).toBeLessThan(80);
-    const overlaps =
-      purse.x < title.x + title.width &&
-      title.x < purse.x + purse.width &&
-      purse.y < title.y + title.height &&
-      title.y < purse.y + purse.height;
-    expect(overlaps).toBe(false);
+    expect(overlap(purse, title)).toBe(false);
+
+    // The cart control is in the top-left, clear of both.
+    const cart = (await cartControl(page).boundingBox())!;
+    expect(cart.x).toBeGreaterThanOrEqual(0);
+    expect(cart.x).toBeLessThan(size.width * 0.05);
+    expect(cart.y).toBeGreaterThanOrEqual(0);
+    expect(cart.y).toBeLessThan(80);
+    expect(overlap(cart, title)).toBe(false);
+    expect(overlap(cart, purse)).toBe(false);
 
     // The header is on one line.
     const lines = await page
@@ -118,13 +158,107 @@ for (const size of [LARGE, SMALL]) {
       });
     expect(Math.abs(edges.name - edges.tile)).toBeLessThanOrEqual(1);
 
-    // No exchange control overflows its tile.
-    const overflowing = await page
-      .locator('app-collection .exchange')
-      .evaluateAll((buttons) => buttons.filter((b) => b.scrollWidth > b.clientWidth + 0.5).length);
-    expect(overflowing).toBe(0);
-
     await page.screenshot({ path: `test-results/collection-${label(size)}.png` });
+  });
+}
+
+for (const size of [LARGE, SMALL]) {
+  test(`at ${label(size)} every frame is one size and holds its rows`, async ({ page }) => {
+    await page.setViewportSize(size);
+    // FC 1 sells three digits' worth, FC 3 has a warned sale, FC 4 is unowned,
+    // and FC 7 is held twelve times.
+    await openCollectionAs(page, {
+      rosaries: 450,
+      collection: [
+        { set: 'FC', number: 1, quantity: 130 },
+        { set: 'FC', number: 3, quantity: 1 },
+        { set: 'FC', number: 7, quantity: 12 },
+      ],
+      decks: [[{ set: 'FC', number: 3 }]],
+    });
+    await collectionSettled(page);
+
+    // The warning's arrival moves nothing in its row.
+    const warned = sell(exchangeTile(page, 'FC', 3));
+    const still = [warned.lower, warned.value, warned.raise, warned.target];
+    const before = await Promise.all(still.map((part) => part.boundingBox()));
+    await warned.raise.click();
+    await expect(warned.warning).toBeVisible();
+    expect(await Promise.all(still.map((part) => part.boundingBox()))).toEqual(before);
+
+    await sell(exchangeTile(page, 'FC', 1)).target.click();
+    await expect(sell(exchangeTile(page, 'FC', 1)).value).toHaveText('121');
+    await page.mouse.move(0, 0);
+
+    const tiles = await exchangeTiles(page).evaluateAll((els) =>
+      els.map((tile) => {
+        const rect = (el: Element) => {
+          const { left, right, top, bottom, width, height } = el.getBoundingClientRect();
+          return { left, right, top, bottom, width, height };
+        };
+        const all = (selector: string) => [...tile.querySelectorAll(selector)].map(rect);
+        return {
+          frame: rect(tile),
+          border: parseFloat(getComputedStyle(tile).borderTopWidth),
+          number: rect(tile.querySelector('.tile-number')!),
+          card: rect(tile.querySelector('app-card')!),
+          badge: rect(tile.querySelector('.badge')!),
+          rows: all('.row'),
+          parts: [...tile.querySelectorAll('.row')].map((row) =>
+            ['.row-label', '.warn-slot', '.lower', '.value', '.raise', '.target'].map((part) =>
+              rect(row.querySelector(part)!),
+            ),
+          ),
+          overflowing: [...tile.querySelectorAll('.row, .row-label, .value, .row button')].filter(
+            (el) => el.scrollWidth > el.clientWidth + 0.5,
+          ).length,
+        };
+      }),
+    );
+
+    for (const tile of tiles) {
+      // One visible frame, of one size.
+      expect(tile.border).toBeGreaterThan(0);
+      expect(tile.frame.width).toBeCloseTo(tiles[0].frame.width, 1);
+      expect(tile.frame.height).toBeCloseTo(tiles[0].frame.height, 1);
+
+      // Number, card, badge, Sell row, Buy row, top to bottom; nothing of the
+      // frame's on the card.
+      const [sellRow, buyRow] = tile.rows;
+      expect(tile.number.bottom).toBeLessThanOrEqual(tile.card.top);
+      expect(tile.badge.top).toBeGreaterThanOrEqual(tile.card.bottom - 3);
+      expect(sellRow.top).toBeGreaterThanOrEqual(tile.badge.bottom);
+      expect(sellRow.top).toBeGreaterThanOrEqual(tile.card.bottom);
+      expect(buyRow.top).toBeGreaterThanOrEqual(sellRow.bottom);
+      expect(tile.number.left - tile.frame.left).toBeLessThan(16);
+
+      // Nothing runs out of the frame or into its neighbour in the row.
+      expect(tile.overflowing).toBe(0);
+      for (const parts of tile.parts) {
+        parts.forEach((part, i) => {
+          expect(part.left).toBeGreaterThanOrEqual(tile.frame.left);
+          expect(part.right).toBeLessThanOrEqual(tile.frame.right);
+          if (i > 0) expect(part.left).toBeGreaterThanOrEqual(parts[i - 1].right - 0.5);
+        });
+      }
+
+      // The two rows stand in the same columns.
+      tile.parts[0].forEach((part, i) => {
+        expect(Math.abs(part.left - tile.parts[1][i].left)).toBeLessThanOrEqual(0.5);
+      });
+    }
+
+    for (const [number, name] of [
+      [1, 'three-digit-sale'],
+      [3, 'warned'],
+      [4, 'unowned'],
+      [7, 'held-twelve'],
+    ] as const) {
+      await exchangeTile(page, 'FC', number).screenshot({
+        path: `test-results/collection-tile-${name}-${label(size)}.png`,
+      });
+    }
+    await page.screenshot({ path: `test-results/collection-pending-${label(size)}.png` });
   });
 }
 
@@ -175,100 +309,205 @@ test('the nav offers four destinations in order and fits the narrowest viewport'
   await nav.screenshot({ path: `test-results/collection-nav-${label(SMALL)}.png` });
 });
 
-test('the most expensive tile shows both prices inside the tile', async ({ page }) => {
-  await page.setViewportSize(LARGE);
-  // Goam (FC 6) is the highest-rated card catalogued.
-  await openCollectionAs(page, {
-    rosaries: 0,
-    collection: [...heldStarters(), { set: 'FC', number: 6, quantity: 1 }],
-    decks: [],
-  });
-  await collectionSettled(page);
-  const goam = exchangeTile(page, 'FC', 6);
-  await expect(buy(goam)).toHaveAccessibleName('Buy Goam for 400 Rosaries');
-  await expect(sell(goam)).toHaveAccessibleName('Sell Goam for 40 Rosaries');
-  const tile = (await goam.boundingBox())!;
-  for (const control of [buy(goam), sell(goam)]) {
-    const box = (await control.boundingBox())!;
-    expect(box.x).toBeGreaterThanOrEqual(tile.x - 0.5);
-    expect(box.x + box.width).toBeLessThanOrEqual(tile.x + tile.width + 0.5);
-  }
-  await goam.screenshot({ path: 'test-results/collection-tile-highest-price.png' });
-});
+// ─── The cart ───────────────────────────────────────────────────────────────
 
-// ─── Exchange round trips ───────────────────────────────────────────────────
-
-test('a sale and a purchase update the page at once and survive a reload', async ({ page }) => {
+test('a keyboard alone buys and sells through the cart, and it survives a reload', async ({
+  page,
+}) => {
   await page.setViewportSize(LARGE);
-  await openCollectionAs(page, { rosaries: 90, collection: heldStarters(), decks: [] });
-  await expect(rosaryPurse(page)).toHaveText('90');
+  await openCollectionAs(page, { rosaries: 400, collection: heldStarters(), decks: [] });
 
   const crawlid = exchangeTile(page, 'FC', 1);
   const gruzMother = exchangeTile(page, 'FC', 2); // three stars, unowned
   await expect(progress(page)).toHaveText('9 of 15 collected');
-  await expect(badge(gruzMother)).toHaveAccessibleName('Not owned');
-  await expect(buy(crawlid)).toHaveAttribute('aria-disabled', 'true');
 
-  // Sell the only Crawlid by keyboard: the purse rises, the tile un-owns, the
-  // focus lands on its buy control, which is now affordable.
-  await sell(crawlid).focus();
-  await page.keyboard.press('Enter');
-  await expect(rosaryPurse(page)).toHaveText('100');
-  await expect(badge(crawlid)).toHaveAccessibleName('Not owned');
-  await expect(sell(crawlid)).toHaveCount(0);
-  await expect(progress(page)).toHaveText('8 of 15 collected');
-  await expect(buy(crawlid)).toBeFocused();
-  await expect(buy(crawlid)).not.toHaveAttribute('aria-disabled');
-  await expect(page.getByTestId('exchange-announcement')).toHaveText(
-    'Sold Crawlid for 10 Rosaries.',
-  );
+  // The cart control, then the first tile's Sell row and its Buy row, in order.
+  await tabTo(page, cartControl(page));
+  await expectFocusVisible(cartControl(page));
+  for (const row of [sell(crawlid), buy(crawlid)]) {
+    for (const control of [row.lower, row.raise, row.target]) {
+      await page.keyboard.press('Tab');
+      await expectFocusVisible(control);
+    }
+  }
+  // An unavailable control took focus and gives its reason.
+  await tabTo(page, sell(crawlid).target, 'Shift+Tab');
+  await expect(sell(crawlid).target).toHaveAccessibleName('Sell down to 9 Crawlid');
+  await expect(sell(crawlid).target).toHaveAccessibleDescription('You hold 9 or fewer');
+  await expect(sell(crawlid).row).toHaveAccessibleDescription('10 Rosaries each');
 
-  // Buy it back.
+  // Sell the only Crawlid: the control reaches its bound and keeps its focus.
+  await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Enter');
-  await expect(rosaryPurse(page)).toHaveText('0');
+  await expect(sell(crawlid).value).toHaveText('1');
+  await expect(sell(crawlid).raise).toHaveAttribute('aria-disabled', 'true');
+  await expectFocusVisible(sell(crawlid).raise);
+  await expect(page.getByTestId('exchange-announcement')).toHaveText('1 Crawlid pending for sale.');
+
+  await tabTo(page, buy(gruzMother).raise);
+  await page.keyboard.press('Enter');
+  await expect(buy(gruzMother).value).toHaveText('1');
+
+  // Nothing has happened yet.
+  await expect(cartControl(page)).toHaveAccessibleName('Cart, 2 cards pending');
+  await expect(rosaryPurse(page)).toHaveText('400');
   await expect(badge(crawlid)).toHaveAccessibleName('1 held');
+  await expect(badge(gruzMother)).toHaveAccessibleName('Not owned');
   await expect(progress(page)).toHaveText('9 of 15 collected');
-  await expect(buy(crawlid)).toBeFocused();
 
-  // The unaffordable control is inert.
-  // Playwright will not click a control marked unavailable, so it is
-  // activated the way a keyboard user would.
-  await buy(gruzMother).focus();
+  await tabTo(page, cartControl(page), 'Shift+Tab');
   await page.keyboard.press('Enter');
-  await expect(rosaryPurse(page)).toHaveText('0');
-  await expect(badge(gruzMother)).toHaveAccessibleName('Not owned');
+  const dialog = cartDialog(page);
+  await expectFocusVisible(dialog.getByRole('button', { name: 'Close' }));
 
-  // A further sale, then a reload.
-  await sell(exchangeTile(page, 'FC', 7)).click();
-  await expect(rosaryPurse(page)).toHaveText('10');
+  // Escape gives the focus back; then round again, to confirm.
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expectFocusVisible(cartControl(page));
+  await page.keyboard.press('Enter');
+  await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab'); // past the first, to the last
+  await expectFocusVisible(confirm(dialog));
+  await expect(confirm(dialog)).toHaveAccessibleName('Confirm, spend 290 Rosaries');
+  await page.keyboard.press('Enter');
+
+  await expect(dialog).toHaveCount(0);
+  await expect(cartControl(page)).toBeFocused();
+  await expect(cartControl(page)).toHaveAccessibleName('Cart, no cards pending');
+  await expect(page.getByTestId('exchange-announcement')).toHaveText(
+    '1 sold, 1 bought, 290 Rosaries spent.',
+  );
+  await expect(rosaryPurse(page)).toHaveText('110');
+  await expect(badge(crawlid)).toHaveAccessibleName('Not owned');
+  await expect(badge(gruzMother)).toHaveAccessibleName('1 held');
+
   await page.reload();
-  await expect(rosaryPurse(page)).toHaveText('10');
-  await expect(badge(crawlid)).toHaveAccessibleName('1 held');
-  await expect(badge(exchangeTile(page, 'FC', 7))).toHaveAccessibleName('Not owned');
-  expect(await rosaryPurseValue(page)).toBe(10);
+  await expect(rosaryPurse(page)).toHaveText('110');
+  await expect(badge(crawlid)).toHaveAccessibleName('Not owned');
+  await expect(badge(gruzMother)).toHaveAccessibleName('1 held');
+  expect(await rosaryPurseValue(page)).toBe(110);
 });
 
-test('selling the last copy a deck uses takes it out of that deck', async ({ page }) => {
+test('pending lines outlive the page but not a reload', async ({ page }) => {
+  await openCollectionAs(page, {
+    rosaries: 90,
+    collection: heldStarters(),
+    decks: [STARTERS.map(({ set, number }) => ({ set, number }))],
+  });
+  await buy(exchangeTile(page, 'FC', 2)).target.click();
+  await sell(exchangeTile(page, 'FC', 1)).raise.click();
+  await expect(cartControl(page)).toHaveAccessibleName('Cart, 10 cards pending');
+
+  // Through the nav, so the application is never reloaded.
+  for (const name of ['Shop', 'Decks']) {
+    await goTo(page, name);
+    await expect(page).toHaveURL(new RegExp(`/${name.toLowerCase()}$`));
+  }
+  // Pending sales leave the decks alone.
+  await expect(deckCards(page)).toHaveCount(9);
+
+  // Into a battle and out of it again, too.
+  await goTo(page, 'Battle');
+  await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page).toHaveURL(/\/game$/);
+  await page.getByRole('button', { name: 'Retreat' }).click();
+  await expect(page).toHaveURL(/\/battle$/);
+
+  await goTo(page, 'Collection');
+  await expect(buy(exchangeTile(page, 'FC', 2)).value).toHaveText('9');
+  await expect(sell(exchangeTile(page, 'FC', 1)).value).toHaveText('1');
+  const dialog = await openCart(page);
+  await expect(dialog.locator('.line-name')).toHaveText(['Gruz Mother', 'Crawlid']);
+  await dialog.getByRole('button', { name: 'Close' }).click();
+
+  await page.reload();
+  await expect(cartControl(page)).toHaveAccessibleName('Cart, no cards pending');
+  await expect(rosaryPurse(page)).toHaveText('90');
+  await expect(badge(exchangeTile(page, 'FC', 1))).toHaveAccessibleName('1 held');
+});
+
+test('sales pay for a purchase, and a shortfall blocks one', async ({ page }) => {
+  await page.setViewportSize(LARGE);
+  await openCollectionAs(page, {
+    rosaries: 50,
+    collection: heldStarters({ 1: 6 }),
+    decks: [],
+  });
+  const crawlid = exchangeTile(page, 'FC', 1);
+
+  await buy(exchangeTile(page, 'FC', 7)).raise.click();
+  let dialog = await openCart(page);
+  await expect(dialog.locator('[data-total="short"]')).toContainText('50');
+  await expect(confirm(dialog)).toHaveAttribute('aria-disabled', 'true');
+  await expect(confirm(dialog)).toHaveAttribute('title', 'Not enough Rosaries');
+  await expect(confirm(dialog)).toHaveAccessibleDescription('Not enough Rosaries');
+  await page.screenshot({ path: 'test-results/collection-cart-shortfall.png' });
+
+  // Playwright will not click a control marked unavailable, so it is
+  // activated the way a keyboard user would.
+  await confirm(dialog).focus();
+  await page.keyboard.press('Enter');
+  await expect(dialog).toBeVisible();
+  await expect(rosaryPurse(page)).toHaveText('50');
+
+  // The area outside dismisses it, changing nothing.
+  await page.mouse.click(8, 500);
+  await expect(dialog).toHaveCount(0);
+  await expect(cartControl(page)).toBeFocused();
+  await expect(cartControl(page)).toHaveAccessibleName('Cart, 1 card pending');
+
+  // Selling six covers it; the dialog says so and the tile follows its steps.
+  for (let i = 0; i < 5; i++) await sell(crawlid).raise.click();
+  dialog = await openCart(page);
+  await expect(dialog.locator('[data-total="after"]')).toContainText('0');
+  const line = dialog.locator('[data-line="FC-1"]');
+  await line.getByRole('button', { name: 'Sell one more Crawlid' }).click();
+  await expect(sell(crawlid).value).toHaveText('6');
+  await expect(line.locator('.raise')).toHaveAttribute('aria-disabled', 'true');
+  await expect(confirm(dialog)).toHaveAccessibleName('Confirm, spend 40 Rosaries');
+  await confirm(dialog).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(rosaryPurse(page)).toHaveText('10');
+  await expect(badge(crawlid)).toHaveAccessibleName('Not owned');
+  await expect(badge(exchangeTile(page, 'FC', 7))).toHaveAccessibleName('2 held');
+});
+
+test('a confirmed sale of the last copy a deck uses takes it out of that deck', async ({
+  page,
+}) => {
   await page.setViewportSize(LARGE);
   await openCollectionAs(page, {
     collection: heldStarters(),
     decks: [[{ set: 'FC', number: 1 }], [{ set: 'FC', number: 7 }], [{ set: 'FC', number: 1 }]],
   });
 
-  const crawlid = exchangeTile(page, 'FC', 1);
-  await expect(sell(crawlid)).toHaveAttribute('title', 'Selling removes it from Deck 1 and Deck 3');
-  await expect(sell(crawlid).locator('.warn-mark')).toBeVisible();
-  await expect(sell(exchangeTile(page, 'FC', 8)).locator('.warn-mark')).toHaveCount(0);
-  await sell(crawlid).click();
+  const crawlid = sell(exchangeTile(page, 'FC', 1));
+  await expect(crawlid.warning).toHaveCount(0);
+  await crawlid.raise.click();
+  await expect(crawlid.warning).toBeVisible();
+  await expect(crawlid.warning).toHaveAttribute(
+    'title',
+    'Selling removes it from Deck 1 and Deck 3',
+  );
+  await expect(crawlid.row).toHaveAccessibleDescription(
+    '10 Rosaries each Selling removes it from Deck 1 and Deck 3',
+  );
+  const gruzzer = sell(exchangeTile(page, 'FC', 8));
+  await gruzzer.raise.click();
+  await expect(gruzzer.warning).toHaveCount(0);
+
+  const dialog = await openCart(page);
+  await expect(dialog.locator('.line-warning')).toHaveCount(1);
+  await expect(dialog.locator('[data-line="FC-1"] .line-warning')).toHaveText(
+    'Removes it from Deck 1 and Deck 3',
+  );
+  await confirm(dialog).click();
   await expect(page.getByTestId('exchange-announcement')).toHaveText(
-    'Sold Crawlid for 10 Rosaries. Removed from Deck 1 and Deck 3.',
+    '2 sold, 0 bought, 20 Rosaries gained. Cards removed from Deck 1 and Deck 3.',
   );
 
   // Through the nav, so the change is read live rather than off a reload.
-  await page
-    .getByRole('navigation', { name: 'Primary' })
-    .getByRole('link', { name: 'Decks' })
-    .click();
+  await goTo(page, 'Decks');
   await expect(page).toHaveURL(/\/decks$/);
   await expect(deckCards(page)).toHaveCount(0);
   await deckButton(page, 'Deck 2').click();
@@ -277,19 +516,116 @@ test('selling the last copy a deck uses takes it out of that deck', async ({ pag
   await expect(deckCards(page)).toHaveCount(0);
 });
 
-test("the Decks page's reset zeroes the purse", async ({ page }) => {
+for (const size of [LARGE, SMALL]) {
+  test(`at ${label(size)} the dialog fits with a line for every card`, async ({ page }) => {
+    await page.setViewportSize(size);
+    // Every card bought but the first, whose sale would trim every deck there
+    // can be: the tallest list the catalogue can make.
+    await openCollectionAs(page, {
+      rosaries: 10,
+      collection: [{ set: 'FC', number: 1, quantity: 130 }],
+      decks: Array.from({ length: 9 }, () => [{ set: 'FC', number: 1 }]),
+    });
+    await collectionSettled(page);
+    const count = await exchangeTiles(page).count();
+    for (let i = 0; i < count; i++)
+      await buy(exchangeTiles(page).nth(i)).target.click({ force: true });
+    const first = sell(exchangeTile(page, 'FC', 1));
+    await first.target.click();
+    for (let i = 0; i < 9; i++) await first.raise.click();
+    await expect(first.value).toHaveText('130');
+    const sections = page.getByTestId('sections');
+    await sections.evaluate((el) => el.scrollTo(0, 0));
+
+    const dialog = await openCart(page);
+    await expect(dialog.locator('.line')).toHaveCount(count);
+    await expectNoScroll(page);
+    const box = (await dialog.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(size.width);
+    expect(box.y + box.height).toBeLessThanOrEqual(size.height);
+
+    // No line runs out of the dialog, and nothing in one overlaps.
+    const faults = await dialog.locator('.line').evaluateAll((els) =>
+      els.flatMap((el) => {
+        const parts = [...el.children]
+          .filter((part) => !part.matches('.line-warning'))
+          .map((part) => part.getBoundingClientRect());
+        const collides = parts.some((part, i) => i > 0 && part.left < parts[i - 1].right - 0.5);
+        const signed = el.querySelector('.signed')!.getBoundingClientRect();
+        const runsOver =
+          signed.left < el.querySelector('.line-effect')!.getBoundingClientRect().left - 0.5;
+        return collides || runsOver || el.scrollWidth > el.clientWidth ? [el.textContent] : [];
+      }),
+    );
+    expect(faults).toEqual([]);
+
+    // The rows scroll; the foot and the close control stay.
+    const rows = dialog.getByTestId('cart-rows');
+    const parts = [
+      dialog.locator('.totals'),
+      confirm(dialog),
+      dialog.getByRole('button', { name: 'Close' }),
+    ];
+    const before = await Promise.all(parts.map((part) => part.boundingBox()));
+    for (const part of parts) await expect(part).toBeInViewport({ ratio: 1 });
+    expect(await rows.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await rows.hover({ position: { x: 20, y: 40 } });
+    await page.mouse.wheel(0, 5000);
+    await expect
+      .poll(() => rows.evaluate((el) => el.scrollTop + el.clientHeight >= el.scrollHeight - 1))
+      .toBe(true);
+    await expect(dialog.locator('.line').last()).toBeInViewport();
+    expect(await Promise.all(parts.map((part) => part.boundingBox()))).toEqual(before);
+
+    // The page behind does not scroll: not past the rows' end, nor from outside.
+    await page.mouse.wheel(0, 5000);
+    await page.mouse.move(8, size.height / 2);
+    await page.mouse.wheel(0, 5000);
+    await expectNoScroll(page);
+    expect(await sections.evaluate((el) => el.scrollTop)).toBe(0);
+
+    await rows.evaluate((el) => el.scrollTo(0, 0));
+    await page.screenshot({ path: `test-results/collection-cart-${label(size)}.png` });
+  });
+}
+
+test('focus is held inside the dialog, wherever in it the player presses', async ({ page }) => {
+  await openCollectionAs(page, { rosaries: 500, collection: heldStarters(), decks: [] });
+  await buy(exchangeTile(page, 'FC', 1)).raise.click();
+  const dialog = await openCart(page);
+  const close = dialog.getByRole('button', { name: 'Close' });
+
+  await confirm(dialog).focus();
+  await page.keyboard.press('Tab');
+  await expect(close).toBeFocused();
+
+  // A press on the dialog's own ground leaves it dismissible by keyboard.
+  await dialog.locator('.cart-title').click();
+  await page.keyboard.press('Tab');
+  await expect(close).toBeFocused();
+  await dialog.locator('.cart-title').click();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(cartControl(page)).toBeFocused();
+});
+
+test("the Decks page's reset zeroes the purse and empties the cart", async ({ page }) => {
   await openCollectionAs(page, { rosaries: 340, collection: heldStarters(), decks: [[]] });
   await expect(rosaryPurse(page)).toHaveText('340');
+  await buy(exchangeTile(page, 'FC', 2)).raise.click();
+  await sell(exchangeTile(page, 'FC', 1)).raise.click();
+  await expect(cartControl(page)).toHaveAccessibleName('Cart, 2 cards pending');
 
-  await openDecks(page);
+  // Through the nav: a load of its own would empty the cart whatever reset did.
+  await goTo(page, 'Decks');
   await page.getByRole('button', { name: 'Reset data' }).click();
   const dialog = page.getByRole('alertdialog');
   await expect(dialog).toContainText(/Rosaries/);
   await dialog.getByRole('button', { name: 'Reset data' }).click();
 
-  await page
-    .getByRole('navigation', { name: 'Primary' })
-    .getByRole('link', { name: 'Collection' })
-    .click();
+  await goTo(page, 'Collection');
   await expect(rosaryPurse(page)).toHaveText('0');
+  await expect(cartControl(page)).toHaveAccessibleName('Cart, no cards pending');
 });

@@ -1,0 +1,131 @@
+<!-- A signed amount: the sign outside the primitive, which stays a numeral and
+     its mark. The sign is what carries the direction; the colour only agrees. -->
+<ng-template #signed let-amount>
+  <span class="signed" [class.is-gain]="amount > 0" [class.is-spend]="amount < 0">
+    @if (amount > 0) {
+      <span class="sign">+</span>
+    } @else if (amount < 0) {
+      <span class="sign">&minus;</span>
+    }
+    <app-rosary [amount]="abs(amount)"
+  /></span>
+</ng-template>
+
+<div class="cart-scrim" aria-hidden="true" (click)="close.emit()"></div>
+<!-- Focusable, so a press on its empty ground keeps the keyboard inside. -->
+<div
+  #panel
+  class="cart"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cart-title"
+  tabindex="-1"
+  (keydown)="onKeydown($event)"
+>
+  <header class="cart-head">
+    <h2 class="cart-title" id="cart-title">Cart</h2>
+    <button #closeControl type="button" class="hk-btn sm cart-close" (click)="close.emit()">
+      Close
+    </button>
+  </header>
+
+  <div class="cart-body" data-testid="cart-rows">
+    @if (rows().length === 0) {
+      <p class="cart-empty">The cart is empty.</p>
+    } @else {
+      <ul class="lines">
+        @for (row of rows(); track row.key; let i = $index) {
+          <li class="line" [attr.data-line]="slug(row.card)">
+            <span class="line-action" [class.is-sell]="row.action === 'sell'">{{
+              actionLabel(row.action)
+            }}</span>
+            <span class="line-name">{{ row.card.name }}</span>
+            <app-quantity-stepper
+              [value]="row.quantity"
+              [canLower]="row.quantity > least"
+              [canRaise]="row.quantity < row.max"
+              [lowerReason]="atLeastReason"
+              [raiseReason]="raiseRefusal(row.action, row.held, row.quantity)"
+              [lowerLabel]="lowerLabel(row.action, row.card)"
+              [raiseLabel]="raiseLabel(row.action, row.card)"
+              (decrease)="onStep(row, -1)"
+              (increase)="onStep(row, 1)"
+            />
+            <span class="line-effect">
+              <span aria-hidden="true"
+                ><ng-container *ngTemplateOutlet="signed; context: { $implicit: row.effect }"
+              /></span>
+              <span class="sr-only">{{ effectText(row.effect) }}</span>
+            </span>
+            <button
+              type="button"
+              class="hk-btn sm line-remove"
+              [attr.data-remove]="slug(row.card)"
+              [attr.aria-label]="'Remove ' + row.card.name"
+              (click)="onRemove(i)"
+            >
+              Remove
+            </button>
+            @if (row.trims.length > 0) {
+              <p class="line-warning">
+                <svg class="warn-mark" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+                  <path d="M5 1.2 9.2 8.8H0.8Z" />
+                  <path d="M5 4v2.2M5 7.4v.2" />
+                </svg>
+                {{ trimText(row) }}
+              </p>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  <footer class="cart-foot">
+    <dl class="totals">
+      <div class="total" data-total="balance">
+        <dt>Balance</dt>
+        <dd><app-rosary [amount]="balance()" /></dd>
+      </div>
+      <div class="total" data-total="net">
+        <dt>Net</dt>
+        <dd>
+          <span aria-hidden="true"
+            ><ng-container *ngTemplateOutlet="signed; context: { $implicit: net() }"
+          /></span>
+          <span class="sr-only">{{ effectText(net()) }}</span>
+        </dd>
+      </div>
+      @if (shortfall() > 0) {
+        <div class="total is-short" data-total="short">
+          <dt>Short by</dt>
+          <dd><app-rosary [amount]="shortfall()" /></dd>
+        </div>
+      } @else {
+        <div class="total" data-total="after">
+          <dt>After</dt>
+          <dd><app-rosary [amount]="balanceAfter()" /></dd>
+        </div>
+      }
+    </dl>
+
+    <!-- Unavailable stays focusable — not the native `disabled` — so its
+         reason can be read. -->
+    <button
+      type="button"
+      class="hk-btn primary cart-confirm"
+      [attr.aria-label]="confirmLabel()"
+      [attr.aria-disabled]="refusal() ? 'true' : null"
+      [attr.aria-describedby]="refusal() ? 'cart-refusal' : null"
+      [attr.title]="refusal() || null"
+      (click)="onConfirm()"
+    >
+      Confirm <ng-container *ngTemplateOutlet="signed; context: { $implicit: net() }" />
+    </button>
+    @if (refusal()) {
+      <span hidden id="cart-refusal">{{ refusal() }}</span>
+    }
+  </footer>
+
+  <p class="sr-only" aria-live="polite" data-testid="cart-announcement">{{ announcement() }}</p>
+</div>

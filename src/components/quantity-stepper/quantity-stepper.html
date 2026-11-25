@@ -1,0 +1,34 @@
+@let whyNotLower = canLower() ? '' : lowerReason();
+@let whyNotRaise = canRaise() ? '' : raiseReason();
+
+<button
+  type="button"
+  class="hk-btn sm lower"
+  [attr.aria-label]="lowerLabel()"
+  [attr.aria-disabled]="canLower() ? null : 'true'"
+  [attr.aria-describedby]="whyNotLower ? id + '-lower' : null"
+  [attr.title]="whyNotLower || null"
+  (click)="onLower()"
+>
+  <span class="glyph">&minus;</span>
+</button>
+<span class="value">{{ value() }}</span>
+<button
+  type="button"
+  class="hk-btn sm raise"
+  [attr.aria-label]="raiseLabel()"
+  [attr.aria-disabled]="canRaise() ? null : 'true'"
+  [attr.aria-describedby]="whyNotRaise ? id + '-raise' : null"
+  [attr.title]="whyNotRaise || null"
+  (click)="onRaise()"
+>
+  <span class="glyph">+</span>
+</button>
+
+<!-- `hidden` still describes: these are read with their control and nowhere else. -->
+@if (whyNotLower) {
+  <span hidden [id]="id + '-lower'">{{ whyNotLower }}</span>
+}
+@if (whyNotRaise) {
+  <span hidden [id]="id + '-raise'">{{ whyNotRaise }}</span>
+}
