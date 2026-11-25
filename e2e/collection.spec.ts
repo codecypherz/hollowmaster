@@ -728,6 +728,8 @@ test('pending lines outlive the page but not a reload', async ({ page }) => {
   // Into a battle and out of it again, too.
   await goTo(page, 'Battle');
   await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page).toHaveURL(/\/battle\/deck$/);
+  await page.getByRole('button', { name: 'Begin Battle' }).click();
   await expect(page).toHaveURL(/\/game$/);
   await page.getByRole('button', { name: 'Retreat' }).click();
   await expect(page).toHaveURL(/\/battle$/);

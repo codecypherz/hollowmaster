@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { READY_TEST_DECK } from '../testing/ready-deck';
 import { Router, UrlTree } from '@angular/router';
 import { provideRouter } from '@angular/router';
 import { gameActiveGuard } from './game-active.guard';
@@ -20,7 +21,7 @@ describe('gameActiveGuard', () => {
   });
 
   it('allows the in-game route while a game is in progress', () => {
-    gameService.startGame();
+    gameService.startGame(READY_TEST_DECK);
     expect(run()).toBe(true);
   });
 

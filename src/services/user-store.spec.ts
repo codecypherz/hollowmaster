@@ -58,6 +58,7 @@ describe('the persisted shape', () => {
       rosaries: 70,
       collection: grantAll(seedUser().collection, [crawlid, crawlid, goam]),
       decks: [],
+      battleDeck: null,
       milestones: { peakRosaries: 90, rarestHeld: 5 },
     };
     const restored = fromPersisted(
@@ -80,6 +81,7 @@ describe('the persisted shape', () => {
       rosaries: 0,
       collection: grantAll(new Map(), [goam, goam]),
       decks: [],
+      battleDeck: null,
       milestones: { peakRosaries: 0, rarestHeld: 4 },
     });
     expect(persisted).toEqual({
@@ -88,6 +90,7 @@ describe('the persisted shape', () => {
       rosaries: 0,
       collection: [{ set: 'FC', number: 6, quantity: 2 }],
       decks: [],
+      battleDeck: null,
       milestones: { peakRosaries: 0, rarestHeld: 4 },
     });
 
@@ -110,6 +113,7 @@ describe('the persisted shape', () => {
       rosaries: 0,
       collection: new Map([[cardKeyOf('FC', 6), 3]]),
       decks: [],
+      battleDeck: null,
       milestones: NO_MILESTONES,
     });
     expect(persisted.collection).toEqual([{ set: 'FC', number: 6, quantity: 3 }]);
@@ -138,6 +142,7 @@ describe('parsePersistedUser', () => {
       rosaries: 30,
       collection: [{ set: 'FC', number: 1, quantity: 2 }],
       decks: [],
+      battleDeck: null,
       milestones: { peakRosaries: 80, rarestHeld: 3 },
     });
   });
@@ -239,6 +244,7 @@ describe('persisted decks', () => {
       rosaries: 0,
       collection: holdings,
       decks: three,
+      battleDeck: null,
       milestones: NO_MILESTONES,
     });
     expect(persisted.version).toBe(SCHEMA_VERSION);
@@ -258,6 +264,7 @@ describe('persisted decks', () => {
         rosaries: 0,
         collection: holdings,
         decks: three,
+        battleDeck: null,
         milestones: NO_MILESTONES,
       }),
     );
@@ -277,6 +284,7 @@ describe('persisted decks', () => {
       rosaries: 0,
       collection: holdings,
       decks: three,
+      battleDeck: null,
       milestones: NO_MILESTONES,
     };
     const restored = fromPersisted(
@@ -581,6 +589,96 @@ describe('a version 3 record', () => {
   });
 });
 
+// ─── The remembered battle deck ─────────────────────────────────────────────
+
+/** Nine starter cards: a Ready deck the starter collection can hold. */
+const READY_REFS = [1, 7, 8, 9, 10, 11, 12, 13, 14].map((number) => ({ set: 'FC', number }));
+const STARTER_HOLDINGS = READY_REFS.map((ref) => ({ ...ref, quantity: 1 }));
+
+describe('a version 4 record', () => {
+  const v4 = () => ({
+    version: 4,
+    geo: 320,
+    rosaries: 45,
+    collection: STARTER_HOLDINGS,
+    decks: [READY_REFS, [{ set: 'FC', number: 1 }]],
+    milestones: { peakRosaries: 900, rarestHeld: 1 },
+  });
+
+  it('restores everything it holds, and remembers no battle deck', () => {
+    const state = fromPersisted(parsePersistedUser(v4())!);
+    expect(state.geo).toBe(320);
+    expect(state.rosaries).toBe(45);
+    expect(totalCards(state.collection)).toBe(9);
+    expect(state.decks).toHaveLength(2);
+    expect(state.decks[0].cards).toHaveLength(DECK_SIZE);
+    expect(state.milestones).toEqual({ peakRosaries: 900, rarestHeld: 1 });
+    expect(state.battleDeck).toBeNull();
+  });
+
+  it('ignores a stray battle deck, which the shape did not have', () => {
+    expect(parsePersistedUser({ ...v4(), battleDeck: 0 })!.battleDeck).toBeNull();
+  });
+
+  it('is rewritten at the current version on load', async () => {
+    const store = new InMemoryUserStore(parsePersistedUser(v4()));
+    TestBed.configureTestingModule({ providers: [{ provide: USER_STORE, useValue: store }] });
+    const users = TestBed.inject(UserService);
+    await users.load();
+
+    expect(store.saved).toHaveLength(1);
+    expect(store.saved[0].version).toBe(SCHEMA_VERSION);
+    expect(store.saved[0].battleDeck).toBeNull();
+    expect(store.saved[0].geo).toBe(320);
+    expect(store.saved[0].rosaries).toBe(45);
+    expect(store.saved[0].decks).toEqual(v4().decks);
+    expect(store.saved[0].milestones).toEqual({ peakRosaries: 900, rarestHeld: 1 });
+    expect(users.state().battleDeck).toBeNull();
+  });
+});
+
+describe('the persisted battle deck', () => {
+  const record = (battleDeck: unknown) => ({
+    version: SCHEMA_VERSION,
+    geo: 70,
+    rosaries: 5,
+    collection: STARTER_HOLDINGS,
+    decks: [READY_REFS, READY_REFS, [{ set: 'FC', number: 1 }]],
+    battleDeck,
+    milestones: { peakRosaries: 5, rarestHeld: 1 },
+  });
+  const restore = (raw: unknown) => fromPersisted(parsePersistedUser(raw)!);
+
+  it('round-trips a remembered deck', () => {
+    const state = { ...restore(record(null)), battleDeck: 1 };
+    const persisted = toPersisted(state);
+    expect(persisted.battleDeck).toBe(1);
+    expect(restore(JSON.parse(JSON.stringify(persisted))).battleDeck).toBe(1);
+  });
+
+  it('reads an impossible value as none, without costing the record', () => {
+    for (const value of [-1, 1.5, '1', undefined, Number.NaN, {}]) {
+      const raw = record(value);
+      if (value === undefined) delete (raw as Record<string, unknown>)['battleDeck'];
+      const state = restore(raw);
+      expect(state.battleDeck).toBeNull();
+      expect(state.geo).toBe(70);
+      expect(state.rosaries).toBe(5);
+      expect(state.decks).toHaveLength(3);
+      expect(totalCards(state.collection)).toBe(9);
+    }
+  });
+
+  it('reads a position beyond the restored decks as none', () => {
+    expect(restore(record(3)).battleDeck).toBeNull();
+    expect(restore(record(8)).battleDeck).toBeNull();
+  });
+
+  it('keeps a remembered deck that is not Ready', () => {
+    expect(restore(record(2)).battleDeck).toBe(2);
+  });
+});
+
 describe('persisted milestones', () => {
   const record = (milestones: unknown, rosaries = 300) => ({
     version: SCHEMA_VERSION,
@@ -658,6 +756,7 @@ describe('LocalStorageUserStore', () => {
         rosaries: 15,
         collection: grantAll(new Map(), [goam]),
         decks: [],
+        battleDeck: null,
         milestones: { peakRosaries: 15, rarestHeld: 4 },
       }),
     );
@@ -669,6 +768,7 @@ describe('LocalStorageUserStore', () => {
       rosaries: 15,
       collection: [{ set: 'FC', number: 6, quantity: 1 }],
       decks: [],
+      battleDeck: null,
       milestones: { peakRosaries: 15, rarestHeld: 4 },
     });
   });
@@ -718,6 +818,7 @@ describe('UserService persistence', () => {
         rosaries: 0,
         collection: [{ set: 'FC', number: 6, quantity: 2 }],
         decks: [],
+        battleDeck: null,
         milestones: NO_MILESTONES,
       }),
     );
@@ -778,6 +879,7 @@ describe('UserService persistence', () => {
       rosaries: 0,
       collection: [{ set: 'FC', number: 1, quantity: 2 }],
       decks: [],
+      battleDeck: null,
       milestones: NO_MILESTONES,
     });
     const us = withStore(store);

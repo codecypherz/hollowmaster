@@ -21,6 +21,7 @@ class RecordingStore implements UserStore {
       rosaries: 0,
       collection: [],
       decks: [],
+      battleDeck: null,
       milestones: NO_MILESTONES,
       ...this.record,
     };

@@ -291,6 +291,44 @@ describe('UserService', () => {
     });
   });
 
+  // ─── The remembered battle deck ───────────────────────────────────────────
+
+  describe('the battle deck command', () => {
+    function withStore(store: UserStore): UserService {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [{ provide: USER_STORE, useValue: store }] });
+      return TestBed.inject(UserService);
+    }
+
+    it('starts a new player with none', () => {
+      expect(us.battleDeck()).toBeNull();
+    });
+
+    it('publishes and persists a Ready deck chosen', () => {
+      const store = new InMemoryUserStore();
+      const users = withStore(store);
+      users.createDeck();
+      for (const key of STARTER_CARD_KEYS) users.addCardToDeck(1, CARD_BY_KEY.get(key)!);
+      store.saved = [];
+
+      expect(users.chooseBattleDeck(1)).toBe(true);
+      expect(users.battleDeck()).toBe(1);
+      expect(users.state().battleDeck).toBe(1);
+      expect(store.saved).toHaveLength(1);
+      expect(store.saved[0].battleDeck).toBe(1);
+    });
+
+    it('refuses a deck that is not Ready, persisting nothing', () => {
+      const store = new InMemoryUserStore();
+      const users = withStore(store);
+
+      expect(users.chooseBattleDeck(0)).toBe(false);
+      expect(users.chooseBattleDeck(4)).toBe(false);
+      expect(users.battleDeck()).toBeNull();
+      expect(store.saved).toHaveLength(0);
+    });
+  });
+
   // ─── Rosaries ─────────────────────────────────────────────────────────────
 
   describe('the Rosary commands', () => {
@@ -374,6 +412,7 @@ describe('UserService', () => {
           rosaries: 0,
           collection: [{ set: 'FC', number: 1, quantity: 2 }],
           decks: [[{ set: 'FC', number: 1 }]],
+          battleDeck: null,
           milestones: NO_MILESTONES,
         },
       ];

@@ -7,8 +7,10 @@ import {
   RARITY_LIMIT,
   addCardToDeck,
   addRefusal,
+  chooseBattleDeck,
   copiesInDeck,
   createDeck,
+  defaultBattleDeck,
   deckName,
   deckStanding,
   deleteDeck,
@@ -25,7 +27,9 @@ import {
   quantityOf,
   seedUser,
   totalCards,
+  withMilestones,
 } from './user';
+import { settleOrder } from './exchange';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
 const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
@@ -596,5 +600,130 @@ describe('listing deck names', () => {
     expect(listOf(['Deck 1'])).toBe('Deck 1');
     expect(listOf(['Deck 1', 'Deck 3'])).toBe('Deck 1 and Deck 3');
     expect(listOf(['Deck 1', 'Deck 2', 'Deck 3'])).toBe('Deck 1, Deck 2, and Deck 3');
+  });
+});
+
+// ─── The remembered battle deck ─────────────────────────────────────────────
+
+describe('the remembered battle deck', () => {
+  const ready = (): Deck => deckOf(...lowKeys(9));
+  const incomplete = (): Deck => deckOf(...lowKeys(8));
+  /** Over the rarity limit, and full — Invalid alone. */
+  const invalid = (): Deck => deckOf(cardKey(goam), cardKey(goam), cardKey(goam), ...lowKeys(6));
+
+  function remembering(decks: readonly Deck[], battleDeck: number | null): UserState {
+    return { ...withDecks(decks), battleDeck };
+  }
+
+  it('starts as none for a new user', () => {
+    expect(seedUser().battleDeck).toBeNull();
+  });
+
+  describe('choosing', () => {
+    it('records a Ready deck', () => {
+      const state = withDecks([incomplete(), ready()]);
+      expect(chooseBattleDeck(state, 1)!.battleDeck).toBe(1);
+    });
+
+    it('changes nothing but the record', () => {
+      const state = withDecks([ready()]);
+      const next = chooseBattleDeck(state, 0)!;
+      expect(next.decks).toBe(state.decks);
+      expect(next.collection).toBe(state.collection);
+      expect(next.geo).toBe(state.geo);
+      expect(next.rosaries).toBe(state.rosaries);
+    });
+
+    it('refuses an Incomplete deck', () => {
+      expect(chooseBattleDeck(remembering([ready(), incomplete()], 0), 1)).toBeNull();
+    });
+
+    it('refuses an Invalid deck', () => {
+      expect(isBattleReady(invalid())).toBe(false);
+      expect(invalid().cards).toHaveLength(DECK_SIZE);
+      expect(chooseBattleDeck(withDecks([ready(), invalid()]), 1)).toBeNull();
+    });
+
+    it('refuses an index no deck occupies', () => {
+      const state = withDecks([ready()]);
+      for (const index of [-1, 1, 9, 0.5, Number.NaN]) {
+        expect(chooseBattleDeck(state, index)).toBeNull();
+      }
+    });
+  });
+
+  describe('the default', () => {
+    it('is the first Ready deck with no record', () => {
+      expect(defaultBattleDeck(withDecks([incomplete(), ready(), ready()]))).toBe(1);
+    });
+
+    it('is the record when that deck is Ready', () => {
+      expect(defaultBattleDeck(remembering([ready(), ready(), ready()], 2))).toBe(2);
+    });
+
+    it('falls back to the first Ready deck when the record is not Ready', () => {
+      expect(defaultBattleDeck(remembering([invalid(), ready(), incomplete()], 2))).toBe(1);
+    });
+
+    it('is none with no Ready deck', () => {
+      expect(defaultBattleDeck(seedUser())).toBeNull();
+      expect(defaultBattleDeck(remembering([incomplete(), invalid()], 0))).toBeNull();
+    });
+  });
+
+  describe('deleting a deck', () => {
+    it('moves the record down when an earlier deck is deleted', () => {
+      const third = deckOf(...lowKeys(9).reverse());
+      const next = deleteDeck(remembering([ready(), ready(), third], 2), 0)!;
+      expect(next.battleDeck).toBe(1);
+      expect(next.decks[1]).toBe(third);
+    });
+
+    it('clears the record when the remembered deck is deleted', () => {
+      expect(deleteDeck(remembering([ready(), ready(), ready()], 1), 1)!.battleDeck).toBeNull();
+    });
+
+    it('leaves the record when a later deck is deleted', () => {
+      expect(deleteDeck(remembering([ready(), ready(), ready()], 1), 2)!.battleDeck).toBe(1);
+    });
+
+    it('leaves no record as none', () => {
+      expect(deleteDeck(remembering([ready(), ready()], null), 0)!.battleDeck).toBeNull();
+    });
+  });
+
+  describe('every other operation leaves the record', () => {
+    it('creating a deck', () => {
+      expect(createDeck(remembering([ready()], 0))!.battleDeck).toBe(0);
+    });
+
+    it('adding a card', () => {
+      const state = remembering([ready(), incomplete()], 0);
+      const next = addCardToDeck(state, 1, CARD_BY_KEY.get(lowKeys(9)[8])!)!;
+      expect(next.battleDeck).toBe(0);
+    });
+
+    it('removing a card, even one that leaves the remembered deck Incomplete', () => {
+      const next = removeCardFromDeck(remembering([ready()], 0), 0, 0)!;
+      expect(isBattleReady(next.decks[0])).toBe(false);
+      expect(next.battleDeck).toBe(0);
+    });
+
+    it('a sale that trims the remembered deck', () => {
+      const state = remembering([ready()], 0);
+      const sold = settleOrder(state, [{ key: lowKeys(1)[0], action: 'sell', quantity: 1 }])!;
+      expect(sold.decks[0].cards).toHaveLength(DECK_SIZE - 1);
+      expect(sold.battleDeck).toBe(0);
+    });
+
+    it('raising milestones', () => {
+      const state: UserState = {
+        ...remembering([ready()], 0),
+        rosaries: 500,
+      };
+      const raised = withMilestones(state);
+      expect(raised).not.toBe(state);
+      expect(raised.battleDeck).toBe(0);
+    });
   });
 });

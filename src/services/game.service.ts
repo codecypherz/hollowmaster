@@ -1,5 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { Card, Direction, CARD_DB } from '../model/card';
+import { CARD_BY_KEY, CARD_DB, Card, Direction } from '../model/card';
+import { Deck, isBattleReady } from '../model/deck';
 import { BOARD_SIZE, Coord, GameState, HAND_SIZE, Owner, PlacedCard } from '../model/game';
 
 @Injectable({ providedIn: 'root' })
@@ -16,8 +17,23 @@ export class GameService {
    */
   readonly scores = computed(() => countOwned(this._state()));
 
-  startGame(): void {
-    const [playerHand, opponentHand] = dealHands(CARD_DB, 2, HAND_SIZE);
+  /** The deck the current match was begun with, so Play Again deals it again. */
+  private deck: Deck | null = null;
+
+  /**
+   * Begins a match with `deck` as the player's hand, in deck order, and an
+   * opponent dealt from the card database. Refused, changing nothing, for a
+   * deck that is not `isBattleReady`.
+   *
+   * Handed a deck rather than reaching for the user, so the game knows
+   * nothing about where decks are kept. A Ready deck has survived the load's
+   * catalogue check, so every key resolves.
+   */
+  startGame(deck: Deck): boolean {
+    if (!isBattleReady(deck)) return false;
+    this.deck = deck;
+    const playerHand = deck.cards.map((key) => CARD_BY_KEY.get(key)!);
+    const [opponentHand] = dealHands(CARD_DB, 1, HAND_SIZE);
     this._state.set({
       board: emptyBoard(),
       player: { hand: playerHand },
@@ -29,6 +45,12 @@ export class GameService {
       lastPlaced: null,
       inspected: null,
     });
+    return true;
+  }
+
+  /** Begins a fresh match with the deck the last one was begun with. */
+  restartGame(): boolean {
+    return this.deck !== null && this.startGame(this.deck);
   }
 
   selectCard(index: number): void {

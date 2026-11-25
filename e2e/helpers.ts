@@ -7,16 +7,20 @@ export const HAND_POSITIONS = 18;
 export const BOARD_CELLS = 25;
 
 /**
- * The in-game route is guarded: it may only be reached by starting a match from
- * Battle, never by URL. Most checks here need the in-game screen, so that walk
- * lives in one place.
+ * The in-game route is guarded: it may only be reached by beginning a match
+ * from deck selection, never by URL, and a match needs a Ready deck. Most
+ * checks here need the in-game screen, so that walk lives in one place: store
+ * a player whose Deck 1 is Ready, then Battle → deck selection → the match.
  *
  * Web-first assertions carry all the waiting — there is no fixed delay or poll
  * anywhere in this suite.
  */
 export async function startMatch(page: Page): Promise<void> {
+  await storeUser(page, READY_STARTER_USER);
   await page.goto('/battle');
   await page.getByRole('button', { name: 'Start Game' }).click();
+  await expect(page).toHaveURL(/\/battle\/deck$/);
+  await page.getByRole('button', { name: 'Begin Battle' }).click();
 
   await expect(page).toHaveURL(/\/game$/);
   await expect(arena(page)).toBeVisible();
@@ -330,6 +334,8 @@ export interface StoredUser {
   decks: { set: string; number: number }[][];
   /** Left out, the app proves them from the balance and the collection. */
   milestones?: { peakRosaries?: number; rarestHeld?: number };
+  /** The remembered battle deck's position; none when left out. */
+  battleDeck?: number | null;
 }
 
 /**
@@ -342,14 +348,33 @@ export async function storeUser(page: Page, user: StoredUser): Promise<void> {
   await page.evaluate(
     (record) => localStorage.setItem('hollowmaster.user.v1', JSON.stringify(record)),
     {
-      version: 4,
+      version: 5,
       geo: user.geo ?? 0,
       rosaries: user.rosaries ?? 0,
       collection: user.collection,
       decks: user.decks,
+      battleDeck: user.battleDeck ?? null,
       milestones: { peakRosaries: 0, rarestHeld: 0, ...user.milestones },
     },
   );
+}
+
+/** The nine starter cards, by identity, in starter order. */
+export const STARTER_REFS: readonly { set: string; number: number }[] = [
+  1, 7, 8, 9, 10, 11, 12, 13, 14,
+].map((number) => ({ set: 'FC', number }));
+
+/** A new player's collection, with Deck 1 holding all nine: a Ready deck by construction. */
+export const READY_STARTER_USER: StoredUser = {
+  collection: STARTER_REFS.map((ref) => ({ ...ref, quantity: 1 })),
+  decks: [[...STARTER_REFS]],
+};
+
+/** Navigates to deck selection and waits for its deck row and control. */
+export async function openDeckSelect(page: Page): Promise<void> {
+  await page.goto('/battle/deck');
+  await expect(page.locator('app-deck-select app-deck-bar')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Begin Battle' })).toBeVisible();
 }
 
 /** One tile per distinct card the collection holds. */

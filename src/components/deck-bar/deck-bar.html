@@ -9,68 +9,82 @@
         @for (name of names(); track $index) {
           <!-- Only the selected button spells out "Deck"; the others show the
                numeral alone. The accessible name is the full name either way,
-               so a screen reader never hears a bare number. -->
+               so a screen reader never hears a bare number. A deck the page
+               will not take is listed, disabled, and says why — aria-disabled
+               rather than native disabled, so it stays in the tab order and
+               its tooltip reaches the keyboard. -->
+          @let refusal = refusals()[$index];
           <button
             type="button"
             class="deck-btn"
             [class.is-selected]="selectedIndex() === $index"
+            [class.is-disabled]="refusal !== null"
             [attr.aria-pressed]="selectedIndex() === $index"
             [attr.aria-label]="name"
-            (click)="selectDeck.emit($index)"
+            [attr.aria-disabled]="refusal !== null ? 'true' : null"
+            [attr.aria-describedby]="refusal !== null ? 'deck-reason-' + $index : null"
+            [attr.data-tip]="refusal"
+            (click)="onSelect($index)"
           >
             {{ selectedIndex() === $index ? name : $index + 1 }}
           </button>
+          @if (refusal !== null) {
+            <span [id]="'deck-reason-' + $index" class="sr-only">{{ refusal }}</span>
+          }
         }
       </div>
     }
 
-    <div class="deck-controls-unit">
-      <span class="controls-sep" aria-hidden="true"></span>
-      <div class="deck-controls" role="group" aria-label="Deck controls">
-        <!-- At the limit the control stays where it is, disabled: the place
+    @if (mode() === 'edit') {
+      <div class="deck-controls-unit">
+        <span class="controls-sep" aria-hidden="true"></span>
+        <div class="deck-controls" role="group" aria-label="Deck controls">
+          <!-- At the limit the control stays where it is, disabled: the place
              the player looks for it still answers, with the reason. Not the
              native `disabled`, which would take it out of the tab order and
              in some browsers suppress the hover that shows the tooltip. -->
-        <button
-          type="button"
-          class="icon-btn create-deck"
-          [class.is-disabled]="!canCreate()"
-          aria-label="New deck"
-          [attr.aria-disabled]="canCreate() ? null : 'true'"
-          [attr.aria-describedby]="canCreate() ? null : 'deck-limit-reason'"
-          [attr.data-tip]="canCreate() ? 'New deck' : limitText"
-          (click)="onCreate()"
-        >
-          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-            <path d="M8 2.5v11M2.5 8h11" />
-          </svg>
-        </button>
-        @if (!canCreate()) {
-          <span id="deck-limit-reason" class="sr-only">{{ limitText }}</span>
-        }
-
-        @if (selectedIndex() !== null) {
           <button
             type="button"
-            class="icon-btn delete-deck"
-            [attr.aria-label]="'Delete ' + selectedName()"
-            [attr.data-tip]="'Delete ' + selectedName()"
-            (click)="askToDelete()"
+            class="icon-btn create-deck"
+            [class.is-disabled]="!canCreate()"
+            aria-label="New deck"
+            [attr.aria-disabled]="canCreate() ? null : 'true'"
+            [attr.aria-describedby]="canCreate() ? null : 'deck-limit-reason'"
+            [attr.data-tip]="canCreate() ? 'New deck' : limitText"
+            (click)="onCreate()"
           >
             <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.75 6.5v4.5M9.25 6.5v4.5" />
+              <path d="M8 2.5v11M2.5 8h11" />
             </svg>
           </button>
-        }
+          @if (!canCreate()) {
+            <span id="deck-limit-reason" class="sr-only">{{ limitText }}</span>
+          }
+
+          @if (selectedIndex() !== null) {
+            <button
+              type="button"
+              class="icon-btn delete-deck"
+              [attr.aria-label]="'Delete ' + selectedName()"
+              [attr.data-tip]="'Delete ' + selectedName()"
+              (click)="askToDelete()"
+            >
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.75 6.5v4.5M9.25 6.5v4.5" />
+              </svg>
+            </button>
+          }
+        </div>
       </div>
-    </div>
+    }
   </div>
 
   @if (selectedIndex() === null) {
     <!-- No decks: the page says so plainly and the collection below is still
          shown in full. -->
     <p class="empty-state">
-      You have no decks. Create one to start building from the collection below.
+      {{ emptyText() }}
+      <ng-content select="[emptyAction]" />
     </p>
   } @else {
     <!-- The row lays out at a fixed unit and the whole region is scaled, so no
@@ -92,9 +106,10 @@
                 />
               }
             </div>
-            <!-- The strip is every position's, so filling one moves nothing. -->
+            <!-- The strip is every position's, so filling one moves nothing.
+                 Deck selection changes no deck, so it holds no Remove. -->
             <div class="slot-strip">
-              @if (position.card; as card) {
+              @if (mode() === 'edit' && position.card; as card) {
                 <button
                   type="button"
                   class="hk-btn sm remove"
@@ -136,7 +151,7 @@
   }
 </div>
 
-@if (confirming()) {
+@if (mode() === 'edit' && confirming()) {
   <app-confirm-dialog
     [message]="'Delete ' + selectedName() + '? Its cards stay in your collection.'"
     [confirmLabel]="'Delete ' + selectedName()"

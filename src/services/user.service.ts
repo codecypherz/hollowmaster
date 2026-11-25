@@ -1,6 +1,12 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Card } from '../model/card';
-import { addCardToDeck, createDeck, deleteDeck, removeCardFromDeck } from '../model/deck';
+import {
+  addCardToDeck,
+  chooseBattleDeck,
+  createDeck,
+  deleteDeck,
+  removeCardFromDeck,
+} from '../model/deck';
 import { OrderLine, settleOrder } from '../model/exchange';
 import {
   SCHEMA_VERSION,
@@ -36,6 +42,9 @@ export class UserService {
 
   /** The decks the player has built, in their own order. */
   readonly decks = computed(() => this._state().decks);
+
+  /** The position of the deck last chosen for battle, or `null` for none. */
+  readonly battleDeck = computed(() => this._state().battleDeck);
 
   /** Every copy of every card held. */
   readonly totalCards = computed(() => countTotal(this._state().collection));
@@ -164,6 +173,14 @@ export class UserService {
   /** Takes out the card at that position. Refused for a position not occupied. */
   removeCardFromDeck(deckIndex: number, position: number): boolean {
     return this.apply((s) => removeCardFromDeck(s, deckIndex, position));
+  }
+
+  /**
+   * Remembers that deck as the one chosen for battle. Refused for a deck not
+   * held or one that is not Ready.
+   */
+  chooseBattleDeck(deckIndex: number): boolean {
+    return this.apply((s) => chooseBattleDeck(s, deckIndex));
   }
 
   /**

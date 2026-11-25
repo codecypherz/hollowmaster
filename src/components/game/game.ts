@@ -145,7 +145,7 @@ export class Game {
   }
 
   playAgain(): void {
-    this.gs.startGame();
+    this.gs.restartGame();
   }
 
   isPlaceable(row: number, col: number): boolean {

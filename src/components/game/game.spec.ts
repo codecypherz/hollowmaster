@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { READY_TEST_DECK } from '../../testing/ready-deck';
 import { provideRouter } from '@angular/router';
 import { Game } from './game';
 import { GameService } from '../../services/game.service';
@@ -20,7 +21,7 @@ describe('Game', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [Game], providers: [provideRouter([])] });
     gs = TestBed.inject(GameService);
-    gs.startGame();
+    gs.startGame(READY_TEST_DECK);
     fixture = TestBed.createComponent(Game);
     host = fixture.nativeElement;
     fixture.detectChanges();
@@ -53,9 +54,9 @@ describe('Game', () => {
    */
   function playATurn(hand: number): { row: number; col: number } {
     const board = gs.state()!.board;
-    const target = board.flatMap((row, ri) =>
-      row.map((c, ci) => (c ? null : { row: ri, col: ci })),
-    ).find((c) => c !== null)!;
+    const target = board
+      .flatMap((row, ri) => row.map((c, ci) => (c ? null : { row: ri, col: ci })))
+      .find((c) => c !== null)!;
 
     handCard(hand).click();
     fixture.detectChanges();
@@ -77,7 +78,10 @@ describe('Game', () => {
 
   it('presents both hands in the same arrangement, mirrored', () => {
     const positions = (side: 'player' | 'opponent') =>
-      slots(side).map((s) => [s.style.getPropertyValue('--col'), s.style.getPropertyValue('--row')]);
+      slots(side).map((s) => [
+        s.style.getPropertyValue('--col'),
+        s.style.getPropertyValue('--row'),
+      ]);
 
     expect(positions('opponent')).toEqual(positions('player'));
     // Five positions in the outer sub-column, four in the inner one.

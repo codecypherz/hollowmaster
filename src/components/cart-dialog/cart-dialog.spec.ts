@@ -22,6 +22,7 @@ function storeWith(record: Partial<PersistedUser>): UserStore {
       rosaries: 0,
       collection: [],
       decks: [],
+      battleDeck: null,
       milestones: NO_MILESTONES,
       ...record,
     }),

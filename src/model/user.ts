@@ -38,6 +38,12 @@ export interface UserState {
    * rules that bound it and the operations that change it.
    */
   readonly decks: readonly Deck[];
+  /**
+   * The position of the deck last chosen for battle, or `null` for none. Kept
+   * pointing at the same deck by `deleteDeck`; not cleared when that deck stops
+   * being Ready — it only stops being the default. See `deck.ts`.
+   */
+  readonly battleDeck: number | null;
   /** Bounded below by what is held now, but not derivable from it. */
   readonly milestones: Milestones;
 }
@@ -98,6 +104,7 @@ export function seedUser(): UserState {
     rosaries: 0,
     collection: new Map(STARTER_CARD_KEYS.map((key) => [key, 1])),
     decks: [emptyDeck()],
+    battleDeck: null,
     milestones: NO_MILESTONES,
   });
 }
@@ -166,14 +173,15 @@ export function distinctCards(collection: ReadonlyMap<CardKey, number>): number 
  * The shape persisted data is written in.
  *
  * Version 1 held a collection and a balance; version 2 adds the decks; version
- * 3 adds the Rosary balance; version 4 adds the milestones. A read
+ * 3 adds the Rosary balance; version 4 adds the milestones; version 5 adds
+ * the remembered battle deck. A read
  * dispatches on the version rather than demanding equality: a version this
  * application knows an *earlier* shape for is upgraded, because an earlier
  * record is a complete user of its own time and a player must not lose their
  * collection or their Geo because the shape around it grew. A version it knows
  * nothing about is still unreadable rather than hopefully-current.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** The first shape written: a collection and a balance, and no decks. */
 const VERSION_WITHOUT_DECKS = 1;
@@ -183,6 +191,9 @@ const VERSION_WITHOUT_ROSARIES = 2;
 
 /** The third shape: Rosaries beside the rest, but no milestones. */
 const VERSION_WITHOUT_MILESTONES = 3;
+
+/** The fourth shape: milestones beside the rest, but no remembered battle deck. */
+const VERSION_WITHOUT_BATTLE_DECK = 4;
 
 /** One card's holding, as it is stored: identity and quantity, nothing else. */
 export interface PersistedEntry {
@@ -224,6 +235,8 @@ export interface PersistedUser {
   readonly rosaries: number;
   readonly collection: readonly PersistedEntry[];
   readonly decks: readonly PersistedDeck[];
+  /** The remembered battle deck's position, or `null` for none. */
+  readonly battleDeck: number | null;
   /** As the record states them; `fromPersisted` lifts them to what it proves. */
   readonly milestones: Milestones;
 }
@@ -252,6 +265,7 @@ export function toPersisted(state: UserState): PersistedUser {
     rosaries: state.rosaries,
     collection,
     decks,
+    battleDeck: state.battleDeck,
     milestones: state.milestones,
   };
 }
@@ -275,6 +289,7 @@ export function parsePersistedUser(raw: unknown): PersistedUser | null {
   const version = record['version'];
   if (
     version !== SCHEMA_VERSION &&
+    version !== VERSION_WITHOUT_BATTLE_DECK &&
     version !== VERSION_WITHOUT_MILESTONES &&
     version !== VERSION_WITHOUT_ROSARIES &&
     version !== VERSION_WITHOUT_DECKS
@@ -305,9 +320,16 @@ export function parsePersistedUser(raw: unknown): PersistedUser | null {
 
   // Before milestones a record states none, so it proves its own.
   const milestones =
-    version === SCHEMA_VERSION ? parseMilestones(record['milestones']) : NO_MILESTONES;
+    version === SCHEMA_VERSION || version === VERSION_WITHOUT_BATTLE_DECK
+      ? parseMilestones(record['milestones'])
+      : NO_MILESTONES;
 
-  return { version, geo: record['geo'], rosaries, collection, decks, milestones };
+  // Before the battle deck was remembered a record remembers none. A later
+  // value that is not a possible position costs only itself.
+  const storedDeck = version === SCHEMA_VERSION ? record['battleDeck'] : null;
+  const battleDeck = isCount(storedDeck) ? storedDeck : null;
+
+  return { version, geo: record['geo'], rosaries, collection, decks, battleDeck, milestones };
 }
 
 /** Turns a read record back into state, dropping cards the catalogue has lost. */
@@ -344,6 +366,12 @@ export function fromPersisted(persisted: PersistedUser): UserState {
     rosaries: persisted.rosaries,
     collection,
     decks,
+    // A position no restored deck occupies names nothing. One whose deck is
+    // not Ready is kept: `user/decks` only passes it over as the default.
+    battleDeck:
+      persisted.battleDeck !== null && persisted.battleDeck < decks.length
+        ? persisted.battleDeck
+        : null,
     milestones: persisted.milestones,
   });
 }

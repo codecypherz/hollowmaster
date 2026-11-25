@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { Battle } from '../components/battle/battle';
+import { DeckSelect } from '../components/deck-select/deck-select';
 import { Game } from '../components/game/game';
 import { gameActiveGuard } from './game-active.guard';
 
@@ -9,9 +10,12 @@ export const routes: Routes = [
   // with the same string.
   { path: '', redirectTo: 'battle', pathMatch: 'full' },
 
-  // Battle and Game are eager: Battle is the first paint, and Game must appear
-  // the instant a battle starts. Everything else can wait on a chunk.
+  // Battle, deck selection, and Game are eager: Battle is the first paint, and
+  // deck selection and Game sit on the path into a match, which must not wait
+  // on a chunk. Everything else can. Deck selection is beneath `battle`, so the
+  // nav's Battle link stays current while a deck is chosen.
   { path: 'battle', component: Battle },
+  { path: 'battle/deck', component: DeckSelect },
   { path: 'game', component: Game, canActivate: [gameActiveGuard] },
 
   {

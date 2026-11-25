@@ -71,8 +71,22 @@ function standingLine(problem: DeckProblem): StandingLine {
 const DECK_CARD_WIDTH = 128;
 
 /**
+ * The words that name what keeps a deck out of battle, Invalid first — the
+ * same leading words its standing uses. Empty for a Ready deck.
+ */
+function problemWords(deck: Deck): string {
+  return deckStanding(deck)
+    .problems.map((problem) => (problem.kind === 'invalid' ? 'Invalid' : 'Incomplete'))
+    .join(' · ');
+}
+
+/**
  * The pinned region at the top of the Decks page: the deck buttons, the selected
  * deck's nine positions, and the controls that create and delete a deck.
+ *
+ * In `choose` mode — deck selection — it is read-only: no create or delete
+ * control, no Remove strips, and a deck `eligible` refuses is listed but
+ * disabled, saying why.
  *
  * It holds no user state of its own. Which deck is selected is the page's, and
  * every change is asked for by an output — the region renders what it is given
@@ -93,6 +107,17 @@ export class DeckBar {
 
   /** Which deck is on screen; null when the player holds none. */
   readonly selectedIndex = input.required<number | null>();
+
+  /** `edit` on the Decks page; `choose` on deck selection, which changes nothing. */
+  readonly mode = input<'edit' | 'choose'>('edit');
+
+  /** Which decks may be selected. Every deck, unless a page says otherwise. */
+  readonly eligible = input<(deck: Deck) => boolean>(() => true);
+
+  /** What the region says when no deck is selected. */
+  readonly emptyText = input(
+    'You have no decks. Create one to start building from the collection below.',
+  );
 
   readonly selectDeck = output<number>();
   readonly createDeck = output<void>();
@@ -116,6 +141,17 @@ export class DeckBar {
   private readonly scale = signal(1);
 
   readonly names = computed(() => this.decks().map((_, i) => deckName(i)));
+
+  /**
+   * Why each deck cannot be selected, or `null` where it can. A deck the page
+   * deems ineligible is named by its standing's problems.
+   */
+  readonly refusals = computed<(string | null)[]>(() => {
+    const eligible = this.eligible();
+    return this.decks().map((deck) =>
+      eligible(deck) ? null : problemWords(deck) || 'Unavailable',
+    );
+  });
 
   readonly selectedDeck = computed<Deck | null>(() => {
     const index = this.selectedIndex();
@@ -178,6 +214,12 @@ export class DeckBar {
     const observer = new ResizeObserver(() => this.measure());
     observer.observe(this.host.nativeElement);
     this.destroyRef.onDestroy(() => observer.disconnect());
+  }
+
+  /** A disabled deck button emits nothing. */
+  onSelect(index: number): void {
+    if (this.refusals()[index] !== null) return;
+    this.selectDeck.emit(index);
   }
 
   /** The click guard for the disabled state; the model would refuse anyway. */

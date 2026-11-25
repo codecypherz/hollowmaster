@@ -2,7 +2,20 @@ import { expect, test } from '@playwright/test';
 import { arena, startMatch } from './helpers';
 
 test.describe('the guard-gated route into the match', () => {
-  test('starting a match from Battle reaches the in-game screen', async ({ page }) => {
+  test('Start Game leads to deck selection and starts no game', async ({ page }) => {
+    await page.goto('/battle');
+    await page.getByRole('button', { name: 'Start Game' }).click();
+
+    await expect(page).toHaveURL(/\/battle\/deck$/);
+    await expect(page.getByRole('heading', { name: 'Choose a Deck' })).toBeVisible();
+    await expect(arena(page)).toHaveCount(0);
+
+    // No game was started, so the in-game route is still closed.
+    await page.goto('/game');
+    await expect(page).toHaveURL(/\/battle$/);
+  });
+
+  test('starting a match through deck selection reaches the in-game screen', async ({ page }) => {
     await startMatch(page);
 
     await expect(page).toHaveURL(/\/game$/);

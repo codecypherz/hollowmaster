@@ -1,0 +1,58 @@
+<div class="page-wrap">
+  <!-- Layered void background -->
+  <div class="void-bg" aria-hidden="true"></div>
+  <div class="mist-layer" aria-hidden="true"></div>
+
+  <!-- Floating soul particles -->
+  <div class="particles" aria-hidden="true">
+    @for (p of particles; track $index) {
+      <span class="particle" [class.falls]="p.falling" [style]="vars(p)"></span>
+    }
+  </div>
+
+  <main class="content">
+    <header class="screen-header">
+      <span class="screen-header-rule" aria-hidden="true"></span>
+      <h1 class="screen-header-title">Choose a Deck</h1>
+      <span class="screen-header-rule is-end" aria-hidden="true"></span>
+    </header>
+
+    <!-- The deck bar, read-only: the Decks page's row and positions, without
+         a control that could change a deck. A deck that is not Ready is
+         listed, disabled, and says why. -->
+    <section class="deck-area" aria-label="Your decks">
+      <app-deck-bar
+        mode="choose"
+        [decks]="decks()"
+        [selectedIndex]="chosen()"
+        [eligible]="eligible"
+        emptyText="None of your decks is ready for battle."
+        (selectDeck)="onChoose($event)"
+        (readCard)="onRead($event)"
+      >
+        <a emptyAction class="build-link" routerLink="/decks">Build a deck</a>
+      </app-deck-bar>
+    </section>
+
+    <!-- With nothing chosen the control stays in place and in the tab order,
+         and says what it needs — aria-disabled, never native disabled. -->
+    <div class="actions">
+      <button
+        type="button"
+        class="hk-btn primary begin"
+        [attr.aria-disabled]="chosen() === null ? 'true' : null"
+        [attr.aria-describedby]="chosen() === null ? 'begin-reason' : null"
+        (click)="begin()"
+      >
+        Begin Battle
+      </button>
+      @if (chosen() === null) {
+        <p id="begin-reason" class="begin-reason">{{ beginReason }}</p>
+      }
+    </div>
+  </main>
+</div>
+
+@if (readingCard(); as card) {
+  <app-card-reader [card]="card" (close)="closeReader()" />
+}

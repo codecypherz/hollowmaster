@@ -21,13 +21,16 @@ import {
   openCollectionAs,
   openDecks,
   openDecksAs,
+  openDeckSelect,
   openShop,
   purseButton,
   readCard,
   revealedCards,
   revealedRarities,
   rosaryPurse,
+  READY_STARTER_USER,
   startMatch,
+  storeUser,
   type Size,
 } from './helpers';
 
@@ -378,4 +381,52 @@ test('the Collection page presents its tiles, cart, and purse without animation'
   ).toBe('none');
   await page.keyboard.press('Escape');
   await expect(reader).toHaveCount(0);
+});
+
+test('deck selection renders finished, with every deck, position, and control at once', async ({
+  page,
+}) => {
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
+    true,
+  );
+
+  await page.setViewportSize(VIEWPORT);
+  await storeUser(page, {
+    ...READY_STARTER_USER,
+    decks: [...READY_STARTER_USER.decks, []],
+  });
+  await openDeckSelect(page);
+
+  // Read in one pass, straight after arrival: nothing is waited out, so
+  // anything still entering would be caught part-way.
+  const parts = await page.evaluate(() => {
+    const read = (el: Element) => {
+      const style = getComputedStyle(el);
+      return {
+        opacity: style.opacity,
+        animation: style.animationName,
+        visible: el.getBoundingClientRect().width > 0,
+        // A deck that is not Ready is dimmed at rest, on purpose.
+        dimmed: el.classList.contains('is-disabled'),
+      };
+    };
+    const select = (selector: string) => [...document.querySelectorAll(selector)].map(read);
+    return {
+      buttons: select('app-deck-select .deck-btn'),
+      slots: select('app-deck-select .slot'),
+      begin: select('app-deck-select button.begin'),
+    };
+  });
+
+  expect(parts.buttons).toHaveLength(2);
+  expect(parts.slots).toHaveLength(9);
+  expect(parts.begin).toHaveLength(1);
+  for (const part of [...parts.buttons, ...parts.slots, ...parts.begin]) {
+    expect(part.visible).toBe(true);
+    expect(part.opacity).toBe(part.dimmed ? '0.45' : '1');
+    expect(part.animation).toBe('none');
+  }
+  expect(parts.buttons.map((b) => b.dimmed)).toEqual([false, true]);
+
+  await expectNoScroll(page);
 });

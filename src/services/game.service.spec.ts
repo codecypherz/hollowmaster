@@ -1,6 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { READY_TEST_DECK } from '../testing/ready-deck';
 import { GameService, countOwned, dealHands, finalize, resolveBattles } from './game.service';
-import { Card, CARD_DB, Direction } from '../model/card';
+import { Card, CARD_BY_KEY, CARD_DB, Direction, cardKey, cardKeyOf } from '../model/card';
+import { Deck } from '../model/deck';
+import { STARTER_CARD_KEYS } from '../model/user';
 import { BOARD_SIZE, GameState, HAND_SIZE, PlacedCard } from '../model/game';
 
 /** A card built for a test, stated only in the properties the test cares about. */
@@ -40,10 +43,49 @@ describe('GameService', () => {
 
   describe('the deal', () => {
     it('fills both hands to nine cards', () => {
-      gs.startGame();
+      gs.startGame(READY_TEST_DECK);
       const s = gs.state()!;
       expect(s.player.hand.filter(Boolean)).toHaveLength(HAND_SIZE);
       expect(s.opponent.hand.filter(Boolean)).toHaveLength(HAND_SIZE);
+    });
+
+    it("deals the player the deck's cards in deck order, duplicates included", () => {
+      const crawlid = cardKeyOf('FC', 1);
+      const deck: Deck = { cards: [crawlid, crawlid, ...STARTER_CARD_KEYS.slice(2, 8), crawlid] };
+      expect(deck.cards).toHaveLength(HAND_SIZE);
+      expect(gs.startGame(deck)).toBe(true);
+      const hand = gs.state()!.player.hand;
+      expect(hand.map((card) => cardKey(card!))).toEqual(deck.cards);
+      expect(hand[0]).toBe(CARD_BY_KEY.get(crawlid));
+    });
+
+    it('deals the opponent nine cards from the card database', () => {
+      gs.startGame(READY_TEST_DECK);
+      const hand = gs.state()!.opponent.hand;
+      expect(hand).toHaveLength(HAND_SIZE);
+      for (const card of hand) expect(CARD_DB).toContain(card);
+    });
+
+    it('refuses an Incomplete deck, starting nothing', () => {
+      expect(gs.startGame({ cards: STARTER_CARD_KEYS.slice(0, 8) })).toBe(false);
+      expect(gs.state()).toBeNull();
+      expect(gs.isActive()).toBe(false);
+    });
+
+    it('refuses an Invalid deck, starting nothing', () => {
+      const goam = cardKeyOf('FC', 6); // four stars
+      const invalid: Deck = { cards: [goam, goam, goam, ...STARTER_CARD_KEYS.slice(0, 6)] };
+      expect(invalid.cards).toHaveLength(HAND_SIZE);
+      expect(gs.startGame(invalid)).toBe(false);
+      expect(gs.state()).toBeNull();
+    });
+
+    it('plays again with the deck the match was begun with', () => {
+      expect(gs.restartGame()).toBe(false);
+      gs.startGame(READY_TEST_DECK);
+      gs.exitGame();
+      expect(gs.restartGame()).toBe(true);
+      expect(gs.state()!.player.hand.map((card) => cardKey(card!))).toEqual(READY_TEST_DECK.cards);
     });
 
     it('succeeds from a database holding a single card', () => {
@@ -74,14 +116,14 @@ describe('GameService', () => {
 
   describe('score', () => {
     it('starts at nothing apiece: a card in hand is not a card owned', () => {
-      gs.startGame();
+      gs.startGame(READY_TEST_DECK);
       expect(gs.scores()).toEqual({ player: 0, opponent: 0 });
     });
 
     it('always sums to the cards on the board, reaching eighteen at the end', () => {
       vi.useFakeTimers();
       try {
-        gs.startGame();
+        gs.startGame(READY_TEST_DECK);
         while (gs.state()!.phase !== 'game-over') {
           const { player, opponent } = gs.scores();
           expect(player + opponent).toBe(placedCount(gs.state()!));
@@ -99,7 +141,7 @@ describe('GameService', () => {
     it('moves only the placed card when a placement captures nothing', () => {
       vi.useFakeTimers();
       try {
-        gs.startGame();
+        gs.startGame(READY_TEST_DECK);
         const before = gs.scores();
         gs.selectCard(0);
         gs.placeCard(0, 0); // an empty board: nothing to contest
@@ -146,7 +188,7 @@ describe('GameService', () => {
   it('ends only once both hands are empty, leaving seven cells empty', () => {
     vi.useFakeTimers();
     try {
-      gs.startGame();
+      gs.startGame(READY_TEST_DECK);
       for (let turn = 0; turn < HAND_SIZE; turn++) {
         playOneCard(gs);
         if (turn < HAND_SIZE - 1) vi.runOnlyPendingTimers();
@@ -172,7 +214,7 @@ describe('GameService', () => {
     it('works while the opponent is moving and changes nothing else', () => {
       vi.useFakeTimers();
       try {
-        gs.startGame();
+        gs.startGame(READY_TEST_DECK);
         gs.selectCard(0);
         gs.placeCard(0, 0);
         expect(gs.state()!.phase).toBe('opponent-turn');
@@ -211,7 +253,7 @@ describe('GameService', () => {
     it('is distinct from selection, which still guards on the turn', () => {
       vi.useFakeTimers();
       try {
-        gs.startGame();
+        gs.startGame(READY_TEST_DECK);
         gs.selectCard(0);
         gs.placeCard(0, 0);
         gs.selectCard(1); // out of turn
@@ -228,7 +270,7 @@ describe('GameService', () => {
     it('records the cell every placement landed in', () => {
       vi.useFakeTimers();
       try {
-        gs.startGame();
+        gs.startGame(READY_TEST_DECK);
         gs.selectCard(0);
         gs.placeCard(2, 3);
         expect(gs.state()!.lastPlaced).toEqual({ row: 2, col: 3 });
@@ -291,7 +333,7 @@ describe('GameService', () => {
   });
 
   it('discards the match on retreat', () => {
-    gs.startGame();
+    gs.startGame(READY_TEST_DECK);
     expect(gs.isActive()).toBe(true);
     gs.exitGame();
     expect(gs.isActive()).toBe(false);
@@ -317,7 +359,7 @@ function playOneCard(gs: GameService): void {
 
 /** Runs a whole match to its end. Requires fake timers to be installed. */
 function playFullMatch(gs: GameService): void {
-  gs.startGame();
+  gs.startGame(READY_TEST_DECK);
   while (gs.state()!.phase !== 'game-over') {
     if (gs.state()!.phase === 'player-turn') playOneCard(gs);
     vi.runOnlyPendingTimers();

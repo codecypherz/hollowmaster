@@ -150,10 +150,53 @@ export function createDeck(state: UserState): UserState | null {
   return { ...state, decks: [...state.decks, emptyDeck()] };
 }
 
-/** The user without that deck, or `null` for an index no deck occupies. */
+/**
+ * The user without that deck, or `null` for an index no deck occupies.
+ *
+ * The remembered battle deck names a position, so it is kept naming the same
+ * deck: a deletion before it moves it down one, deleting it clears it, and a
+ * deletion after it leaves it alone.
+ */
 export function deleteDeck(state: UserState, deckIndex: number): UserState | null {
   if (!holdsDeck(state, deckIndex)) return null;
-  return { ...state, decks: state.decks.filter((_, i) => i !== deckIndex) };
+  const remembered = state.battleDeck;
+  const battleDeck =
+    remembered === null || remembered < deckIndex
+      ? remembered
+      : remembered === deckIndex
+        ? null
+        : remembered - 1;
+  return { ...state, decks: state.decks.filter((_, i) => i !== deckIndex), battleDeck };
+}
+
+/**
+ * The user remembering that deck as the one chosen for battle, or `null` for
+ * an index no deck occupies or a deck that is not `isBattleReady`.
+ */
+export function chooseBattleDeck(state: UserState, deckIndex: number): UserState | null {
+  if (!holdsDeck(state, deckIndex)) return null;
+  if (!isBattleReady(state.decks[deckIndex])) return null;
+  return { ...state, battleDeck: deckIndex };
+}
+
+/**
+ * The deck the deck selection screen opens on: the remembered one if it is
+ * still Ready, else the first Ready deck, else `null`.
+ *
+ * Derived, never stored. A remembered deck that has stopped being Ready keeps
+ * its record — it is only passed over here until it is Ready again.
+ */
+export function defaultBattleDeck(state: UserState): number | null {
+  const remembered = state.battleDeck;
+  if (
+    remembered !== null &&
+    holdsDeck(state, remembered) &&
+    isBattleReady(state.decks[remembered])
+  ) {
+    return remembered;
+  }
+  const first = state.decks.findIndex(isBattleReady);
+  return first === -1 ? null : first;
 }
 
 /** How many copies of `card` that deck holds. */

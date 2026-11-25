@@ -1,0 +1,88 @@
+/* ─── Deck selection ──────────────────────────────────────────────────────────
+   The Decks page's shell — the void, the mist, the particles, the single-line
+   header, no corner frame — around three rows: the header, the deck region
+   centred in the space left, and the control that begins the battle. Nothing
+   here scrolls: the deck region is one row, scaled by the deck bar to fit.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:host {
+  /* As the Decks page: the page is laid out inside the space it is given, so
+     nothing it holds can grow the document past the viewport. */
+  display: block;
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.page-wrap {
+  position: absolute;
+  inset: 0;
+  background: var(--color-void);
+  overflow: hidden;
+  font-family: var(--font-ui);
+}
+
+.content {
+  position: relative;
+  z-index: 10;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  /* One column no wider than the page, so the deck row — laid out wider than
+     a narrow viewport on purpose, to be scaled — cannot widen it. */
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.deck-area {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 24px;
+}
+
+.begin-reason {
+  margin: 0;
+  font-family: var(--font-flavor);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.build-link {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-gold-light);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-radius: 2px;
+  transition: color var(--dur-fast) ease;
+}
+
+.build-link:hover {
+  color: var(--color-soul-bright);
+}
+
+.build-link:focus-visible {
+  outline: 2px solid var(--color-soul);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .build-link {
+    transition: none;
+  }
+}
