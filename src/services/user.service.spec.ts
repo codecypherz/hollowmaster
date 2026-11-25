@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { effect } from '@angular/core';
+import { addSixStarCard } from '../testing/six-star';
 import { UserService } from './user.service';
 import { CARD_BY_KEY, Card, cardKey, cardKeyOf } from '../model/card';
 import { DECK_SIZE, MAX_DECKS } from '../model/deck';
 import { OrderLine } from '../model/exchange';
 import {
+  NO_MILESTONES,
   PersistedUser,
   SCHEMA_VERSION,
   STARTER_CARD_KEYS,
@@ -307,10 +309,10 @@ describe('UserService', () => {
       const users = withStore(store);
 
       expect(users.settle([sell(vengefly)])).toBe(true);
-      expect(users.rosaries()).toBe(10);
+      expect(users.rosaries()).toBe(1);
       expect(quantityOf(users.collection(), vengefly)).toBe(0);
       expect(store.saved).toHaveLength(1);
-      expect(store.saved[0].rosaries).toBe(10);
+      expect(store.saved[0].rosaries).toBe(1);
 
       expect(users.settle([sell(vengefly)])).toBe(false);
       expect(store.saved).toHaveLength(1);
@@ -323,9 +325,9 @@ describe('UserService', () => {
       expect(users.settle([buy(crawlid)])).toBe(false);
       expect(store.saved).toHaveLength(0);
 
-      const starters = STARTER_CARD_KEYS.map((key) => CARD_BY_KEY.get(key)!);
+      const starters = STARTER_CARD_KEYS.slice(0, 3).map((key) => CARD_BY_KEY.get(key)!);
       expect(users.settle(starters.map((card) => sell(card)))).toBe(true);
-      expect(users.rosaries()).toBe(90);
+      expect(users.rosaries()).toBe(3);
       store.saved = [];
       expect(users.settle([buy(crawlid)])).toBe(false);
       expect(store.saved).toHaveLength(0);
@@ -359,7 +361,7 @@ describe('UserService', () => {
       us.settle([sell(crawlid)]);
       TestBed.tick();
       expect(us.decks().every((d) => d.cards.length === 0)).toBe(true);
-      expect(seen.at(-1)).toEqual({ held: 0, inDecks: 0, rosaries: 10 });
+      expect(seen.at(-1)).toEqual({ held: 0, inDecks: 0, rosaries: 1 });
       for (const step of seen) expect([2, 0]).toContain(step.inDecks);
     });
 
@@ -372,6 +374,7 @@ describe('UserService', () => {
           rosaries: 0,
           collection: [{ set: 'FC', number: 1, quantity: 2 }],
           decks: [[{ set: 'FC', number: 1 }]],
+          milestones: NO_MILESTONES,
         },
       ];
       const users = withStore(store);
@@ -383,6 +386,89 @@ describe('UserService', () => {
       expect(store.saved).toHaveLength(2);
       expect(store.saved[1].version).toBe(SCHEMA_VERSION);
       expect(store.saved[1].rosaries).toBe(0);
+    });
+  });
+
+  // ─── Milestones ───────────────────────────────────────────────────────────
+
+  describe('the milestones', () => {
+    it('rise with a pack in the same step as its cards', () => {
+      const seen: { held: number; rarest: number }[] = [];
+      TestBed.runInInjectionContext(() =>
+        effect(() => {
+          const s = us.state();
+          seen.push({ held: quantityOf(s.collection, goam), rarest: s.milestones.rarestHeld });
+        }),
+      );
+      TestBed.tick();
+      us.creditGeo(100);
+      us.purchase(100, pack);
+      TestBed.tick();
+      expect(seen).toEqual([
+        { held: 0, rarest: 1 },
+        { held: 1, rarest: 4 },
+      ]);
+    });
+
+    it('keep the rarest card held and the highest balance through sales and purchases', () => {
+      us.grantCards([goam]);
+      expect(us.state().milestones).toEqual({ peakRosaries: 0, rarestHeld: 4 });
+      us.settle([sell(goam)]);
+      expect(us.rosaries()).toBe(33);
+      expect(us.state().milestones).toEqual({ peakRosaries: 33, rarestHeld: 4 });
+      us.settle([buy(crawlid, 8)]);
+      expect(us.rosaries()).toBe(1);
+      expect(us.state().milestones).toEqual({ peakRosaries: 33, rarestHeld: 4 });
+    });
+
+    it('count only the balance an order settles at', () => {
+      us.grantCards([goam]);
+      us.settle([sell(goam), buy(crawlid, 8)]);
+      expect(us.state().milestones.peakRosaries).toBe(1);
+    });
+
+    it('rise with a card bought', () => {
+      us.settle(STARTER_CARD_KEYS.map((key) => sell(CARD_BY_KEY.get(key)!)));
+      us.grantCards(Array<Card>(18).fill(crawlid));
+      us.settle([sell(crawlid, 18), buy(gruzMother)]);
+      expect(us.state().milestones).toEqual({ peakRosaries: 9, rarestHeld: 3 });
+    });
+
+    it('are persisted with the change that raised them', () => {
+      const store = new InMemoryUserStore();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [{ provide: USER_STORE, useValue: store }] });
+      const users = TestBed.inject(UserService);
+      users.grantCards([goam]);
+      expect(store.saved).toHaveLength(1);
+      expect(store.saved[0].milestones).toEqual({ peakRosaries: 0, rarestHeld: 4 });
+    });
+
+    it('are a new player’s again after a reset', () => {
+      us.grantCards([goam]);
+      us.settle([sell(goam)]);
+      us.reset();
+      expect(us.state().milestones).toEqual(seedUser().milestones);
+    });
+
+    it('refuse a purchase whose rate is unknown without a write, and allow it once known', () => {
+      const six = addSixStarCard();
+      const store = new InMemoryUserStore();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [{ provide: USER_STORE, useValue: store }] });
+      const users = TestBed.inject(UserService);
+      users.grantCards(Array<Card>(400).fill(goam));
+      store.saved = [];
+      const before = users.state();
+      expect(users.settle([sell(goam, 400), buy(six)])).toBe(false);
+      expect(users.state()).toBe(before);
+      expect(store.saved).toEqual([]);
+
+      expect(users.settle([sell(goam, 303)])).toBe(true);
+      expect(users.rosaries()).toBe(9999);
+      expect(users.settle([buy(six)])).toBe(true);
+      expect(quantityOf(users.collection(), six)).toBe(1);
+      expect(users.state().milestones).toEqual({ peakRosaries: 9999, rarestHeld: 6 });
     });
   });
 

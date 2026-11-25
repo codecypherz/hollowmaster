@@ -3,7 +3,9 @@ import { LocalStorageUserStore, STORAGE_KEY, USER_STORE, UserStore } from './use
 import { UserService } from './user.service';
 import { CARD_BY_KEY, cardKey, cardKeyOf } from '../model/card';
 import { DECK_SIZE, MAX_DECKS, emptyDeck } from '../model/deck';
+import { knowsRate, settleOrder } from '../model/exchange';
 import {
+  NO_MILESTONES,
   PersistedUser,
   SCHEMA_VERSION,
   distinctCards,
@@ -56,6 +58,7 @@ describe('the persisted shape', () => {
       rosaries: 70,
       collection: grantAll(seedUser().collection, [crawlid, crawlid, goam]),
       decks: [],
+      milestones: { peakRosaries: 90, rarestHeld: 5 },
     };
     const restored = fromPersisted(
       parsePersistedUser(JSON.parse(JSON.stringify(toPersisted(original))))!,
@@ -63,6 +66,7 @@ describe('the persisted shape', () => {
 
     expect(restored.geo).toBe(350);
     expect(restored.rosaries).toBe(70);
+    expect(restored.milestones).toEqual({ peakRosaries: 90, rarestHeld: 5 });
     expect(totalCards(restored.collection)).toBe(totalCards(original.collection));
     expect(distinctCards(restored.collection)).toBe(distinctCards(original.collection));
     expect([...restored.collection.entries()].sort()).toEqual(
@@ -76,6 +80,7 @@ describe('the persisted shape', () => {
       rosaries: 0,
       collection: grantAll(new Map(), [goam, goam]),
       decks: [],
+      milestones: { peakRosaries: 0, rarestHeld: 4 },
     });
     expect(persisted).toEqual({
       version: SCHEMA_VERSION,
@@ -83,6 +88,7 @@ describe('the persisted shape', () => {
       rosaries: 0,
       collection: [{ set: 'FC', number: 6, quantity: 2 }],
       decks: [],
+      milestones: { peakRosaries: 0, rarestHeld: 4 },
     });
 
     const json = JSON.stringify(toPersisted(seedUser()));
@@ -104,6 +110,7 @@ describe('the persisted shape', () => {
       rosaries: 0,
       collection: new Map([[cardKeyOf('FC', 6), 3]]),
       decks: [],
+      milestones: NO_MILESTONES,
     });
     expect(persisted.collection).toEqual([{ set: 'FC', number: 6, quantity: 3 }]);
     expect(fromPersisted(persisted).collection.get(cardKeyOf('FC', 6))).toBe(3);
@@ -121,6 +128,7 @@ describe('parsePersistedUser', () => {
     rosaries: 30,
     collection: [{ set: 'FC', number: 1, quantity: 2 }],
     decks: [],
+    milestones: { peakRosaries: 80, rarestHeld: 3 },
   });
 
   it('accepts a well-formed record', () => {
@@ -130,6 +138,7 @@ describe('parsePersistedUser', () => {
       rosaries: 30,
       collection: [{ set: 'FC', number: 1, quantity: 2 }],
       decks: [],
+      milestones: { peakRosaries: 80, rarestHeld: 3 },
     });
   });
 
@@ -225,7 +234,13 @@ describe('persisted decks', () => {
   ]);
 
   it('writes a current record carrying its decks', () => {
-    const persisted = toPersisted({ geo: 0, rosaries: 0, collection: holdings, decks: three });
+    const persisted = toPersisted({
+      geo: 0,
+      rosaries: 0,
+      collection: holdings,
+      decks: three,
+      milestones: NO_MILESTONES,
+    });
     expect(persisted.version).toBe(SCHEMA_VERSION);
     expect(persisted.decks).toHaveLength(3);
     expect(persisted.decks[0]).toEqual([]);
@@ -238,7 +253,13 @@ describe('persisted decks', () => {
 
   it("names a deck's cards and nothing else about them", () => {
     const json = JSON.stringify(
-      toPersisted({ geo: 0, rosaries: 0, collection: holdings, decks: three }),
+      toPersisted({
+        geo: 0,
+        rosaries: 0,
+        collection: holdings,
+        decks: three,
+        milestones: NO_MILESTONES,
+      }),
     );
     for (const card of CARD_BY_KEY.values()) {
       expect(json).not.toContain(card.name);
@@ -251,7 +272,13 @@ describe('persisted decks', () => {
   });
 
   it('round-trips three decks in order, contents, and positions', () => {
-    const original = { geo: 40, rosaries: 0, collection: holdings, decks: three };
+    const original = {
+      geo: 40,
+      rosaries: 0,
+      collection: holdings,
+      decks: three,
+      milestones: NO_MILESTONES,
+    };
     const restored = fromPersisted(
       parsePersistedUser(JSON.parse(JSON.stringify(toPersisted(original))))!,
     );
@@ -515,6 +542,106 @@ describe('a version 2 record', () => {
   });
 });
 
+describe('a version 3 record', () => {
+  const v3 = (extra: Record<string, unknown> = {}) => ({
+    version: 3,
+    geo: 210,
+    rosaries: 12000,
+    collection: [
+      { set: 'FC', number: 1, quantity: 2 },
+      { set: 'FC', number: 6, quantity: 1 },
+    ],
+    decks: [[{ set: 'FC', number: 6 }]],
+    ...extra,
+  });
+
+  it('restores everything it holds, its Rosaries included', () => {
+    const state = fromPersisted(parsePersistedUser(v3())!);
+    expect(state.geo).toBe(210);
+    expect(state.rosaries).toBe(12000);
+    expect(totalCards(state.collection)).toBe(3);
+    expect(state.decks).toEqual([{ cards: [cardKey(goam)] }]);
+  });
+
+  it('is restored with the milestones it proves, and no others', () => {
+    const proved = { peakRosaries: 12000, rarestHeld: 4 };
+    expect(fromPersisted(parsePersistedUser(v3())!).milestones).toEqual(proved);
+    const stray = v3({ milestones: { peakRosaries: 99999, rarestHeld: 6 } });
+    expect(fromPersisted(parsePersistedUser(stray)!).milestones).toEqual(proved);
+  });
+
+  it('still requires a possible Rosary balance', () => {
+    for (const rosaries of [-1, 2.5, '30', undefined]) {
+      expect(parsePersistedUser(v3({ rosaries }))).toBeNull();
+    }
+  });
+
+  it('reports the version it was read at', () => {
+    expect(parsePersistedUser(v3())!.version).toBe(3);
+  });
+});
+
+describe('persisted milestones', () => {
+  const record = (milestones: unknown, rosaries = 300) => ({
+    version: SCHEMA_VERSION,
+    geo: 5,
+    rosaries,
+    collection: [{ set: 'FC', number: 6, quantity: 1 }], // four stars
+    decks: [[{ set: 'FC', number: 6 }]],
+    milestones,
+  });
+  const restore = (raw: unknown) => fromPersisted(parsePersistedUser(raw)!);
+
+  it('are proved by the records of versions 1 and 2', () => {
+    const collection = [{ set: 'FC', number: 6, quantity: 1 }];
+    for (const version of [1, 2]) {
+      expect(restore({ version, geo: 5, collection, decks: [] }).milestones).toEqual({
+        peakRosaries: 0,
+        rarestHeld: 4,
+      });
+    }
+  });
+
+  it('survive a round trip after the Rosaries are spent', () => {
+    const spender = restore(record({ peakRosaries: 9999, rarestHeld: 4 }, 9999));
+    const spent = settleOrder(spender, [{ key: cardKey(goam), action: 'buy', quantity: 101 }])!;
+    expect(spent.rosaries).toBe(0);
+    const reloaded = restore(JSON.parse(JSON.stringify(toPersisted(spent))));
+    expect(reloaded.milestones.peakRosaries).toBe(9999);
+    expect(knowsRate(reloaded, 6)).toBe(true);
+  });
+
+  it('are raised to what the record holds', () => {
+    expect(restore(record({ peakRosaries: 10, rarestHeld: 1 })).milestones).toEqual({
+      peakRosaries: 300,
+      rarestHeld: 4,
+    });
+  });
+
+  it('cost only themselves when they are missing or impossible', () => {
+    const impossible = (peakRosaries: unknown, rarestHeld: unknown) =>
+      restore(record({ peakRosaries, rarestHeld })).milestones;
+    for (const peak of [-1, 2.5, '9999', Number.NaN, null, undefined]) {
+      expect(impossible(peak, 5), `${peak}`).toEqual({ peakRosaries: 300, rarestHeld: 5 });
+    }
+    for (const rarest of [9, 7, -1, 4.5, '6', null, undefined]) {
+      expect(impossible(800, rarest), `${rarest}`).toEqual({ peakRosaries: 800, rarestHeld: 4 });
+    }
+    for (const whole of [undefined, null, 'nonsense', 4, [1, 2]]) {
+      const state = restore(record(whole));
+      expect(state.milestones).toEqual({ peakRosaries: 300, rarestHeld: 4 });
+      expect([state.geo, state.rosaries]).toEqual([5, 300]);
+      expect(totalCards(state.collection)).toBe(1);
+      expect(state.decks).toEqual([{ cards: [cardKey(goam)] }]);
+    }
+  });
+
+  it('are not proved by a card the catalogue has lost', () => {
+    const lost = { ...record(undefined), collection: [{ set: 'GONE', number: 1, quantity: 1 }] };
+    expect(restore(lost).milestones.rarestHeld).toBe(0);
+  });
+});
+
 // ─── 4.4 The localStorage implementation ────────────────────────────────────
 
 describe('LocalStorageUserStore', () => {
@@ -526,7 +653,13 @@ describe('LocalStorageUserStore', () => {
 
   it('round-trips through one named key', async () => {
     await store.save(
-      toPersisted({ geo: 25, rosaries: 15, collection: grantAll(new Map(), [goam]), decks: [] }),
+      toPersisted({
+        geo: 25,
+        rosaries: 15,
+        collection: grantAll(new Map(), [goam]),
+        decks: [],
+        milestones: { peakRosaries: 15, rarestHeld: 4 },
+      }),
     );
     expect(localStorage.getItem(STORAGE_KEY)).toBeTruthy();
     expect(Object.keys(localStorage)).toEqual([STORAGE_KEY]);
@@ -536,6 +669,7 @@ describe('LocalStorageUserStore', () => {
       rosaries: 15,
       collection: [{ set: 'FC', number: 6, quantity: 1 }],
       decks: [],
+      milestones: { peakRosaries: 15, rarestHeld: 4 },
     });
   });
 
@@ -584,6 +718,7 @@ describe('UserService persistence', () => {
         rosaries: 0,
         collection: [{ set: 'FC', number: 6, quantity: 2 }],
         decks: [],
+        milestones: NO_MILESTONES,
       }),
     );
     await us.load();
@@ -643,6 +778,7 @@ describe('UserService persistence', () => {
       rosaries: 0,
       collection: [{ set: 'FC', number: 1, quantity: 2 }],
       decks: [],
+      milestones: NO_MILESTONES,
     });
     const us = withStore(store);
 

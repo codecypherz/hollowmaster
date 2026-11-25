@@ -1,6 +1,11 @@
 import { Component, booleanAttribute, computed, input, output } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { Card, Direction, DIRECTIONS as MODEL_DIRECTIONS } from '../../model/card';
+import {
+  Card,
+  Direction,
+  DIRECTIONS as MODEL_DIRECTIONS,
+  collectionNumber,
+} from '../../model/card';
 import { Owner } from '../../model/game';
 
 /**
@@ -106,6 +111,12 @@ export class CardComponent {
   /** Actionable right now — reachable by keyboard and responsive to hover. */
   readonly selectable = input(false, { transform: booleanAttribute });
 
+  /**
+   * Activating this card opens a dialog — its reading presentation — rather
+   * than selecting it, so it announces that and no selection state.
+   */
+  readonly opensDialog = input(false, { transform: booleanAttribute });
+
   /** Just changed ownership; plays the capture transition. */
   readonly flipped = input(false, { transform: booleanAttribute });
 
@@ -136,9 +147,6 @@ export class CardComponent {
     return NAME_FIT_TIERS.find((tier) => length <= tier.maxChars)?.factor ?? NAME_FIT_FLOOR;
   });
 
-  /** The card's number within its set, zero-padded to three: `002`. */
-  readonly setNumber = computed(() => String(this.card()?.number ?? 0).padStart(3, '0'));
-
   /** Unique per rendered card; the `aria-describedby` target for its ability text. */
   readonly abilityId = `card-ability-${nextAbilityId++}`;
 
@@ -157,7 +165,7 @@ export class CardComponent {
     const owner = this.owner() ? `, ${this.owner()}` : '';
     return (
       `${c.name}, stars ${c.stars}, attack ${c.attack}, defense ${c.defense}${owner}, ` +
-      `${c.set} ${this.setNumber()}`
+      collectionNumber(c)
     );
   });
 

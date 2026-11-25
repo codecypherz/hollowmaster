@@ -81,7 +81,7 @@
 /* Fixed columns around the name, so every line's parts stand in a column. */
 .line {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 92px 96px auto;
+  grid-template-columns: 34px minmax(0, 1fr) 104px 96px auto;
   align-items: center;
   gap: 4px 12px;
   padding: 9px 0;

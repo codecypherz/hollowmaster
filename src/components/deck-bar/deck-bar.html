@@ -80,27 +80,31 @@
     <div #regionWrap class="deck-region">
       <div #region class="deck-row">
         @for (position of positions(); track position.index) {
-          <div class="slot" [class.slot-empty]="!position.card" [style.--index]="position.index">
-            @if (position.card) {
-              <app-card
-                [card]="position.card"
-                interactive
-                selectable
-                [selected]="openPosition() === position.index"
-                (select)="selectCard.emit(position.index)"
-              />
-
-              @if (openPosition() === position.index) {
-                <app-card-menu
-                  label="Remove"
-                  [available]="true"
-                  [cardName]="position.card.name"
-                  (primary)="removeCard.emit(position.index)"
-                  (read)="readCard.emit(position.index)"
-                  (dismiss)="dismissMenu.emit()"
+          <div class="slot" [style.--index]="position.index">
+            <div class="slot-card" [class.slot-empty]="!position.card">
+              @if (position.card; as card) {
+                <app-card
+                  [card]="card"
+                  interactive
+                  selectable
+                  opensDialog
+                  (select)="readCard.emit(position.index)"
                 />
               }
-            }
+            </div>
+            <!-- The strip is every position's, so filling one moves nothing. -->
+            <div class="slot-strip">
+              @if (position.card; as card) {
+                <button
+                  type="button"
+                  class="hk-btn sm remove"
+                  [attr.aria-label]="'Remove ' + card.name + ' from ' + selectedName()"
+                  (click)="removeCard.emit(position.index)"
+                >
+                  Remove
+                </button>
+              }
+            </div>
           </div>
         }
       </div>

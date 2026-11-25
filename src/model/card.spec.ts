@@ -12,6 +12,9 @@ import {
   assertCatalogueSets,
   cardSet,
   cardsInSet,
+  collectionNumber,
+  STARS_MAX,
+  STARS_MIN,
 } from './card';
 
 /**
@@ -208,6 +211,17 @@ describe('card identity', () => {
     const crawlid = CARD_DB.find((c) => c.name === 'Crawlid')!;
     expect(cardKey(crawlid)).toBe('FC#1');
     expect(cardKeyOf('FC', 1)).toBe(cardKey(crawlid));
+  });
+
+  it('is not how the player reads a collection number, which is never padded', () => {
+    const numbered = (number: number) => CARD_BY_KEY.get(cardKeyOf('FC', number))!;
+    expect(collectionNumber(numbered(1))).toBe('FC #1');
+    expect(collectionNumber(numbered(10))).toBe('FC #10');
+    expect(cardKey(numbered(10))).toBe('FC#10');
+  });
+
+  it('states the range a rarity may have', () => {
+    expect([STARS_MIN, STARS_MAX]).toEqual([1, 6]);
   });
 
   it('indexes the whole catalogue', () => {

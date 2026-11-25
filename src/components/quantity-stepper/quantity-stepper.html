@@ -12,7 +12,24 @@
 >
   <span class="glyph">&minus;</span>
 </button>
-<span class="value">{{ value() }}</span>
+<input
+  #field
+  type="text"
+  inputmode="numeric"
+  autocomplete="off"
+  class="hk-seg-field value"
+  [value]="text()"
+  [readOnly]="!editable()"
+  [attr.aria-label]="fieldLabel()"
+  [attr.aria-disabled]="editable() ? null : 'true'"
+  [attr.aria-describedby]="!editable() && whyNotRaise ? id + '-raise' : null"
+  [attr.title]="(!editable() && whyNotRaise) || null"
+  (input)="onInput()"
+  (mousedown)="onFieldPress($event)"
+  (blur)="onBlur()"
+  (keydown.enter)="onEnter()"
+  (keydown.escape)="onEscape($event)"
+/>
 <button
   type="button"
   class="hk-btn sm raise"
@@ -24,6 +41,7 @@
 >
   <span class="glyph">+</span>
 </button>
+<ng-content />
 
 <!-- `hidden` still describes: these are read with their control and nowhere else. -->
 @if (whyNotLower) {

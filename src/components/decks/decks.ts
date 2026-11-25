@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { CARD_BY_KEY, Card } from '../../model/card';
 import {
   DEFAULT_SORT_STATE,
@@ -37,10 +46,10 @@ export interface TileSection {
   readonly tiles: readonly Tile[];
 }
 
-/** Which of the page's two regions a selection is in. */
+/** Which of the page's two regions a card is in. */
 type Region = 'deck' | 'collection';
 
-/** The one open menu, or the card being read: a region and a position in it. */
+/** The card being read: a region and a position in it. */
 interface Selection {
   readonly region: Region;
   readonly index: number;
@@ -54,9 +63,8 @@ interface Selection {
  * it is a grid row that does not scroll, which a long collection cannot defeat
  * the way it can defeat a sticky element inside one scroller.
  *
- * The page holds only screen state: which deck is on screen, which card's menu
- * is open, which card is being read, and how the collection is ordered. Every
- * *user* fact — the decks, the collection, the balance — is read from
+ * The page holds only screen state: which deck is on screen, which card is being
+ * read, and how the collection is ordered. Every *user* fact — the decks, the collection, the balance — is read from
  * `UserService`, and every change is asked of it, so a card granted by a pack
  * in the Shop is here on arrival without the page being reloaded.
  */
@@ -65,13 +73,12 @@ interface Selection {
   imports: [CardReader, CollectionGrid, ConfirmDialog, DeckBar],
   templateUrl: './decks.html',
   styleUrl: './decks.css',
-  host: {
-    '(document:click)': 'onDocumentClick($event)',
-  },
 })
 export class Decks {
   private readonly users = inject(UserService);
   private readonly cart = inject(CartService);
+  private readonly injector = inject(Injector);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
 
   readonly particles = createParticleField(14, 0xc0115);
   readonly vars = particleVars;
@@ -94,9 +101,6 @@ export class Decks {
 
   /** The deck on screen. Screen state: nothing else in the application reads it. */
   readonly selectedDeck = signal<number | null>(0);
-
-  /** The one open action menu, at most. */
-  readonly openMenu = signal<Selection | null>(null);
 
   /** The card being read, at most one. */
   readonly reading = signal<Selection | null>(null);
@@ -125,9 +129,9 @@ export class Decks {
   });
 
   /**
-   * Every tile, with what the selected deck makes of its card. The menu and
-   * the reader both read from here, so the two cannot disagree about whether
-   * a card can be added, or why not.
+   * Every tile, with what the selected deck makes of its card. Its add button
+   * and the reader both read from here, so the two cannot disagree about
+   * whether a card can be added, or why not.
    */
   readonly tiles = computed<Tile[]>(() => {
     const state = this.users.state();
@@ -168,18 +172,12 @@ export class Decks {
 
   readonly readingFromDeck = computed(() => this.reading()?.region === 'deck');
 
-  /** Why the reader's add is withheld — the same tile entry the menu reads. */
+  /** Why the reader's add is withheld — the same tile entry its add button reads. */
   readonly readingAddReason = computed(() => {
     const selection = this.reading();
     if (!selection || selection.region !== 'collection') return '';
     return this.tiles()[selection.index]?.addReason ?? '';
   });
-
-  /** The deck position whose menu is open, when the open menu is the deck's. */
-  readonly openDeckPosition = computed(() => this.positionOf('deck'));
-
-  /** The collection tile whose menu is open, when the open menu is the grid's. */
-  readonly openCollectionIndex = computed(() => this.positionOf('collection'));
 
   constructor() {
     // The selected deck is clamped rather than remembered: a deletion
@@ -200,56 +198,42 @@ export class Decks {
 
   onSelectDeck(index: number): void {
     this.selectedDeck.set(index);
-    this.closeMenu();
   }
 
   onCreateDeck(): void {
     if (this.users.createDeck()) this.selectedDeck.set(this.decks().length - 1);
-    this.closeMenu();
   }
 
   onDeleteDeck(index: number): void {
     this.users.deleteDeck(index);
-    this.closeMenu();
-  }
-
-  onSelectDeckCard(position: number): void {
-    this.toggleMenu('deck', position);
   }
 
   onRemoveFromDeck(position: number): void {
     const deck = this.selectedDeck();
     if (deck === null) return;
-    this.users.removeCardFromDeck(deck, position);
-    this.closeMenu();
-    this.finishReading();
+    if (!this.users.removeCardFromDeck(deck, position)) return;
+    this.reading.set(null);
+    this.focusAfterRemoval(position);
   }
 
   // ─── The collection ───────────────────────────────────────────────────────
-
-  onSelectCollectionCard(index: number): void {
-    this.toggleMenu('collection', index);
-  }
 
   onAddToDeck(index: number): void {
     const deck = this.selectedDeck();
     const card = this.owned()[index]?.card;
     if (deck === null || !card) return;
     this.users.addCardToDeck(deck, card);
-    this.closeMenu();
-    this.finishReading();
+    this.closeReader();
   }
 
   onSort(key: SortKey): void {
     this.sort.update((current) => nextSort(current, key));
     this.sortGeneration.update((g) => g + 1);
-    this.closeMenu();
   }
 
   // ─── Reset ────────────────────────────────────────────────────────────────
 
   askToReset(): void {
-    this.closeMenu();
     this.confirmingReset.set(true);
   }
 
@@ -261,14 +245,12 @@ export class Decks {
     this.selectedDeck.set(0);
     this.sort.set(DEFAULT_SORT_STATE);
     this.sortGeneration.update((g) => g + 1);
-    this.openMenu.set(null);
     this.reading.set(null);
   }
 
   // ─── Reading ──────────────────────────────────────────────────────────────
 
   onRead(region: Region, index: number): void {
-    this.openMenu.set(null);
     this.reading.set({ region, index });
   }
 
@@ -280,56 +262,11 @@ export class Decks {
     else this.onAddToDeck(selection.index);
   }
 
-  /**
-   * Closes the reader after an action taken from inside it, handing focus back
-   * to where the player was. The card may be gone — a removed deck position —
-   * in which case nothing is focused and the next Tab starts from the top.
-   */
-  private finishReading(): void {
-    const selection = this.reading();
-    this.reading.set(null);
-    if (selection) this.restoreFocus(selection);
-  }
-
+  /** Closes the reader, if one is open, handing focus back to the card it was opened from. */
   closeReader(): void {
     const selection = this.reading();
     this.reading.set(null);
     if (selection) this.restoreFocus(selection);
-  }
-
-  closeMenu(): void {
-    this.openMenu.set(null);
-  }
-
-  /** Dismissing a menu hands focus back to the card it was raised over. */
-  dismissMenu(): void {
-    const selection = this.openMenu();
-    this.openMenu.set(null);
-    if (selection) this.restoreFocus(selection);
-  }
-
-  /**
-   * A click anywhere that is neither a card nor the menu itself dismisses the
-   * open menu. Clicks on a card are excluded because the click that *opens* a
-   * menu reaches the document too — and because selecting another card is
-   * already the "close this one, open that one" path.
-   */
-  onDocumentClick(event: MouseEvent): void {
-    if (!this.openMenu()) return;
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('app-card-menu') || target?.closest('app-card')) return;
-    this.openMenu.set(null);
-  }
-
-  private toggleMenu(region: Region, index: number): void {
-    const open = this.openMenu();
-    const same = open && open.region === region && open.index === index;
-    this.openMenu.set(same ? null : { region, index });
-  }
-
-  private positionOf(region: Region): number | null {
-    const open = this.openMenu();
-    return open && open.region === region ? open.index : null;
   }
 
   private deckCardAt(position: number): Card | undefined {
@@ -338,27 +275,45 @@ export class Decks {
   }
 
   /**
-   * Puts focus back on the card an overlay was opened from.
+   * Puts focus back on the card the reader was opened from.
    *
    * The card renderer draws an accessible button, and it is that button — not
    * the tile around it — the player's focus was on, so that is what it returns
    * to. The lookup is by position because the card component's element is not
    * held anywhere: the two regions are lists, and a position names one row of
-   * one of them.
+   * one of them. Nothing scrolls: the card is where the player left it.
    */
-  private restoreFocus(selection: Selection): void {
+  private restoreFocus({ region, index }: Selection): void {
     queueMicrotask(() => {
       // Collection tiles are split across a grid per rarity section, so they
       // are found by their flat index rather than as one container's children.
-      const holder =
-        selection.region === 'deck'
-          ? (document.querySelector('app-deck-bar .deck-row')?.children[selection.index] as
-              HTMLElement | undefined)
-          : document.querySelector<HTMLElement>(
-              `app-collection-grid .tile[data-index="${selection.index}"]`,
-            );
-      holder?.querySelector<HTMLElement>('button')?.focus();
+      const card =
+        region === 'deck'
+          ? this.find(`app-deck-bar .slot:nth-child(${index + 1}) .slot-card button`)
+          : this.find(`app-collection-grid .tile[data-index="${index}"] .tile-card button`);
+      card?.focus({ preventScroll: true });
     });
+  }
+
+  /**
+   * After a removal, focus goes to the Remove button now at that position, else
+   * to the last card's, else to the selected deck's own button.
+   */
+  private focusAfterRemoval(position: number): void {
+    afterNextRender(
+      () => {
+        const removes = this.host.nativeElement.querySelectorAll<HTMLElement>(
+          'app-deck-bar .slot .remove',
+        );
+        const heir = removes[Math.min(position, removes.length - 1)];
+        (heir ?? this.find('app-deck-bar .deck-btn.is-selected'))?.focus({ preventScroll: true });
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private find(selector: string): HTMLElement | null {
+    return this.host.nativeElement.querySelector<HTMLElement>(selector);
   }
 }
 

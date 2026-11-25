@@ -1,29 +1,8 @@
-/* The two controls sit at the ends of whatever width the stepper is given and
-   the value is centred between them, so steppers of one width line up whatever
-   they hold. The value's box never falls below two digits. */
+/* The bar, its accent, and the field are the segmented control's, in
+   src/styles/primitives.css. The face's own signs are slight, so they are drawn
+   larger than the button's type. No line height and no tracking, so the button
+   keeps its metrics. */
 
-:host {
-  display: grid;
-  grid-template-columns: auto minmax(2.4ch, 1fr) auto;
-  align-items: center;
-  column-gap: 3px;
-}
-
-.value {
-  font-family: var(--font-ui);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  text-align: center;
-  color: var(--color-text-bright);
-}
-
-.hk-btn {
-  color: var(--color-text-bright);
-}
-
-/* The face's own signs are slight, so they are drawn larger than the button's
-   type. No line height and no tracking, so the button keeps its metrics. */
 .glyph {
   display: inline-block;
   width: 0.6rem;

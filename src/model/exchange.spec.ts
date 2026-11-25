@@ -1,15 +1,21 @@
+import { addSixStarCard } from '../testing/six-star';
 import { CARD_BY_KEY, CARD_DB, Card, CardKey, cardKey, cardKeyOf } from './card';
 import { Deck } from './deck';
 import {
   OrderLine,
-  ROSARY_PRICE_PER_STAR,
+  ROSARY_RATES,
+  SECRET_RATE_PEAK,
+  assertRosaryRates,
   decksTrimmedBySale,
+  knowsRate,
   purchasePrice,
+  rosariesText,
   rosaryEffect,
+  rosaryRates,
   salePrice,
   settleOrder,
 } from './exchange';
-import { UserState, distinctCards, quantityOf, seedUser } from './user';
+import { UserState, distinctCards, quantityOf, seedUser, withMilestones } from './user';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // one star
 const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
@@ -18,17 +24,46 @@ const fourStar = CARD_DB.find((card) => card.stars === 4)!;
 const twoStar = CARD_DB.find((card) => card.stars === 2)!;
 
 function user(rosaries: number, holdings: [CardKey, number][] = [], decks: Deck[] = []): UserState {
-  return { ...seedUser(), geo: 55, rosaries, collection: new Map(holdings), decks };
+  return withMilestones({
+    ...seedUser(),
+    geo: 55,
+    rosaries,
+    collection: new Map(holdings),
+    decks,
+  });
 }
 
 describe('Rosary prices', () => {
-  it('are ten per star to sell and a hundred per star to buy', () => {
-    expect(ROSARY_PRICE_PER_STAR).toEqual({ sell: 10, buy: 100 });
+  it('are the stated rate of each rarity', () => {
+    expect(ROSARY_RATES).toEqual({
+      1: { sell: 1, buy: 4 },
+      2: { sell: 3, buy: 12 },
+      3: { sell: 9, buy: 27 },
+      4: { sell: 33, buy: 99 },
+      5: { sell: 330, buy: 660 },
+      6: { sell: 5000, buy: 9999 },
+    });
     expect(crawlid.stars).toBe(1);
-    expect(salePrice(crawlid)).toBe(10);
-    expect(purchasePrice(crawlid)).toBe(100);
-    expect(salePrice(fourStar)).toBe(40);
-    expect(purchasePrice(fourStar)).toBe(400);
+    expect(salePrice(crawlid)).toBe(1);
+    expect(purchasePrice(crawlid)).toBe(4);
+    expect(salePrice(fourStar)).toBe(33);
+    expect(purchasePrice(fourStar)).toBe(99);
+  });
+
+  it('sell for less than they cost, at every rating', () => {
+    for (const { sell, buy } of Object.values(ROSARY_RATES)) expect(sell).toBeLessThan(buy);
+  });
+
+  it('reject a table that is missing a rating, fractional, or sells too high', () => {
+    expect(() => assertRosaryRates(ROSARY_RATES)).not.toThrow();
+    const { 6: _, ...missing } = ROSARY_RATES;
+    expect(() => assertRosaryRates(missing)).toThrow();
+    expect(() => assertRosaryRates({ ...ROSARY_RATES, 2: { sell: 1.5, buy: 12 } })).toThrow();
+    expect(() => assertRosaryRates({ ...ROSARY_RATES, 2: { sell: 12, buy: 12 } })).toThrow();
+  });
+
+  it('are worded with the singular', () => {
+    expect([0, 1, 4].map(rosariesText)).toEqual(['0 Rosaries', '1 Rosary', '4 Rosaries']);
   });
 
   it('never pay more to sell than they cost to buy, for any catalogued card', () => {
@@ -53,29 +88,29 @@ const buy = (card: Card, quantity: number): OrderLine => ({
 
 describe('the effect of a line on the balance', () => {
   it('rises by the sale price and falls by the purchase price, per copy', () => {
-    expect(rosaryEffect(twoStar, 'sell', 3)).toBe(60);
-    expect(rosaryEffect(crawlid, 'buy', 2)).toBe(-200);
+    expect(rosaryEffect(twoStar, 'sell', 3)).toBe(9);
+    expect(rosaryEffect(crawlid, 'buy', 2)).toBe(-8);
   });
 });
 
 describe('an order of purchases', () => {
   it('spends exactly the balance when it is the price', () => {
-    const next = settleOrder(user(100), [buy(crawlid, 1)])!;
+    const next = settleOrder(user(4), [buy(crawlid, 1)])!;
     expect(next).not.toBeNull();
     expect(next.rosaries).toBe(0);
     expect(quantityOf(next.collection, crawlid)).toBe(1);
   });
 
   it('adds every further copy of a card already held, at once', () => {
-    const next = settleOrder(user(500, [[cardKey(crawlid), 2]]), [buy(crawlid, 3)])!;
+    const next = settleOrder(user(20, [[cardKey(crawlid), 2]]), [buy(crawlid, 3)])!;
     expect(quantityOf(next.collection, crawlid)).toBe(5);
-    expect(next.rosaries).toBe(200);
+    expect(next.rosaries).toBe(8);
   });
 
   it('is refused, changing nothing, when the balance is short', () => {
-    const state = user(99);
-    expect(settleOrder(state, [buy(crawlid, 1)])).toBeNull();
-    expect(state.rosaries).toBe(99);
+    const state = user(98);
+    expect(settleOrder(state, [buy(fourStar, 1)])).toBeNull();
+    expect(state.rosaries).toBe(98);
     expect(state.collection.size).toBe(0);
   });
 
@@ -91,7 +126,7 @@ describe('an order of sales', () => {
   it('removes several copies and credits each of them', () => {
     const next = settleOrder(user(0, [[cardKey(twoStar), 3]]), [sell(twoStar, 2)])!;
     expect(quantityOf(next.collection, twoStar)).toBe(1);
-    expect(next.rosaries).toBe(40);
+    expect(next.rosaries).toBe(6);
   });
 
   it('un-owns a card when every copy goes', () => {
@@ -160,7 +195,7 @@ describe('a mixed order', () => {
       [sell(crawlid, 1), buy(vengefly, 1)],
       [buy(vengefly, 1), sell(crawlid, 1)],
     ]) {
-      const next = settleOrder(user(90, held), order)!;
+      const next = settleOrder(user(3, held), order)!;
       expect(next.rosaries).toBe(0);
       expect(quantityOf(next.collection, crawlid)).toBe(0);
       expect(quantityOf(next.collection, vengefly)).toBe(1);
@@ -168,9 +203,9 @@ describe('a mixed order', () => {
   });
 
   it('is refused whole when its net exceeds the balance, though its sales alone could apply', () => {
-    const state = user(89, held);
+    const state = user(2, held);
     expect(settleOrder(state, [sell(crawlid, 1), buy(vengefly, 1)])).toBeNull();
-    expect(state.rosaries).toBe(89);
+    expect(state.rosaries).toBe(2);
     expect(quantityOf(state.collection, crawlid)).toBe(1);
   });
 
@@ -232,6 +267,63 @@ describe('the decks a sale would trim', () => {
     expect(decksTrimmedBySale(state, crawlid, 0)).toEqual([]);
     expect(decksTrimmedBySale(state, crawlid, 2)).toEqual([]);
     expect(decksTrimmedBySale(user(0, [], [{ cards: [c] }]), crawlid, 1)).toEqual([]);
+  });
+});
+
+describe('whether a rate is known', () => {
+  const peaking = (peakRosaries: number, rarestHeld = 5): UserState => ({
+    ...user(0),
+    milestones: { peakRosaries, rarestHeld },
+  });
+
+  it('is so for rarities 1 to 5 from the start, and not for 6', () => {
+    const known = [1, 2, 3, 4, 5, 6].map((stars) => knowsRate(seedUser(), stars));
+    expect(known).toEqual([true, true, true, true, true, false]);
+  });
+
+  it('turns on having held 9999 Rosaries, even once they are spent', () => {
+    expect(SECRET_RATE_PEAK).toBe(9999);
+    expect(knowsRate(peaking(9998), 6)).toBe(false);
+    expect(knowsRate(peaking(9999), 6)).toBe(true);
+    expect(knowsRate(user(9999), 6)).toBe(true);
+    expect(knowsRate(withMilestones({ ...user(9999), rosaries: 0 }), 6)).toBe(true);
+  });
+
+  it('turns on having held a six-star card, even once it is sold', () => {
+    const six = addSixStarCard();
+    const holding = user(0, [[cardKey(six), 1]]);
+    expect(knowsRate(holding, 6)).toBe(true);
+    const sold = settleOrder({ ...holding, rosaries: 0 }, [sell(six, 1)])!;
+    expect(quantityOf(sold.collection, six)).toBe(0);
+    // The milestone alone, with the sale's own 5000 short of the other.
+    expect(knowsRate(withMilestones(sold), 6)).toBe(true);
+  });
+
+  it('decides which rates are listed', () => {
+    expect(rosaryRates(seedUser())).toEqual([
+      { stars: 1, sell: 1, buy: 4 },
+      { stars: 2, sell: 3, buy: 12 },
+      { stars: 3, sell: 9, buy: 27 },
+      { stars: 4, sell: 33, buy: 99 },
+      { stars: 5, sell: 330, buy: 660 },
+    ]);
+    expect(rosaryRates(peaking(9999))).toHaveLength(6);
+    expect(rosaryRates(peaking(9999)).at(-1)).toEqual({ stars: 6, sell: 5000, buy: 9999 });
+  });
+
+  it('refuses a purchase until it is known, though sales in the order would pay for it', () => {
+    const six = addSixStarCard();
+    const held: [CardKey, number][] = [[cardKey(fourStar), 400]];
+    const order = [sell(fourStar, 400), buy(six, 1)];
+    const state = user(0, held);
+    expect(settleOrder(state, order)).toBeNull();
+    expect(state.rosaries).toBe(0);
+    expect(quantityOf(state.collection, fourStar)).toBe(400);
+
+    const knowing = { ...state, milestones: { peakRosaries: 9999, rarestHeld: 4 } };
+    const next = settleOrder(knowing, order)!;
+    expect(quantityOf(next.collection, six)).toBe(1);
+    expect(next.rosaries).toBe(400 * 33 - 9999);
   });
 });
 

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   PACK_SIZE,
+  addButton,
   buyPack,
   cartControl,
   cartDialog,
@@ -9,21 +10,23 @@ import {
   deckCards,
   deckSlots,
   deckTabs,
+  exchangeRates,
+  exchangeRow,
+  exchangeTile,
+  exchangeTiles,
   expectCollectionLeftAligned,
   expectNoScroll,
   expectNothingClipped,
   grantGeo,
-  exchangeRow,
-  exchangeTile,
-  exchangeTiles,
-  openCardMenu,
   openCollectionAs,
-  rosaryPurse,
   openDecks,
   openDecksAs,
   openShop,
+  purseButton,
+  readCard,
   revealedCards,
   revealedRarities,
+  rosaryPurse,
   startMatch,
   type Size,
 } from './helpers';
@@ -159,7 +162,7 @@ test('a pack keeps a still foil highlight with the travel taken away', async ({ 
   }
 });
 
-test('the Decks page presents its cards, menus, and reader without animation', async ({ page }) => {
+test('the Decks page presents its cards and reader without animation', async ({ page }) => {
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(
     true,
   );
@@ -184,15 +187,7 @@ test('the Decks page presents its cards, menus, and reader without animation', a
 
   // The card takes its place in the deck without travelling there.
   const tile = collectionTiles(page).first();
-  await openCardMenu(tile);
-  const menu = await page.locator('app-card-menu .menu').evaluate((el) => ({
-    animation: getComputedStyle(el).animationName,
-    opacity: getComputedStyle(el).opacity,
-  }));
-  expect(menu.animation).toBe('none');
-  expect(menu.opacity).toBe('1');
-
-  await page.getByRole('button', { name: 'Add to Deck 2' }).click();
+  await addButton(tile).click();
   await expect(deckCards(page)).toHaveCount(1);
   const placed = await deckSlots(page)
     .first()
@@ -204,10 +199,7 @@ test('the Decks page presents its cards, menus, and reader without animation', a
   expect(placed.opacity).toBe('1');
 
   // The reader opens without animation, and still reads.
-  await openCardMenu(deckSlots(page).first());
-  await page.getByRole('button', { name: 'Read' }).click();
-  const reader = page.locator('app-card-reader');
-  await expect(reader).toBeVisible();
+  const reader = await readCard(deckSlots(page).first());
   expect(
     await reader.locator('.reader-panel').evaluate((el) => getComputedStyle(el).animationName),
   ).toBe('none');
@@ -215,7 +207,7 @@ test('the Decks page presents its cards, menus, and reader without animation', a
   await page.keyboard.press('Escape');
 
   // And every state the motion would have carried is still distinguishable:
-  // the selected deck button, the selected card, and the card's place in the
+  // the selected deck button, the unavailable add, and the card's place in the
   // deck. The selected button's face — filled and heavier — is not motion.
   const faces = await deckTabs(page).evaluateAll((els) =>
     els.map((el) => ({
@@ -229,11 +221,21 @@ test('the Decks page presents its cards, menus, and reader without animation', a
   expect(selected.weight).not.toBe(other.weight);
   expect(selected.ground).not.toBe(other.ground);
 
-  await openCardMenu(tile);
-  await expect(tile.locator('app-card button')).toHaveAttribute('aria-pressed', 'true');
+  const adds = await page.locator('app-collection-grid .add').evaluateAll((els) =>
+    els.map((el) => ({
+      unavailable: el.getAttribute('aria-disabled') === 'true',
+      opacity: getComputedStyle(el).opacity,
+      outline: getComputedStyle(el).borderTopStyle,
+      transition: getComputedStyle(el).transitionDuration,
+    })),
+  );
+  const off = adds.find((add) => add.unavailable)!;
+  const on = adds.find((add) => !add.unavailable)!;
+  expect(off.opacity).not.toBe(on.opacity);
+  expect(off.outline).not.toBe(on.outline);
+  expect(new Set(adds.map((add) => add.transition))).toEqual(new Set(['0s']));
   await expect(deckCards(page)).toHaveCount(1);
   await expect(page.locator('app-deck-bar .slot-empty')).toHaveCount(8);
-  await page.keyboard.press('Escape');
 
   // A reorder is immediate: the tiles are in their new order with nothing
   // running on any of them.
@@ -329,7 +331,7 @@ test('the Collection page presents its tiles, cart, and purse without animation'
 
   // A pending quantity, its warning, and the cart's count settle at once.
   await exchangeRow(crawlid, 'sell').raise.click();
-  await expect(exchangeRow(crawlid, 'sell').value).toHaveText('1');
+  await expect(exchangeRow(crawlid, 'sell').value).toHaveValue('1');
   await expect(exchangeRow(crawlid, 'sell').warning).toBeVisible();
   await exchangeRow(vengefly, 'sell').raise.click();
   await expect(cartControl(page)).toHaveAccessibleName('Cart, 2 cards pending');
@@ -350,5 +352,30 @@ test('the Collection page presents its tiles, cart, and purse without animation'
   await dialog.locator('.cart-confirm').click();
   await expect(dialog).toHaveCount(0);
   await expect(vengefly.locator('.badge')).toHaveAccessibleName('2 held');
-  await expect(rosaryPurse(page)).toHaveText('70');
+  await expect(rosaryPurse(page)).toHaveText('52');
+
+  // So are the exchange rates, and the card being read.
+  await purseButton(page).click();
+  const rates = exchangeRates(page);
+  await expect(rates).toBeVisible();
+  expect(
+    await rates.evaluate((el) => {
+      const { animationName, opacity } = getComputedStyle(el);
+      return { animationName, opacity };
+    }),
+  ).toEqual({ animationName: 'none', opacity: '1' });
+  expect(
+    await page
+      .locator('app-collection .purse-chevron')
+      .evaluate((el) => getComputedStyle(el).transitionDuration),
+  ).toBe('0s');
+  await page.keyboard.press('Escape');
+  await expect(rates).toBeHidden();
+
+  const reader = await readCard(gruzMother);
+  expect(
+    await reader.locator('.reader-panel').evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe('none');
+  await page.keyboard.press('Escape');
+  await expect(reader).toHaveCount(0);
 });

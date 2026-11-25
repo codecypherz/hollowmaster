@@ -3,9 +3,9 @@ import { Card } from '../../model/card';
 import { CardComponent } from '../card/card';
 
 /**
- * Reading a card: the one place on the Decks page where a card is rendered
- * above the renderer's 200px ability gate, so the ability text, the set, and
- * the number a collection tile withholds are legible.
+ * Reading a card, from the Decks or the Collection page: the one place on
+ * either where a card is rendered above the renderer's 200px ability gate, so
+ * the ability text, the set, and the number a tile withholds are legible.
  *
  * The larger face is not a second way of drawing a card — it is the same
  * renderer given more width. Nothing here knows what the card says.
@@ -13,7 +13,8 @@ import { CardComponent } from '../card/card';
  * The deck action is *given* rather than derived: the caller already decided
  * whether this card is being read from the collection (add) or from the deck
  * (remove), and under what conditions the action is withheld. Re-deriving it
- * here is how the overlay and the menu come to disagree.
+ * here is how the overlay and the page come to disagree. A caller that gives
+ * none — the Collection page — gets a presentation that only closes.
  */
 @Component({
   selector: 'app-card-reader',
@@ -30,13 +31,13 @@ import { CardComponent } from '../card/card';
 export class CardReader implements AfterViewInit {
   readonly card = input.required<Card>();
 
-  /** What the deck action is called here — the same words the menu used. */
+  /** What the deck action is called here — the same words the page's button uses. */
   readonly actionLabel = input('');
 
   /** Whether that action is on offer at all. */
   readonly actionAvailable = input(false);
 
-  /** Why it is not, stated in the same words the menu states it in. */
+  /** Why it is not, stated in the same words the page states it in. */
   readonly actionReason = input('');
 
   readonly action = output<void>();

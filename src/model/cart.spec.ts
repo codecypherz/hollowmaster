@@ -2,9 +2,11 @@ import { CARD_BY_KEY, cardKey, cardKeyOf } from './card';
 import {
   CartLine,
   MAX_PENDING_BUY,
+  RATE_UNKNOWN,
   changeText,
   maxPending,
   quantityFor,
+  quantityLabel,
   raiseRefusal,
   remove,
   setQuantity,
@@ -21,44 +23,44 @@ const selling = (quantity: number, key = c): CartLine => ({ key, action: 'sell',
 
 describe('setting a pending quantity', () => {
   it('adds a line for a card with nothing pending', () => {
-    expect(setQuantity([], c, 'buy', 2, 0)).toEqual([buying(2)]);
+    expect(setQuantity([], c, 'buy', 2, 0, true)).toEqual([buying(2)]);
   });
 
   it('replaces the line in place when the direction changes', () => {
     const lines = [buying(3), buying(1, v)];
-    const next = setQuantity(lines, c, 'sell', 1, 5);
+    const next = setQuantity(lines, c, 'sell', 1, 5, true);
     expect(next).toEqual([selling(1), buying(1, v)]);
     expect(quantityFor(next, c, 'buy')).toBe(0);
     expect(quantityFor(next, c, 'sell')).toBe(1);
   });
 
   it('takes the line out at zero', () => {
-    expect(setQuantity([buying(1), selling(1, v)], c, 'buy', 0, 0)).toEqual([selling(1, v)]);
-    expect(setQuantity([buying(1)], c, 'buy', -1, 0)).toEqual([]);
+    expect(setQuantity([buying(1), selling(1, v)], c, 'buy', 0, 0, true)).toEqual([selling(1, v)]);
+    expect(setQuantity([buying(1)], c, 'buy', -1, 0, true)).toEqual([]);
   });
 
   it('does not clear the other direction when this one is set to zero', () => {
-    expect(setQuantity([buying(3)], c, 'sell', 0, 5)).toEqual([buying(3)]);
+    expect(setQuantity([buying(3)], c, 'sell', 0, 5, true)).toEqual([buying(3)]);
     // Including when the zero comes from the bound: nothing held to sell.
-    expect(setQuantity([buying(3)], c, 'sell', 1, 0)).toEqual([buying(3)]);
+    expect(setQuantity([buying(3)], c, 'sell', 1, 0, true)).toEqual([buying(3)]);
   });
 
   it('clamps a sale to the copies held', () => {
-    expect(setQuantity([selling(2)], c, 'sell', 3, 2)).toEqual([selling(2)]);
+    expect(setQuantity([selling(2)], c, 'sell', 3, 2, true)).toEqual([selling(2)]);
   });
 
   it('clamps a purchase to its bound', () => {
     expect(MAX_PENDING_BUY).toBe(99);
-    expect(setQuantity([buying(99)], c, 'buy', 100, 0)).toEqual([buying(99)]);
+    expect(setQuantity([buying(99)], c, 'buy', 100, 0, true)).toEqual([buying(99)]);
   });
 
   it('keeps the order cards were first added in', () => {
     let lines: readonly CartLine[] = [];
-    lines = setQuantity(lines, g, 'buy', 1, 0);
-    lines = setQuantity(lines, c, 'sell', 1, 4);
-    lines = setQuantity(lines, v, 'buy', 1, 0);
-    lines = setQuantity(lines, g, 'buy', 5, 0);
-    lines = setQuantity(lines, c, 'buy', 2, 4);
+    lines = setQuantity(lines, g, 'buy', 1, 0, true);
+    lines = setQuantity(lines, c, 'sell', 1, 4, true);
+    lines = setQuantity(lines, v, 'buy', 1, 0, true);
+    lines = setQuantity(lines, g, 'buy', 5, 0, true);
+    lines = setQuantity(lines, c, 'buy', 2, 4, true);
     expect(lines.map((line) => line.key)).toEqual([g, c, v]);
   });
 });
@@ -80,16 +82,39 @@ describe('copies held falling', () => {
 
 describe('bounds', () => {
   it('are the copies held for a sale and 99 for a purchase', () => {
-    expect(maxPending('sell', 4)).toBe(4);
-    expect(maxPending('buy', 4)).toBe(99);
+    expect(maxPending('sell', 4, true)).toBe(4);
+    expect(maxPending('buy', 4, true)).toBe(99);
   });
 
   it('give a reason exactly when one more is refused', () => {
-    expect(raiseRefusal('sell', 2, 1)).toBe('');
-    expect(raiseRefusal('sell', 2, 2)).toBe('Every copy you hold is pending');
-    expect(raiseRefusal('sell', 0, 0)).toBe('You hold none to sell');
-    expect(raiseRefusal('buy', 0, 98)).toBe('');
-    expect(raiseRefusal('buy', 0, 99)).toBe('99 is the most that can be pending');
+    expect(raiseRefusal('sell', 2, 1, true)).toBe('');
+    expect(raiseRefusal('sell', 2, 2, true)).toBe('Every copy you hold is pending');
+    expect(raiseRefusal('sell', 0, 0, true)).toBe('You hold none to sell');
+    expect(raiseRefusal('buy', 0, 98, true)).toBe('');
+    expect(raiseRefusal('buy', 0, 99, true)).toBe('99 is the most that can be pending');
+  });
+});
+
+describe('a card whose rate is not known', () => {
+  it('cannot be pending for purchase, and says why', () => {
+    expect(maxPending('buy', 4, false)).toBe(0);
+    expect(raiseRefusal('buy', 4, 0, false)).toBe(RATE_UNKNOWN);
+    expect(RATE_UNKNOWN).toBe('You do not know its price yet');
+    expect(setQuantity([], c, 'buy', 3, 0, false)).toEqual([]);
+    expect(setQuantity([selling(2)], c, 'buy', 3, 2, false)).toEqual([selling(2)]);
+  });
+
+  it('is bounded for sale as any other', () => {
+    expect(maxPending('sell', 4, false)).toBe(4);
+    expect(raiseRefusal('sell', 4, 3, false)).toBe('');
+    expect(setQuantity([], c, 'sell', 3, 2, false)).toEqual([selling(2)]);
+  });
+});
+
+describe('the name of a quantity field', () => {
+  it('states the direction and the card', () => {
+    expect(quantityLabel('sell', crawlid)).toBe('Copies of Crawlid to sell');
+    expect(quantityLabel('buy', crawlid)).toBe('Copies of Crawlid to buy');
   });
 });
 

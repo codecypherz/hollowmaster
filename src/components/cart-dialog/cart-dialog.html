@@ -41,15 +41,18 @@
             }}</span>
             <span class="line-name">{{ row.card.name }}</span>
             <app-quantity-stepper
+              [class.soul]="row.action === 'buy'"
               [value]="row.quantity"
               [canLower]="row.quantity > least"
               [canRaise]="row.quantity < row.max"
               [lowerReason]="atLeastReason"
-              [raiseReason]="raiseRefusal(row.action, row.held, row.quantity)"
+              [raiseReason]="raiseRefusal(row.action, row.held, row.quantity, row.rateKnown)"
               [lowerLabel]="lowerLabel(row.action, row.card)"
               [raiseLabel]="raiseLabel(row.action, row.card)"
+              [fieldLabel]="quantityLabel(row.action, row.card)"
               (decrease)="onStep(row, -1)"
               (increase)="onStep(row, 1)"
+              (entered)="onEntered(row, $event)"
             />
             <span class="line-effect">
               <span aria-hidden="true"

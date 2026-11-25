@@ -1,0 +1,42 @@
+<!-- Always shown, and zero is a number like any other. -->
+<button
+  #purse
+  type="button"
+  class="purse"
+  aria-controls="exchange-rates"
+  [attr.aria-expanded]="open()"
+  [attr.aria-label]="'Your Rosaries, ' + rosaries()"
+  (click)="toggle()"
+>
+  <svg class="purse-chevron" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+    <path d="M2 3.75 5 6.75 8 3.75" />
+  </svg>
+  <app-rosary class="purse-amount" data-testid="rosary-purse" [amount]="rosaries()" />
+</button>
+
+<div class="panel" id="exchange-rates" data-testid="exchange-rates" [hidden]="!open()">
+  <table class="rates">
+    <caption class="sr-only">
+      Exchange rates per copy
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Rarity</th>
+        <th scope="col" class="price">Sell</th>
+        <th scope="col" class="price">Buy</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (rate of rates(); track rate.stars) {
+        <tr [attr.data-rarity]="rate.stars">
+          <th scope="row">
+            <span class="stars" aria-hidden="true">{{ starGlyphs(rate.stars) }}</span>
+            <span class="sr-only">{{ starsText(rate.stars) }}</span>
+          </th>
+          <td class="price is-sell"><app-rosary [amount]="rate.sell" /></td>
+          <td class="price is-buy"><app-rosary [amount]="rate.buy" /></td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

@@ -248,7 +248,7 @@ test.describe('opening a pack', () => {
     await expect(ability).not.toBeEmpty();
     await expect(hero.locator('app-card .cf-plate')).toBeVisible();
     await expect(hero.locator('app-card .cf-set')).toHaveText('FC');
-    await expect(hero.locator('app-card .cf-number')).toHaveText(/^\d{3}$/);
+    await expect(hero.locator('app-card .cf-number')).toHaveText(/^#[1-9]\d*$/);
 
     // And it is a real card face from the shared renderer, not a summary of
     // one: artwork, star track, chevrons, and stat bars, all through app-card.

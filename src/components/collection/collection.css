@@ -47,6 +47,10 @@
   gap: 12px;
   padding: 0 16px 8px;
   border-bottom: 1px solid var(--color-section-border);
+  /* Above the sections, whose tiles animate with transforms: the exchange rates
+     hang down over them. */
+  position: relative;
+  z-index: 1;
 }
 
 .cart-control {
@@ -78,21 +82,8 @@
   text-align: center;
 }
 
-.purse {
-  display: inline-flex;
-  align-items: baseline;
-  margin: 6px 0 0;
-  padding: 0.25rem 1rem;
-  border: 1px solid var(--color-gold-dim);
-}
-
-.purse-amount {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 900;
-  color: var(--color-gold-light);
-  letter-spacing: 0.06em;
-  text-shadow: 0 0 14px var(--color-gold-glow);
+.rates {
+  margin-top: 6px;
 }
 
 /* ─── The sections ────────────────────────────────────────────────────────────
@@ -219,6 +210,11 @@
   pointer-events: none;
 }
 
+/* The renderer lifts a hovered card; the veil goes with it. */
+.tile-card:hover .veil {
+  translate: 0 -2px;
+}
+
 /* Centred on the card's lower rim, its top edge just below the chevron ring,
    so even the longer "Not owned" covers nothing the renderer draws. It hangs
    into the gap above the rows, which is sized to take it. */
@@ -249,28 +245,46 @@
 }
 
 /* ─── The Sell and Buy rows ───────────────────────────────────────────────────
-   Every column is fixed but the stepper's, which takes what is left, so the
-   two rows line up whatever they hold and the warning's slot is there whether
-   or not a warning is.
+   A fixed label cell and the bar, so the two rows line up whatever they hold.
+   The cell stacks the label over the price, and both the warning's slot and the
+   price's line are there whether or not they have anything in them.
    ──────────────────────────────────────────────────────────────────────────── */
 
 .rows {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   margin-top: 26px;
 }
 
 .row {
   display: grid;
-  grid-template-columns: 26px 11px minmax(0, 1fr) 38px;
+  grid-template-columns: 46px minmax(0, 1fr);
   align-items: center;
   column-gap: 4px;
 }
 
+.row-head {
+  display: grid;
+  grid-template-columns: auto 11px;
+  justify-content: start;
+  align-items: center;
+  gap: 3px 4px;
+}
+
 .row-label {
   font-size: 0.6rem;
+  line-height: 1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--color-text-bright);
+}
+
+.row-price {
+  grid-column: 1 / -1;
+  height: 0.8rem;
+  font-size: 0.64rem;
+  line-height: 0.8rem;
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-bright);
 }
 
@@ -295,9 +309,10 @@
   stroke-linejoin: round;
 }
 
+/* One width whichever arrow it shows, so the bars' segments line up. */
 .target {
+  width: 36px;
   white-space: nowrap;
-  color: var(--color-text-bright);
 }
 
 .sr-only {

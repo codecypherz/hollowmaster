@@ -14,7 +14,6 @@ import { Card, CARD_BY_KEY } from '../../model/card';
 import { DECK_SIZE, Deck, DeckProblem, MAX_DECKS, deckName, deckStanding } from '../../model/deck';
 import { fitOverlay } from '../../model/fit';
 import { CardComponent } from '../card/card';
-import { CardMenu } from '../card-menu/card-menu';
 import { ConfirmDialog } from '../confirm-dialog/confirm-dialog';
 
 /** One of the deck's nine positions, filled or free. */
@@ -80,7 +79,7 @@ const DECK_CARD_WIDTH = 128;
  */
 @Component({
   selector: 'app-deck-bar',
-  imports: [CardComponent, CardMenu, ConfirmDialog],
+  imports: [CardComponent, ConfirmDialog],
   templateUrl: './deck-bar.html',
   styleUrl: './deck-bar.css',
   host: {
@@ -94,16 +93,11 @@ export class DeckBar {
   /** Which deck is on screen; null when the player holds none. */
   readonly selectedIndex = input.required<number | null>();
 
-  /** The position whose menu is open, if the open menu is one of this row's. */
-  readonly openPosition = input<number | null>(null);
-
   readonly selectDeck = output<number>();
   readonly createDeck = output<void>();
   readonly deleteDeck = output<number>();
-  readonly selectCard = output<number>();
   readonly removeCard = output<number>();
   readonly readCard = output<number>();
-  readonly dismissMenu = output<void>();
 
   readonly deckCardWidth = DECK_CARD_WIDTH;
   readonly maxDecks = MAX_DECKS;

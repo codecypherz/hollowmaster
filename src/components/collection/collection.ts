@@ -1,23 +1,41 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { CARD_SETS, Card, CardKey, CardSet, cardKey, cardsInSet } from '../../model/card';
+import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import {
+  CARD_SETS,
+  Card,
+  CardKey,
+  CardSet,
+  cardKey,
+  cardsInSet,
+  collectionNumber,
+} from '../../model/card';
+import {
+  RATE_UNKNOWN,
   actionLabel,
   cardSlug,
   changeText,
   lowerLabel,
   maxPending,
   quantityFor,
+  quantityLabel,
   raiseLabel,
   raiseRefusal,
 } from '../../model/cart';
 import { DECK_SIZE, deckName, listOf } from '../../model/deck';
-import { ExchangeAction, decksTrimmedBySale, unitPrice } from '../../model/exchange';
+import {
+  ExchangeAction,
+  decksTrimmedBySale,
+  knowsRate,
+  rosariesText,
+  unitPrice,
+} from '../../model/exchange';
 import { createParticleField, particleVars } from '../../model/particle';
 import { UserState, quantityOf } from '../../model/user';
 import { CartService, CartSummary } from '../../services/cart.service';
 import { UserService } from '../../services/user.service';
 import { CardComponent } from '../card/card';
+import { CardReader } from '../card-reader/card-reader';
 import { CartDialog } from '../cart-dialog/cart-dialog';
+import { ExchangeRates } from '../exchange-rates/exchange-rates';
 import { QuantityStepper } from '../quantity-stepper/quantity-stepper';
 import { Rosary } from '../rosary/rosary';
 
@@ -28,10 +46,13 @@ export interface ExchangeRow {
   readonly label: string;
   /** Copies pending this way. */
   readonly quantity: number;
+  /** Whether a quantity can be typed: not where none could be pending at all. */
+  readonly editable: boolean;
   readonly canRaise: boolean;
   readonly raiseReason: string;
   readonly raiseLabel: string;
   readonly lowerLabel: string;
+  readonly fieldLabel: string;
   /** The control that brings the copies held to exactly `DECK_SIZE`. */
   readonly target: {
     readonly face: string;
@@ -41,9 +62,9 @@ export interface ExchangeRow {
     /** Why it is unavailable; empty when it is on offer. */
     readonly reason: string;
   };
-  /** The price per copy for the tooltip, where the currency word may not be set. */
-  readonly priceTitle: string;
-  /** The same for assistive technology, with the currency in words. */
+  /** The price per copy, or null where the player does not know the card's rate. */
+  readonly price: number | null;
+  /** The same in words, for assistive technology. */
   readonly priceText: string;
   /** The decks the pending sale would trim, in words; empty when it would trim none. */
   readonly warning: string;
@@ -55,7 +76,7 @@ export interface ExchangeTile {
   readonly key: CardKey;
   /** A DOM-safe form of the key, for ids and `data-` hooks. */
   readonly slug: string;
-  /** The set code and the number within it, as `FC 001`. */
+  /** The set code and the number within it, as `FC #1`. */
   readonly number: string;
   /** Copies held; zero for a card not owned. Unaffected by anything pending. */
   readonly quantity: number;
@@ -79,30 +100,33 @@ export interface SetSection {
  * Two rows — the pinned top bar (cart, header, and purse) above the scrolling
  * sections — with nothing `position: sticky`, as on the Decks page.
  *
- * The page holds only screen state: the last announcement, and whether the
- * cart is open. Every fact — the balance, the quantities, what is pending,
+ * The page holds only screen state: the last announcement, which card is being
+ * read, and whether the cart is open. Every fact — the balance, the quantities, what is pending,
  * which decks a sale would trim — is read from `UserService` and `CartService`
  * through `computed`, and every change is asked of them, so a card opened in
  * the Shop or a deck built on the Decks page is here on arrival.
  */
 @Component({
   selector: 'app-collection',
-  imports: [CardComponent, CartDialog, QuantityStepper, Rosary],
+  imports: [CardComponent, CardReader, CartDialog, ExchangeRates, QuantityStepper, Rosary],
   templateUrl: './collection.html',
   styleUrl: './collection.css',
 })
 export class Collection {
   private readonly users = inject(UserService);
   private readonly cart = inject(CartService);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
 
   readonly particles = createParticleField(14, 0xc011ec7);
   readonly vars = particleVars;
 
-  readonly rosaries = this.users.rosaries;
   readonly pending = this.cart.count;
 
   /** Whether the cart dialog is up. */
   readonly cartOpen = signal(false);
+
+  /** The card being read, at most one. */
+  readonly reading = signal<Card | null>(null);
 
   /** What the live region last said. Set after each change, never on arrival. */
   readonly announcement = signal('');
@@ -120,7 +144,7 @@ export class Collection {
           card,
           key: cardKey(card),
           slug: cardSlug(card),
-          number: `${card.set} ${String(card.number).padStart(3, '0')}`,
+          number: collectionNumber(card),
           quantity: quantityOf(state.collection, card),
           rows: [this.sellRow(state, card), this.buyRow(state, card)],
         };
@@ -131,7 +155,7 @@ export class Collection {
 
   private sellRow(state: UserState, card: Card): ExchangeRow {
     const held = quantityOf(state.collection, card);
-    const row = this.row('sell', card, held);
+    const row = this.row(state, 'sell', card, held);
     const trims = decksTrimmedBySale(state, card, row.quantity).map(deckName);
     return {
       ...row,
@@ -141,45 +165,62 @@ export class Collection {
         quantity: held - DECK_SIZE,
         reason: held > DECK_SIZE ? '' : `You hold ${DECK_SIZE} or fewer`,
       },
-      priceTitle: `Sells for ${unitPrice(card, 'sell')} each`,
       warning: trims.length > 0 ? `Selling removes it from ${listOf(trims)}` : '',
     };
   }
 
   private buyRow(state: UserState, card: Card): ExchangeRow {
     const held = quantityOf(state.collection, card);
+    const noTarget = held < DECK_SIZE ? '' : `You hold ${DECK_SIZE} or more`;
     return {
-      ...this.row('buy', card, held),
+      ...this.row(state, 'buy', card, held),
       target: {
         face: `↑${DECK_SIZE}`,
         label: `Buy up to ${DECK_SIZE} ${card.name}`,
         quantity: DECK_SIZE - held,
-        reason: held < DECK_SIZE ? '' : `You hold ${DECK_SIZE} or more`,
+        reason: knowsRate(state, card.stars) ? noTarget : RATE_UNKNOWN,
       },
-      priceTitle: `Costs ${unitPrice(card, 'buy')} each`,
       warning: '',
     };
   }
 
   /** What both rows state the same way. */
-  private row(action: ExchangeAction, card: Card, held: number) {
+  private row(state: UserState, action: ExchangeAction, card: Card, held: number) {
     const quantity = quantityFor(this.cart.lines(), cardKey(card), action);
+    const rateKnown = knowsRate(state, card.stars);
+    const max = maxPending(action, held, rateKnown);
+    const price = rateKnown ? unitPrice(card, action) : null;
     return {
       action,
       label: actionLabel(action),
       quantity,
-      canRaise: quantity < maxPending(action, held),
-      raiseReason: raiseRefusal(action, held, quantity),
+      editable: max > 0,
+      canRaise: quantity < max,
+      raiseReason: raiseRefusal(action, held, quantity, rateKnown),
       raiseLabel: raiseLabel(action, card),
       lowerLabel: lowerLabel(action, card),
-      priceText: `${unitPrice(card, action)} Rosaries each`,
+      fieldLabel: quantityLabel(action, card),
+      price,
+      priceText: price === null ? '' : `${rosariesText(price)} each`,
     };
+  }
+
+  /** The ids a row is described by: its price, and its warning, where it has them. */
+  rowDescription(row: ExchangeRow, hook: string): string | null {
+    const ids = [row.priceText && `price-${hook}`, row.warning && `trim-${hook}`];
+    return ids.filter(Boolean).join(' ') || null;
   }
 
   // ─── Pending changes ──────────────────────────────────────────────────────
 
   onStep(tile: ExchangeTile, row: ExchangeRow, by: 1 | -1): void {
-    this.setQuantity(tile, row, row.quantity + by);
+    // From the cart rather than the row: a quantity typed a moment ago may not
+    // have been rendered yet.
+    this.setQuantity(tile, row, this.cart.quantityFor(tile.card, row.action) + by);
+  }
+
+  onEntered(tile: ExchangeTile, row: ExchangeRow, quantity: number): void {
+    this.setQuantity(tile, row, quantity);
   }
 
   /** Sets the quantity that leaves exactly `DECK_SIZE`. Unavailable is focusable but inert. */
@@ -189,7 +230,27 @@ export class Collection {
   }
 
   private setQuantity(tile: ExchangeTile, row: ExchangeRow, quantity: number): void {
-    this.announcement.set(changeText(this.cart.setQuantity(tile.card, row.action, quantity)));
+    const before = this.cart.quantityFor(tile.card, row.action);
+    const change = this.cart.setQuantity(tile.card, row.action, quantity);
+    if (change.quantity !== before) this.announcement.set(changeText(change));
+  }
+
+  // ─── Reading ──────────────────────────────────────────────────────────────
+
+  read(card: Card): void {
+    this.reading.set(card);
+  }
+
+  /** Closes the reader, handing focus back to the card it was opened from. */
+  closeReader(): void {
+    const card = this.reading();
+    this.reading.set(null);
+    if (!card) return;
+    queueMicrotask(() => {
+      this.host.nativeElement
+        .querySelector<HTMLElement>(`[data-card="${cardSlug(card)}"] .tile-card button`)
+        ?.focus({ preventScroll: true });
+    });
   }
 
   // ─── The cart ─────────────────────────────────────────────────────────────
@@ -218,7 +279,7 @@ export function summaryText({ sold, bought, net, trims }: CartSummary): string {
   const rosaries =
     net === 0
       ? 'no Rosaries gained or spent'
-      : `${Math.abs(net)} Rosaries ${net > 0 ? 'gained' : 'spent'}`;
+      : `${rosariesText(Math.abs(net))} ${net > 0 ? 'gained' : 'spent'}`;
   const removed = trims.length > 0 ? ` Cards removed from ${listOf(trims)}.` : '';
   return `${sold} sold, ${bought} bought, ${rosaries}.${removed}`;
 }

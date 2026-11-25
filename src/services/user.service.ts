@@ -11,6 +11,7 @@ import {
   seedUser,
   toPersisted,
   totalCards as countTotal,
+  withMilestones,
 } from '../model/user';
 import { USER_STORE } from './user-store';
 
@@ -59,15 +60,15 @@ export class UserService {
     // application with no user at all rather than with a new one.
     const persisted = await this.store.load().catch(() => null);
     if (persisted) {
-      this._state.set(fromPersisted(persisted));
+      const restored = fromPersisted(persisted);
       // A record read at an earlier version was upgraded on the way in. Write
       // it straight back so the shape settles without the player taking an
       // action, and so a read-only session leaves a current record behind.
-      if (persisted.version !== SCHEMA_VERSION) this.persist();
+      if (persisted.version !== SCHEMA_VERSION) this.commit(restored);
+      else this._state.set(restored);
       return;
     }
-    this._state.set(seedUser());
-    this.persist();
+    this.commit(seedUser());
   }
 
   /**
@@ -78,22 +79,21 @@ export class UserService {
    * holds" is true by construction rather than by a second description of one.
    */
   reset(): void {
-    this._state.set(seedUser());
-    this.persist();
+    this.commit(seedUser());
   }
 
   /** Adds Geo to the purse. A non-positive amount is not a credit and is refused. */
   creditGeo(amount: number): void {
     if (!Number.isInteger(amount) || amount <= 0) return;
-    this._state.update((s) => ({ ...s, geo: s.geo + amount }));
-    this.persist();
+    const state = this._state();
+    this.commit({ ...state, geo: state.geo + amount });
   }
 
   /** Adds cards to the collection, raising the quantity of any already held. */
   grantCards(cards: readonly Card[]): void {
     if (cards.length === 0) return;
-    this._state.update((s) => ({ ...s, collection: grantAll(s.collection, cards) }));
-    this.persist();
+    const state = this._state();
+    this.commit({ ...state, collection: grantAll(state.collection, cards) });
   }
 
   /**
@@ -101,22 +101,22 @@ export class UserService {
    *
    * There is deliberately no public `spendGeo`: every spend in the application
    * is a purchase, and a bare deduction is exactly how the balance and the
-   * collection come apart. The deduction and the grant are applied in one
-   * `update()`, so no consumer of the signal can observe the Geo gone with the
+   * collection come apart. The deduction and the grant are committed as one
+   * state, so no consumer of the signal can observe the Geo gone with the
    * cards not yet arrived.
    *
    * Returns whether the purchase happened.
    */
   purchase(price: number, cards: readonly Card[]): boolean {
     if (!Number.isInteger(price) || price < 0) return false;
-    if (this._state().geo < price) return false;
+    const state = this._state();
+    if (state.geo < price) return false;
 
-    this._state.update((s) => ({
-      ...s,
-      geo: s.geo - price,
-      collection: grantAll(s.collection, cards),
-    }));
-    this.persist();
+    this.commit({
+      ...state,
+      geo: state.geo - price,
+      collection: grantAll(state.collection, cards),
+    });
     return true;
   }
 
@@ -128,7 +128,8 @@ export class UserService {
 
   /**
    * Settles an order of sales and purchases: all of it, or none of it. Refused
-   * when it sells more than is held or its net is more than the balance.
+   * when it sells more than is held, buys a card whose rate is not known, or its
+   * net is more than the balance.
    */
   settle(order: readonly OrderLine[]): boolean {
     return this.apply((s) => settleOrder(s, order));
@@ -172,15 +173,19 @@ export class UserService {
    * no-op that still costs a round trip to the store.
    */
   private apply(operation: (state: UserState) => UserState | null): boolean {
-    let applied = false;
-    this._state.update((s) => {
-      const next = operation(s);
-      if (!next) return s;
-      applied = true;
-      return next;
-    });
-    if (applied) this.persist();
-    return applied;
+    const next = operation(this._state());
+    if (!next) return false;
+    this.commit(next);
+    return true;
+  }
+
+  /**
+   * The one point every change to the user passes through: publishes `next`
+   * with the milestones it proves, in one step, and writes it out.
+   */
+  private commit(next: UserState): void {
+    this._state.set(withMilestones(next));
+    this.persist();
   }
 
   /**

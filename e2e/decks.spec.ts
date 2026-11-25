@@ -1,11 +1,13 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   CARD_ABILITY_GATE,
   CARD_MIN_WIDTH,
   DECK_SIZE,
   MAX_DECKS,
   abilitySectionWidth,
+  addButton,
   badgeCount,
+  cardButton,
   cardWidth,
   decksSettled,
   collectionTiles,
@@ -22,10 +24,10 @@ import {
   openDecksAs,
   label,
   laidOutCardWidth,
-  openCardMenu,
   openDecks,
-  openMenu,
   purse,
+  readCard,
+  removeButton,
   tileNamed,
   type Size,
 } from './helpers';
@@ -89,6 +91,41 @@ async function tileNames(page: Page): Promise<string[]> {
   );
 }
 
+/** The focused control draws a visible indicator. */
+async function expectFocusVisible(target: Locator): Promise<void> {
+  await expect(target).toBeFocused();
+  const outline = await target.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
+  });
+  expect(outline.style).not.toBe('none');
+  expect(outline.width).toBeGreaterThan(0);
+}
+
+/** An add that is in place but unavailable: it says why, and does nothing. */
+async function expectWithheld(add: Locator, reason: string): Promise<void> {
+  await expect(add).toBeVisible();
+  await expect(add).toHaveAttribute('aria-disabled', 'true');
+  await expect(add).toHaveAttribute('title', reason);
+  await expect(add).toHaveAccessibleDescription(reason);
+  const held = await deckCards(add.page()).count();
+  // Playwright will not click a control marked unavailable without being told to.
+  await add.click({ force: true });
+  await add.focus();
+  await add.page().keyboard.press('Enter');
+  await expect(deckCards(add.page())).toHaveCount(held);
+}
+
+/** Where the elements a locator finds stand, as laid out on screen. */
+function boxesOf(locator: Locator) {
+  return locator.evaluateAll((els) =>
+    els.map((el) => {
+      const { left, right, top, bottom, width, height } = el.getBoundingClientRect();
+      return { left, right, top, bottom, width, height };
+    }),
+  );
+}
+
 /** The page's pinned controls, which no viewport may put out of reach. */
 function pinnedParts(page: Page) {
   return {
@@ -100,6 +137,7 @@ function pinnedParts(page: Page) {
     chevron: page.locator('.sort-option .sort-chevron'),
     reset: page.getByRole('button', { name: 'Reset data' }),
     deckRow: page.locator('app-deck-bar .deck-row'),
+    removes: page.locator('app-deck-bar .remove'),
   };
 }
 
@@ -216,8 +254,7 @@ test.describe('the width bands', () => {
     await page.setViewportSize(DEFAULT);
     await openDecks(page);
 
-    await openCardMenu(collectionTiles(page).first());
-    await page.getByRole('button', { name: 'Read' }).click();
+    await readCard(collectionTiles(page).first());
 
     const reader = page.locator('app-card-reader');
     await expect(reader).toBeVisible();
@@ -226,7 +263,7 @@ test.describe('the width bands', () => {
     await expect(reader.locator('.cf-ability-text')).toBeVisible();
     await expect(reader.locator('.cf-ability-text')).not.toBeEmpty();
     await expect(reader.locator('.cf-set')).toHaveText(/\S/);
-    await expect(reader.locator('.cf-number')).toHaveText(/^\d{3}$/);
+    await expect(reader.locator('.cf-number')).toHaveText(/^#[1-9]\d*$/);
   });
 });
 
@@ -313,8 +350,7 @@ test('the badge states used of held, per deck', async ({ page }) => {
   await expect(badge).toHaveAttribute('aria-label', '0 of 3 in Deck 1');
 
   for (let i = 0; i < 2; i++) {
-    await openCardMenu(crawlid);
-    await page.getByRole('button', { name: 'Add to Deck 1' }).click();
+    await addButton(crawlid).click();
   }
   await expect(badge).toHaveAttribute('aria-label', '2 of 3 in Deck 1');
   await expect(badge).not.toHaveClass(/is-exhausted/);
@@ -327,23 +363,18 @@ test('the badge states used of held, per deck', async ({ page }) => {
   }));
   expect(weights.held).toBeGreaterThan(weights.used);
 
-  await openCardMenu(crawlid);
-  await page.getByRole('button', { name: 'Add to Deck 1' }).click();
+  await addButton(crawlid).click();
   await expect(badge).toHaveAttribute('aria-label', '3 of 3 in Deck 1');
   await expect(badge).toHaveClass(/is-exhausted/);
-  await expect(badge).toContainText('✓');
+  await expect(badge).toHaveText('3/3');
 
-  const menu = await openCardMenu(crawlid);
-  await expect(menu.locator('.action-primary')).toHaveCount(0);
-  await expect(menu.locator('.reason')).toHaveText('Every copy you hold is already in Deck 1.');
-  await page.keyboard.press('Escape');
+  await expectWithheld(addButton(crawlid), 'Every copy you hold is already in Deck 1.');
 
   await deckButton(page, 'Deck 2').click();
   await expect(badge).toHaveAttribute('aria-label', '0 of 3 in Deck 2');
   await expect(badge).not.toHaveClass(/is-exhausted/);
-  const offered = await openCardMenu(crawlid);
-  await expect(offered.getByRole('button', { name: 'Add to Deck 2' })).toBeVisible();
-  await page.keyboard.press('Escape');
+  await expect(addButton(crawlid)).toHaveText('Add to Deck 2');
+  await expect(addButton(crawlid)).not.toHaveAttribute('aria-disabled', 'true');
 
   // With no deck at all, the badge states the held count alone.
   for (const name of ['Delete Deck 2', 'Delete Deck 1']) {
@@ -411,6 +442,115 @@ test('the badge separator is as heavy and as high in contrast as the used figure
   await exhausted.screenshot({ path: 'test-results/decks-badge-separator-exhausted.png' });
 });
 
+test('an exhausted badge differs in lightness from one that is not', async ({ page }) => {
+  await page.setViewportSize(DEFAULT);
+  await openDecksAs(page, { collection: STARTERS, decks: [[CRAWLID]] });
+  const ground = (tile: Locator) =>
+    tile.locator('.badge').evaluate((el) => {
+      const canvas = document.createElement('canvas').getContext('2d')!;
+      const over = (color: string) => {
+        canvas.fillStyle = color;
+        canvas.fillRect(0, 0, 1, 1);
+        const [r, g, b] = canvas.getImageData(0, 0, 1, 1).data;
+        const channel = (v: number) =>
+          v / 255 <= 0.03928 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4;
+        return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+      };
+      const style = getComputedStyle(el);
+      return { fill: over(style.backgroundColor), text: over(style.color) };
+    });
+  const exhausted = await ground(tileNamed(page, 'Crawlid'));
+  const open = await ground(tileNamed(page, 'Vengefly'));
+  const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  // Light with dark figures against dark with light ones.
+  expect(exhausted.fill).toBeGreaterThan(exhausted.text);
+  expect(open.fill).toBeLessThan(open.text);
+  expect(contrast(exhausted.fill, open.fill)).toBeGreaterThan(4.5);
+  expect(contrast(exhausted.fill, exhausted.text)).toBeGreaterThan(4.5);
+  await expect(tileNamed(page, 'Crawlid').locator('.badge')).toHaveText('1/1');
+});
+
+// ─── The add and remove buttons ─────────────────────────────────────────────
+
+test('the add button overlaps nothing, and availability moves nothing', async ({ page }) => {
+  await page.setViewportSize(DEFAULT);
+  await openDecksAs(page, { collection: STARTERS, decks: [[]] });
+  await decksSettled(page);
+
+  for (const tile of await collectionTiles(page).all()) {
+    const [add] = await boxesOf(addButton(tile));
+    const [card] = await boxesOf(tile.locator('app-card'));
+    const [badge] = await boxesOf(tile.locator('.badge'));
+    expect(add.top).toBeGreaterThanOrEqual(card.bottom);
+    expect(add.top).toBeGreaterThanOrEqual(badge.bottom);
+    await expect(addButton(tile)).toHaveText('Add to Deck 1');
+    expect(await addButton(tile).evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  }
+
+  const layout = async () => ({
+    tiles: await boxesOf(collectionTiles(page)),
+    adds: await boxesOf(page.locator('app-collection-grid .add')),
+    slots: await boxesOf(deckSlots(page)),
+    cards: await boxesOf(page.locator('app-deck-bar .slot-card')),
+  });
+  const before = await layout();
+  const crawlid = tileNamed(page, 'Crawlid');
+  await addButton(crawlid).click();
+  await expect(deckCards(page)).toHaveCount(1);
+  await expect(addButton(crawlid)).toHaveAttribute('aria-disabled', 'true');
+  await page.mouse.move(0, 0);
+  expect(await layout()).toEqual(before);
+
+  // Not by colour alone: the outline is broken, and the whole is faded.
+  const [off, on] = [addButton(crawlid), addButton(tileNamed(page, 'Vengefly'))];
+  const look = (add: Locator) =>
+    add.evaluate((el) => {
+      const { borderTopStyle, opacity } = getComputedStyle(el);
+      return { borderTopStyle, opacity: Number(opacity) };
+    });
+  await expect.poll(async () => (await look(off)).opacity).toBeLessThan(1);
+  expect((await look(off)).borderTopStyle).not.toBe((await look(on)).borderTopStyle);
+  await page.screenshot({ path: 'test-results/decks-add-buttons.png' });
+
+  // And every position is one size, filled or free, its Remove clear of its card.
+  const slots = await boxesOf(deckSlots(page));
+  for (const slot of slots) {
+    expect(slot.width).toBeCloseTo(slots[0].width, 1);
+    expect(slot.height).toBeCloseTo(slots[0].height, 1);
+  }
+  const [remove] = await boxesOf(page.locator('app-deck-bar .remove'));
+  const [card] = await boxesOf(deckCards(page));
+  expect(remove.top).toBeGreaterThanOrEqual(card.bottom);
+  expect(remove.bottom).toBeLessThanOrEqual(slots[0].bottom + 0.5);
+  await expect(page.locator('app-deck-bar .remove')).toHaveCount(1);
+});
+
+test('reading a card moves nothing and raises nothing over it', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 620 });
+  await openDecksAs(page, { collection: STARTERS, decks: [[CRAWLID]] });
+  await decksSettled(page);
+  const grid = page.locator('app-collection-grid');
+  await grid.evaluate((el) => el.scrollTo(0, 60));
+  const layout = async () => ({
+    tiles: await boxesOf(collectionTiles(page)),
+    slots: await boxesOf(deckSlots(page)),
+    scrolled: await grid.evaluate((el) => el.scrollTop),
+  });
+  const before = await layout();
+  for (const holder of [deckSlots(page).first(), collectionTiles(page).first()]) {
+    // Opened where it stands: a pointer would have scrolled it into view first.
+    await cardButton(holder).evaluate((el: HTMLElement) => {
+      el.focus({ preventScroll: true });
+      el.click();
+    });
+    await expect(page.locator('app-card-reader')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('app-card-reader')).toHaveCount(0);
+    await expect(cardButton(holder)).toBeFocused();
+    expect(await layout()).toEqual(before);
+  }
+});
+
 // ─── 13.5 Building a deck ───────────────────────────────────────────────────
 
 test('a deck is built, filled, trimmed, and survives a reload', async ({ page }) => {
@@ -428,8 +568,7 @@ test('a deck is built, filled, trimmed, and survives a reload', async ({ page })
 
   // The nine starters, one copy each — every card the seeded player holds.
   for (let i = 0; i < DECK_SIZE; i++) {
-    await openCardMenu(collectionTiles(page).nth(i));
-    await page.getByRole('button', { name: `Add to Deck 2` }).click();
+    await addButton(collectionTiles(page).nth(i)).click();
     await expect(deckCards(page)).toHaveCount(i + 1);
   }
   await expect(page.locator('app-deck-bar .slot-empty')).toHaveCount(0);
@@ -440,14 +579,10 @@ test('a deck is built, filled, trimmed, and survives a reload', async ({ page })
   await expect(collectionTiles(page)).toHaveCount(9);
 
   // With the deck full, the add action is withheld and the page says why.
-  const menu = await openCardMenu(tile);
-  await expect(menu.locator('.action-primary')).toHaveCount(0);
-  await expect(menu.locator('.reason')).toContainText(/full/i);
-  await page.keyboard.press('Escape');
+  await expectWithheld(addButton(tile), 'Deck 2 is full.');
 
   // Removing one frees exactly that position.
-  await openCardMenu(deckSlots(page).nth(1));
-  await page.getByRole('button', { name: 'Remove' }).click();
+  await removeButton(deckSlots(page).nth(1)).click();
   await expect(deckCards(page)).toHaveCount(DECK_SIZE - 1);
   expect(await deckStanding(page)).toEqual([
     expect.objectContaining({ kind: 'incomplete', text: expect.stringMatching(/1 more card\b/) }),
@@ -468,45 +603,34 @@ test('the same card can be read from the deck and removed from there', async ({ 
   await page.setViewportSize(DEFAULT);
   await openDecks(page);
 
-  await openCardMenu(collectionTiles(page).first());
-  await page.getByRole('button', { name: 'Add to Deck 1' }).click();
+  await addButton(collectionTiles(page).first()).click();
   await expect(deckCards(page)).toHaveCount(1);
 
-  await openCardMenu(deckSlots(page).first());
-  await page.getByRole('button', { name: 'Read' }).click();
-  const reader = page.locator('app-card-reader');
-  await expect(reader).toBeVisible();
-
+  const reader = await readCard(deckSlots(page).first());
   await reader.getByRole('button', { name: 'Remove' }).click();
   await expect(reader).toHaveCount(0);
   await expect(deckCards(page)).toHaveCount(0);
 });
 
-test('the reader withholds the add with the same reason the menu states', async ({ page }) => {
+test('the reader withholds the add with the same reason the tile states', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
   await openDecks(page);
 
   const tile = collectionTiles(page).first();
   for (let i = 0; i < DECK_SIZE; i++) {
-    await openCardMenu(collectionTiles(page).nth(i));
-    await page.getByRole('button', { name: 'Add to Deck 1' }).click();
+    await addButton(collectionTiles(page).nth(i)).click();
   }
   await expect(deckCards(page)).toHaveCount(DECK_SIZE);
 
-  // The menu's reason, and then the reader's, for the same card.
-  const menu = await openCardMenu(tile);
-  const reason = (await menu.locator('.reason').innerText()).trim();
-  await page.getByRole('button', { name: 'Read' }).click();
-
-  const reader = page.locator('app-card-reader');
-  await expect(reader).toBeVisible();
+  // The tile's reason, and then the reader's, for the same card.
+  const reason = await addButton(tile).getAttribute('title');
+  const reader = await readCard(tile);
   await expect(reader.locator('.action-primary')).toHaveCount(0);
   expect((await reader.locator('.reason').innerText()).trim()).toBe(reason);
 
   // And a card read from the deck still offers removal.
   await page.keyboard.press('Escape');
-  await openCardMenu(deckSlots(page).first());
-  await page.getByRole('button', { name: 'Read' }).click();
+  await readCard(deckSlots(page).first());
   await expect(reader.getByRole('button', { name: 'Remove' })).toBeVisible();
 });
 
@@ -518,8 +642,7 @@ test('removing the second of three copies leaves the other two in order', async 
   const first = tileNamed(page, 'Crawlid');
   const second = tileNamed(page, 'Vengefly');
   for (const tile of [first, first, first, second]) {
-    await openCardMenu(tile);
-    await page.getByRole('button', { name: 'Add to Deck 1' }).click();
+    await addButton(tile).click();
   }
   await expect(deckCards(page)).toHaveCount(4);
 
@@ -529,8 +652,7 @@ test('removing the second of three copies leaves the other two in order', async 
     );
   const before = await names();
 
-  await openCardMenu(deckSlots(page).nth(1));
-  await page.getByRole('button', { name: 'Remove' }).click();
+  await removeButton(deckSlots(page).nth(1)).click();
 
   await expect(deckCards(page)).toHaveCount(3);
   expect(await names()).toEqual([before[0], before[2], before[3]]);
@@ -541,8 +663,7 @@ test('a card read from the collection can be added from there', async ({ page })
   await page.setViewportSize(DEFAULT);
   await openDecks(page);
 
-  await openCardMenu(collectionTiles(page).first());
-  await page.getByRole('button', { name: 'Read' }).click();
+  await readCard(collectionTiles(page).first());
   const reader = page.locator('app-card-reader');
   await reader.getByRole('button', { name: 'Add to Deck 1' }).click();
 
@@ -562,8 +683,7 @@ test('deleting a deck is confirmed, renumbers the rest, and costs no cards', asy
 
   // A card in the deck that is about to go, so its loss is observable.
   await deckButton(page, 'Deck 2').click();
-  await openCardMenu(collectionTiles(page).first());
-  await page.getByRole('button', { name: 'Add to Deck 2' }).click();
+  await addButton(collectionTiles(page).first()).click();
   await expect(deckCards(page)).toHaveCount(1);
 
   // The held counts: the used count follows whichever deck is on screen, so
@@ -615,9 +735,8 @@ test('deleting the last deck leaves the no-decks state', async ({ page }) => {
   await expect(collectionTiles(page)).toHaveCount(9);
 
   // With no deck there is nowhere to add to, and the page says so.
-  const menu = await openCardMenu(collectionTiles(page).first());
-  await expect(menu.locator('.action-primary')).toHaveCount(0);
-  await expect(menu.locator('.reason')).toContainText(/create a deck/i);
+  await expect(addButton(collectionTiles(page).first())).toHaveText('Add to deck');
+  await expectWithheld(addButton(collectionTiles(page).first()), 'Create a deck first.');
 });
 
 test('the create control is disabled at the deck limit', async ({ page }) => {
@@ -672,8 +791,7 @@ test.describe('the Decks page fits the viewport', () => {
       await page.setViewportSize(size);
       await openDecks(page);
       // A deck with cards in it, so the row is measured at its real content.
-      await openCardMenu(collectionTiles(page).first());
-      await page.getByRole('button', { name: 'Add to Deck 1' }).click();
+      await addButton(collectionTiles(page).first()).click();
       await decksSettled(page);
 
       await expectNoScroll(page);
@@ -769,21 +887,32 @@ test('the whole screen is operable by keyboard', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect.poll(() => activeDirection(page)).toBe('desc');
 
-  // A card's menu opens from the keyboard, and focus lands in it.
-  const card = collectionTiles(page).first().locator('app-card button');
+  // A card is read from the keyboard; the next stop after it is its add button.
+  const tile = collectionTiles(page).first();
+  const card = cardButton(tile);
   await card.focus();
+  await page.keyboard.press('Tab');
+  await expectFocusVisible(addButton(tile));
   await page.keyboard.press('Enter');
-  await expect(openMenu(page)).toBeVisible();
-  await expect(openMenu(page).locator('.action-primary')).toBeFocused();
+  await expect(deckCards(page)).toHaveCount(1);
 
-  // Escape dismisses it and hands focus back to the card it was raised over.
-  await page.keyboard.press('Escape');
-  await expect(openMenu(page)).toHaveCount(0);
-  await expect(card).toBeFocused();
+  // Now unavailable, and the press that made it so kept its focus.
+  await expectFocusVisible(addButton(tile));
+  await expect(addButton(tile)).toHaveAccessibleDescription(/already in Deck 1/);
+  await page.keyboard.press('Enter');
+  await expect(deckCards(page)).toHaveCount(1);
+
+  // The same order in the deck: the card, then its Remove.
+  await cardButton(deckSlots(page).first()).focus();
+  await page.keyboard.press('Tab');
+  await expectFocusVisible(removeButton(deckSlots(page).first()));
+  await page.keyboard.press('Enter');
+  await expect(deckCards(page)).toHaveCount(0);
+  await expectFocusVisible(deckButton(page, 'Deck 1'));
 
   // The reader confines focus while it is open and returns it on dismissal.
+  await card.focus();
   await page.keyboard.press('Enter');
-  await page.getByRole('button', { name: 'Read' }).click();
   const reader = page.locator('app-card-reader');
   await expect(reader).toBeVisible();
 
@@ -981,8 +1110,7 @@ test('the deck states its standing: error, warning, or ready', async ({ page }) 
   const goam = collectionTiles(page).first();
   await expect(goam.locator('.cf-name-text')).toHaveText(/goam/i);
   for (let i = 0; i < 2; i++) {
-    await openCardMenu(goam);
-    await page.getByRole('button', { name: 'Add to Deck 1' }).click();
+    await addButton(goam).click();
   }
   await expect(deckCards(page)).toHaveCount(2);
   const both = await deckStanding(page);
@@ -1021,16 +1149,14 @@ test('the deck states its standing: error, warning, or ready', async ({ page }) 
     .screenshot({ path: 'test-results/decks-standing-both.png' });
 
   // Removing one Goam clears the error.
-  await openCardMenu(deckSlots(page).nth(1));
-  await page.getByRole('button', { name: 'Remove' }).click();
+  await removeButton(deckSlots(page).nth(1)).click();
   await expect(deckCards(page)).toHaveCount(1);
   expect((await deckStanding(page)).map((l) => l.kind)).toEqual(['incomplete']);
 
   // Filled to nine within the limit, the deck is ready: eight one-star
   // starters after the one Goam, a copy of each.
   for (let i = 1; i < DECK_SIZE; i++) {
-    await openCardMenu(collectionTiles(page).nth(i));
-    await page.getByRole('button', { name: 'Add to Deck 1' }).click();
+    await addButton(collectionTiles(page).nth(i)).click();
   }
   await expect(deckCards(page)).toHaveCount(DECK_SIZE);
   expect(await deckStanding(page)).toEqual([{ kind: 'ready', text: 'Ready for battle' }]);

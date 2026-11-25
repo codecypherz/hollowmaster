@@ -423,6 +423,110 @@
   }
 }
 
+/* ─── Control: segmented bar ──────────────────────────────────────────────────
+   Compact buttons, and at most one field among them, joined into one bar:
+
+     <div class="hk-seg">            gold; `hk-seg soul` for the soul accent
+       <button class="hk-btn sm">−</button>
+       <input class="hk-seg-field" />
+       <button class="hk-btn sm">+</button>
+     </div>
+
+   Each segment keeps its own border and overlaps the one before it by that
+   border's width, so a pair shares one rule and the bar has one outline. A
+   hovered or focused segment is raised over its neighbours, which would
+   otherwise cover its far edge and its outline. The accent is the two
+   properties below and nothing else.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.hk-seg {
+  --seg-rule: var(--color-gold-dim);
+  --seg-accent: var(--color-gold-light);
+
+  display: flex;
+  align-items: stretch;
+  isolation: isolate;
+}
+
+.hk-seg.soul {
+  --seg-rule: var(--color-soul-dim);
+  --seg-accent: var(--color-soul);
+}
+
+.hk-seg > .hk-btn,
+.hk-seg > .hk-seg-field {
+  position: relative;
+  margin: 0;
+  border: 1px solid var(--seg-rule);
+  border-radius: 0;
+}
+
+.hk-seg > * + .hk-btn,
+.hk-seg > * + .hk-seg-field {
+  margin-left: -1px;
+}
+
+.hk-seg > .hk-btn {
+  --btn-padding: 0.45rem 0.5rem;
+
+  flex: none;
+  color: var(--seg-accent);
+  background: color-mix(in srgb, var(--seg-rule) 16%, transparent);
+}
+
+.hk-seg > .hk-btn:hover:not(:disabled, [aria-disabled='true']),
+.hk-seg > .hk-btn.is-hover {
+  z-index: 1;
+  color: var(--color-text-bright);
+  border-color: var(--seg-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--seg-accent) 40%, transparent);
+}
+
+.hk-seg > .hk-btn:focus-visible,
+.hk-seg > .hk-btn.is-focus,
+.hk-seg > .hk-seg-field:focus-visible,
+.hk-seg > .hk-seg-field.is-focus {
+  z-index: 2;
+  outline: 2px solid var(--seg-accent);
+  outline-offset: 1px;
+}
+
+/* Hollow and dim, rather than the button's faded whole: fading the border with
+   the label would break the bar's outline. */
+.hk-seg > .hk-btn:disabled,
+.hk-seg > .hk-btn[aria-disabled='true'] {
+  opacity: 1;
+  color: var(--color-text-dim);
+  background: transparent;
+  border-color: var(--seg-rule);
+}
+
+/* Takes what the buttons leave, whatever it holds. The
+   recessed ground and the rule under the figures are what say it can be typed
+   in; a field that cannot be loses both. */
+.hk-seg-field {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 2.4ch;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+  color: var(--color-text-bright);
+  background:
+    linear-gradient(var(--seg-accent), var(--seg-accent)) 50% calc(100% - 4px) / 1.6em 1px no-repeat,
+    var(--color-void);
+  cursor: text;
+}
+
+.hk-seg-field:read-only {
+  color: var(--color-text-dim);
+  background: transparent;
+  cursor: not-allowed;
+}
+
 .btn-inner-glow {
   position: absolute;
   inset: 0;

@@ -34,45 +34,49 @@
 
 <ng-template #tileTpl let-tile let-index="index">
   <div class="tile" [attr.data-index]="index" [style.--index]="index">
-    <app-card
-      [card]="tile.card"
-      interactive
-      selectable
-      [selected]="openIndex() === index"
-      (select)="selectCard.emit(index)"
-    />
+    <div class="tile-card">
+      <app-card
+        [card]="tile.card"
+        interactive
+        selectable
+        opensDialog
+        (select)="readCard.emit(index)"
+      />
 
-    <!-- Straddling the card's lower rim in the gap between the S and SE
+      <!-- Straddling the card's lower rim in the gap between the S and SE
          chevrons, so nothing the renderer drew is covered. Shown for every
          tile, a card held once included. With a deck selected it reads
          used / held — the held figure the heavier — and when every copy is
-         used it inverts and gains a check, so exhaustion survives with colour
-         removed. -->
-    @let exhausted = deckName() !== null && tile.used >= tile.quantity;
-    <span class="badge" [class.is-exhausted]="exhausted" [attr.aria-label]="badgeLabel(tile)">
-      @if (deckName() === null) {
-        <span aria-hidden="true">×{{ tile.quantity }}</span>
-      } @else {
-        <span aria-hidden="true">
-          @if (exhausted) {
-            <span class="badge-mark">✓</span>
-          }
-          <span class="used">{{ tile.used }}</span
-          ><span class="badge-sep">/</span><span class="held">{{ tile.quantity }}</span></span
-        >
-      }
-    </span>
+         used it inverts, so exhaustion survives with colour removed. -->
+      @let exhausted = deckName() !== null && tile.used >= tile.quantity;
+      <span class="badge" [class.is-exhausted]="exhausted" [attr.aria-label]="badgeLabel(tile)">
+        @if (deckName() === null) {
+          <span aria-hidden="true">×{{ tile.quantity }}</span>
+        } @else {
+          <span aria-hidden="true">
+            <span class="used">{{ tile.used }}</span><span class="badge-sep">/</span
+            ><span class="held">{{ tile.quantity }}</span></span
+          >
+        }
+      </span>
+    </div>
 
-    @if (openIndex() === index) {
-      <app-card-menu
-        [label]="addLabel()"
-        [available]="tile.addReason === ''"
-        [reason]="tile.addReason"
-        [cardName]="tile.card.name"
-        (primary)="addCard.emit(index)"
-        (read)="readCard.emit(index)"
-        (dismiss)="dismissMenu.emit()"
-      />
+    <!-- Always here, so adding never waits on a hover. Unavailable stays in
+         place and focusable — not the native `disabled` — so its reason can be
+         read, and keeps its face so nothing about the tile changes size. -->
+    <button
+      type="button"
+      class="hk-btn sm add"
+      [attr.aria-label]="addLabel() + ': ' + tile.card.name"
+      [attr.aria-disabled]="tile.addReason ? 'true' : null"
+      [attr.aria-describedby]="tile.addReason ? 'add-reason-' + index : null"
+      [attr.title]="tile.addReason || null"
+      (click)="onAdd(tile, index)"
+    >
+      {{ addLabel() }}
+    </button>
+    @if (tile.addReason) {
+      <span hidden [id]="'add-reason-' + index">{{ tile.addReason }}</span>
     }
   </div>
 </ng-template>

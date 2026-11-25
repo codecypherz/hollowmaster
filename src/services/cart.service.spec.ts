@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { addSixStarCard } from '../testing/six-star';
 import { CARD_BY_KEY, cardKeyOf } from '../model/card';
-import { PersistedUser, SCHEMA_VERSION, quantityOf } from '../model/user';
+import { NO_MILESTONES, PersistedUser, SCHEMA_VERSION, quantityOf } from '../model/user';
 import { CartService } from './cart.service';
 import { USER_STORE, UserStore } from './user-store';
 import { UserService } from './user.service';
@@ -20,6 +21,7 @@ class RecordingStore implements UserStore {
       rosaries: 0,
       collection: [],
       decks: [],
+      milestones: NO_MILESTONES,
       ...this.record,
     };
   }
@@ -54,39 +56,39 @@ describe('CartService', () => {
   });
 
   it('counts copies across lines and signs each effect', async () => {
-    await start({ rosaries: 50, collection: [held(5, 3)] });
+    await start({ rosaries: 0, collection: [held(5, 3)] });
     cart.setQuantity(aspidMother, 'sell', 3);
-    cart.setQuantity(crawlid, 'buy', 2);
-    expect(cart.count()).toBe(5);
+    cart.setQuantity(crawlid, 'buy', 3);
+    expect(cart.count()).toBe(6);
     expect(cart.rows().map((row) => [row.card.name, row.effect])).toEqual([
-      ['Aspid Mother', 60],
-      ['Crawlid', -200],
+      ['Aspid Mother', 9],
+      ['Crawlid', -12],
     ]);
-    expect(cart.net()).toBe(-140);
-    expect(cart.balanceAfter()).toBe(-90);
-    expect(cart.shortfall()).toBe(90);
+    expect(cart.net()).toBe(-3);
+    expect(cart.balanceAfter()).toBe(-3);
+    expect(cart.shortfall()).toBe(3);
     expect(cart.canConfirm()).toBe(false);
   });
 
   it('can be confirmed for a gain, for exactly the balance, and for a net of zero', async () => {
-    await start({ rosaries: 100, collection: [held(1, 10)] });
+    await start({ rosaries: 4, collection: [held(1, 10)] });
     cart.setQuantity(crawlid, 'sell', 6);
-    expect(cart.balanceAfter()).toBe(160);
+    expect(cart.balanceAfter()).toBe(10);
     expect(cart.canConfirm()).toBe(true);
 
-    cart.setQuantity(crawlid, 'sell', 10);
+    cart.setQuantity(crawlid, 'sell', 4);
     cart.setQuantity(vengefly, 'buy', 1);
     expect(cart.net()).toBe(0);
     expect(cart.canConfirm()).toBe(true);
 
     cart.setQuantity(vengefly, 'buy', 2);
-    expect(cart.net()).toBe(-100);
+    expect(cart.net()).toBe(-4);
     expect(cart.balanceAfter()).toBe(0);
     expect(cart.shortfall()).toBe(0);
     expect(cart.canConfirm()).toBe(true);
 
-    cart.setQuantity(crawlid, 'sell', 9);
-    expect(cart.shortfall()).toBe(10);
+    cart.setQuantity(crawlid, 'sell', 3);
+    expect(cart.shortfall()).toBe(1);
     expect(cart.canConfirm()).toBe(false);
   });
 
@@ -168,10 +170,10 @@ describe('CartService', () => {
     expect(cart.confirm()).toEqual({
       sold: 7,
       bought: 1,
-      net: -20,
+      net: 5,
       trims: ['Deck 2', 'Deck 3'],
     });
-    expect(users.rosaries()).toBe(30);
+    expect(users.rosaries()).toBe(55);
     expect(quantityOf(users.collection(), crawlid)).toBe(0);
     expect(quantityOf(users.collection(), vengefly)).toBe(1);
     expect(users.decks().every((deck) => deck.cards.length === 0)).toBe(true);
@@ -180,13 +182,13 @@ describe('CartService', () => {
   });
 
   it('keeps its lines when it cannot be confirmed', async () => {
-    await start({ rosaries: 50 });
+    await start({ rosaries: 3 });
     store.saved = [];
     cart.setQuantity(crawlid, 'buy', 1);
     const lines = cart.lines();
     expect(cart.confirm()).toBeNull();
     expect(cart.lines()).toEqual(lines);
-    expect(users.rosaries()).toBe(50);
+    expect(users.rosaries()).toBe(3);
     expect(store.saved).toEqual([]);
   });
 
@@ -196,5 +198,18 @@ describe('CartService', () => {
     users.settle = () => false;
     expect(cart.confirm()).toBeNull();
     expect(cart.count()).toBe(1);
+  });
+
+  it('adds no line for a purchase whose rate is unknown, until it is known', async () => {
+    const six = addSixStarCard();
+    await start({ rosaries: 9998 });
+    expect(cart.setQuantity(six, 'buy', 2).quantity).toBe(0);
+    expect(cart.isEmpty()).toBe(true);
+
+    users.grantCards([crawlid]);
+    users.settle([{ key: 'FC#1', action: 'sell', quantity: 1 }]);
+    expect(users.rosaries()).toBe(9999);
+    expect(cart.setQuantity(six, 'buy', 2).quantity).toBe(2);
+    expect(cart.rows()[0]).toMatchObject({ rateKnown: true, max: 99, effect: -19998 });
   });
 });

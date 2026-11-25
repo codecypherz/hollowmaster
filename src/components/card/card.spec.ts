@@ -211,7 +211,7 @@ describe('CardComponent', () => {
 
     it('renders the collector number, zero-padded, on the identity plate', () => {
       render();
-      expect(host.querySelector('.cf-plate .cf-number')?.textContent?.trim()).toBe('002');
+      expect(host.querySelector('.cf-plate .cf-number')?.textContent?.trim()).toBe('#2');
       expect(host.querySelector('.cf-plate .cf-set')?.textContent?.trim()).toBe('FC');
     });
 
@@ -255,7 +255,7 @@ describe('CardComponent', () => {
       const label = host.querySelector('button')!.getAttribute('aria-label')!;
       expect(label).toContain('attack 45');
       expect(label).toContain('defense 40');
-      expect(label).toContain('FC 002');
+      expect(label).toMatch(/, FC #2$/);
     });
   });
 
@@ -413,6 +413,18 @@ describe('CardComponent', () => {
       render({ selectable: true, selected: true });
       expect(host.querySelector('button')!.getAttribute('aria-pressed')).toBe('true');
       expect(host.classList).toContain('is-selected');
+    });
+
+    it('announces no dialog while it is selected rather than opened', () => {
+      render({ selectable: true });
+      expect(host.querySelector('button')!.getAttribute('aria-haspopup')).toBeNull();
+      expect(host.querySelector('button')!.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('announces the dialog it opens, and no selection state', () => {
+      render({ selectable: true, opensDialog: true });
+      expect(host.querySelector('button')!.getAttribute('aria-haspopup')).toBe('dialog');
+      expect(host.querySelector('button')!.getAttribute('aria-pressed')).toBeNull();
     });
 
     it('does not emit when it is not selectable', () => {

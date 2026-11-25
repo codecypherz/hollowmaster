@@ -78,13 +78,15 @@
 }
 
 .tile {
-  /* The positioning context the action menu is placed within, so raising one
-     cannot reflow the grid around it. */
-  position: relative;
   width: var(--tile-w);
   animation: tileIn var(--dur-entrance) var(--ease-out-soft) both;
   /* Capped, so a large collection's last tile does not arrive minutes late. */
   animation-delay: calc(min(var(--index), 24) * var(--dur-stagger) / 3);
+}
+
+/* What the badge is placed against: the card, not the button beneath it. */
+.tile-card {
+  position: relative;
 }
 
 @keyframes tileIn {
@@ -142,8 +144,8 @@
   font-weight: 700;
 }
 
-/* Every held copy is in this deck: the pill inverts — a luminance cue — and
-   gains a check — a shape cue — so the state survives with colour removed. */
+/* Every held copy is in this deck: the pill inverts — a luminance cue — so the
+   state survives with colour removed. */
 .badge.is-exhausted {
   color: var(--color-void);
   background: var(--color-gold-light);
@@ -155,9 +157,22 @@
   color: inherit;
 }
 
-.badge-mark {
-  margin-right: 0.3em;
-  font-weight: 700;
+/* ─── The add button ──────────────────────────────────────────────────────────
+   Beneath the card, clear of the half of the badge that hangs below its rim.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.add {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  --btn-padding: 0.45rem 0;
+  white-space: nowrap;
+  color: var(--color-gold-light);
+}
+
+/* A broken outline as well as the button's fading: a shape cue. */
+.add[aria-disabled='true'] {
+  border-style: dashed;
 }
 
 .grid-empty {

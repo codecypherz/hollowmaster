@@ -10,7 +10,7 @@ import {
   withinHeld,
 } from '../model/cart';
 import { deckName } from '../model/deck';
-import { ExchangeAction, decksTrimmedBySale, rosaryEffect } from '../model/exchange';
+import { ExchangeAction, decksTrimmedBySale, knowsRate, rosaryEffect } from '../model/exchange';
 import { quantityOf } from '../model/user';
 import { UserService } from './user.service';
 
@@ -19,6 +19,8 @@ export interface CartRow extends CartLine {
   readonly card: Card;
   /** Copies held, unaffected by anything pending. */
   readonly held: number;
+  /** Whether the player knows the card's Rosary rate. */
+  readonly rateKnown: boolean;
   /** The most that may be pending this way. */
   readonly max: number;
   /** What the line does to the Rosary balance: positive for a sale. */
@@ -59,12 +61,14 @@ export class CartService {
       // A line is only ever made from a `Card`, so its key resolves.
       const card = CARD_BY_KEY.get(line.key)!;
       const held = quantityOf(state.collection, card);
+      const rateKnown = knowsRate(state, card.stars);
       const trims = line.action === 'sell' ? decksTrimmedBySale(state, card, line.quantity) : [];
       return {
         ...line,
         card,
         held,
-        max: maxPending(line.action, held),
+        rateKnown,
+        max: maxPending(line.action, held, rateKnown),
         effect: rosaryEffect(card, line.action, line.quantity),
         trims: trims.map(deckName),
       };
@@ -95,7 +99,8 @@ export class CartService {
     const other: ExchangeAction = action === 'sell' ? 'buy' : 'sell';
     const otherBefore = this.quantityFor(card, other);
     const key = cardKey(card);
-    this._lines.set(setQuantity(this.lines(), key, action, quantity, this.heldOf(key)));
+    const rateKnown = knowsRate(this.users.state(), card.stars);
+    this._lines.set(setQuantity(this.lines(), key, action, quantity, this.heldOf(key), rateKnown));
     return {
       card,
       action,

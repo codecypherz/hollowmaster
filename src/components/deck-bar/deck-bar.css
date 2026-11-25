@@ -14,6 +14,8 @@
   --deck-gap: 10px;
   /* The card's own ratio, so the row's height follows its unit. */
   --deck-ch: calc(var(--deck-cw) * 3.5 / 2.5);
+  /* The strip beneath each card, holding its Remove button. */
+  --deck-strip: 34px;
 
   display: block;
   width: 100%;
@@ -214,7 +216,7 @@
 
 .deck-region {
   /* The scaled height, so the collection below begins where the row ends. */
-  height: calc(var(--deck-ch) * var(--deck-scale));
+  height: calc((var(--deck-ch) + var(--deck-strip)) * var(--deck-scale));
   width: 100%;
   display: flex;
   justify-content: center;
@@ -233,13 +235,29 @@
 }
 
 .slot {
-  position: relative;
   flex: none;
   width: var(--deck-cw);
-  height: var(--deck-ch);
-  border-radius: 4px;
+  height: calc(var(--deck-ch) + var(--deck-strip));
   animation: slotIn var(--dur-entrance) var(--ease-out-soft) both;
   animation-delay: calc(var(--index) * var(--dur-stagger));
+}
+
+.slot-card {
+  box-sizing: border-box;
+  height: var(--deck-ch);
+  border-radius: 4px;
+}
+
+.slot-strip {
+  display: flex;
+  align-items: flex-end;
+  height: var(--deck-strip);
+}
+
+.remove {
+  width: 100%;
+  --btn-padding: 0.4rem 0;
+  color: var(--color-text-bright);
 }
 
 /* A free position is drawn, not omitted: the deck's remaining capacity is

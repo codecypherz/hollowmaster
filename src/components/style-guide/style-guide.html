@@ -208,6 +208,85 @@
       </div>
     </section>
 
+    <!-- ─── Segmented control ──────────────────────────────────────────── -->
+    <section class="sg-section" data-testid="sg-segmented">
+      <h2 class="sg-h2">Segmented control</h2>
+      <p class="sg-sub">
+        Compact buttons, with at most one field among them, joined into one bar: adjacent segments
+        share a rule, and the bar keeps its outline when a segment is unavailable. The gold and the
+        soul accent differ in colour only.
+      </p>
+
+      @for (accent of segAccents; track accent) {
+        <div class="state-grid" [attr.data-accent]="accent">
+          @for (state of segStates; track state.label) {
+            <div class="state-item">
+              <div
+                class="hk-seg seg-demo"
+                role="group"
+                [class.soul]="accent === 'soul'"
+                [class.no-field]="!state.field"
+                [attr.aria-label]="accent + ', ' + state.label"
+                [attr.data-state]="state.label"
+              >
+                <button
+                  type="button"
+                  class="hk-btn sm"
+                  [class.is-focus]="state.focus === 'button'"
+                  [attr.aria-disabled]="state.unavailable ? 'true' : null"
+                  aria-label="Fewer"
+                >
+                  &minus;
+                </button>
+                @if (state.field) {
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    class="hk-seg-field"
+                    aria-label="Quantity"
+                    [class.is-focus]="state.focus === 'field'"
+                    [readOnly]="state.readOnly ?? false"
+                    [value]="state.readOnly ? '0' : '12'"
+                  />
+                }
+                <button
+                  type="button"
+                  class="hk-btn sm"
+                  [attr.aria-disabled]="state.unavailable || state.readOnly ? 'true' : null"
+                  aria-label="More"
+                >
+                  +
+                </button>
+                <button type="button" class="hk-btn sm">↑9</button>
+              </div>
+              <span class="state-label">{{ accent }} · {{ state.label }}</span>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- The dearest price there is beside the widest quantity, in the width a
+           Collection tile gives a row. -->
+      <div class="state-item seg-row-demo" data-testid="sg-segmented-row">
+        <div class="seg-row">
+          <span class="seg-row-price">Buy<br /><app-rosary [amount]="9999" /></span>
+          <div class="hk-seg soul" role="group" aria-label="Buy, at the widest">
+            <button type="button" class="hk-btn sm" aria-label="Fewer">&minus;</button>
+            <input
+              type="text"
+              inputmode="numeric"
+              class="hk-seg-field"
+              aria-label="Quantity"
+              value="999"
+            />
+            <button type="button" class="hk-btn sm" aria-label="More">+</button>
+            <button type="button" class="hk-btn sm">↑9</button>
+          </div>
+        </div>
+        <span class="state-label">a row at 9999</span>
+      </div>
+    </section>
+
     <!-- ─── Ornaments ──────────────────────────────────────────────────── -->
     <section class="sg-section">
       <h2 class="sg-h2">Ornaments</h2>

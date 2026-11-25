@@ -116,15 +116,186 @@ describe('the Decks page', () => {
     expect(page.addLabel()).toBe('Add to Deck 2');
   });
 
-  it('opens one menu at a time and closes it on a second selection', () => {
-    page.onSelectCollectionCard(0);
-    expect(page.openMenu()).toEqual({ region: 'collection', index: 0 });
+  // ─── Reading ────────────────────────────────────────────────────────────
 
-    page.onSelectCollectionCard(1);
-    expect(page.openMenu()).toEqual({ region: 'collection', index: 1 });
+  const root = (): HTMLElement => fixture.nativeElement;
+  const reader = () => root().querySelector<HTMLElement>('app-card-reader');
+  const tileOf = (card: { name: string }) =>
+    root().querySelector<HTMLElement>(`.tile[data-index="${indexOf(page, card)}"]`)!;
+  const cardIn = (holder: Element) => holder.querySelector<HTMLButtonElement>('app-card button')!;
+  const slots = () => [...root().querySelectorAll<HTMLElement>('.slot')];
+  const addOf = (card: { name: string }) => tileOf(card).querySelector<HTMLButtonElement>('.add')!;
+  const removes = () => [...root().querySelectorAll<HTMLButtonElement>('.slot .remove')];
 
-    page.onSelectCollectionCard(1);
-    expect(page.openMenu()).toBeNull();
+  /** Presses a control the way a player does, so it also holds focus. */
+  async function press(control: HTMLElement): Promise<void> {
+    control.focus();
+    control.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  /** Attached for tests that follow focus, which only moves within a document. */
+  beforeEach(() => document.body.appendChild(fixture.nativeElement));
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('reads a collection card at one activation, and gives focus back on closing', async () => {
+    const card = cardIn(tileOf(crawlid));
+    expect(card.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(card.getAttribute('aria-pressed')).toBeNull();
+    await press(card);
+    expect(reader()!.getAttribute('aria-label')).toBe('Reading Crawlid');
+    expect(reader()!.querySelector('.action-primary')!.textContent!.trim()).toBe('Add to Deck 1');
+
+    reader()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(reader()).toBeNull();
+    expect(document.activeElement).toBe(card);
+    expect(page.selectedDeckCards()).toEqual([]);
+  });
+
+  it('reads a deck card at one activation, offering its removal', async () => {
+    page.onAddToDeck(indexOf(page, crawlid));
+    fixture.detectChanges();
+    const card = cardIn(slots()[0]);
+    expect(card.getAttribute('aria-haspopup')).toBe('dialog');
+    await press(card);
+    expect(reader()!.getAttribute('aria-label')).toBe('Reading Crawlid');
+    await press(reader()!.querySelector<HTMLElement>('.action:not(.action-primary)')!);
+    expect(reader()).toBeNull();
+    expect(document.activeElement).toBe(card);
+
+    await press(card);
+    await press(reader()!.querySelector<HTMLElement>('.action-primary')!);
+    expect(reader()).toBeNull();
+    expect(page.selectedDeckCards()).toEqual([]);
+    expect(document.activeElement).toBe(root().querySelector('.deck-btn.is-selected'));
+  });
+
+  it('adds from the reader and hands focus back to the card', async () => {
+    const card = cardIn(tileOf(crawlid));
+    await press(card);
+    await press(reader()!.querySelector<HTMLElement>('.action-primary')!);
+    expect(page.selectedDeckCards()).toEqual([cardKeyOf('FC', 1)]);
+    expect(document.activeElement).toBe(card);
+  });
+
+  // ─── Adding ─────────────────────────────────────────────────────────────
+
+  it('shows an add button on every tile, naming the selected deck and the card', async () => {
+    const faces = () =>
+      new Set([...root().querySelectorAll('.tile .add')].map((b) => b.textContent!.trim()));
+    expect(root().querySelectorAll('.tile .add')).toHaveLength(page.owned().length);
+    expect(faces()).toEqual(new Set(['Add to Deck 1']));
+    expect(addOf(crawlid).getAttribute('aria-label')).toBe('Add to Deck 1: Crawlid');
+
+    page.onCreateDeck();
+    fixture.detectChanges();
+    expect(faces()).toEqual(new Set(['Add to Deck 2']));
+
+    // The card comes before its button in the order of focus.
+    const stops = [...tileOf(crawlid).querySelectorAll('button')];
+    expect(stops).toEqual([cardIn(tileOf(crawlid)), addOf(crawlid)]);
+  });
+
+  it('adds from the tile, opening no reader and keeping focus', async () => {
+    users.grantCards([crawlid]);
+    fixture.detectChanges();
+    const add = addOf(crawlid);
+    await press(add);
+    expect(page.selectedDeckCards()).toEqual([cardKeyOf('FC', 1)]);
+    expect(reader()).toBeNull();
+    expect(document.activeElement).toBe(add);
+  });
+
+  /** An add that is still there and focusable, but inert and saying why. */
+  async function expectWithheld(reason: string, face: string): Promise<void> {
+    const add = addOf(crawlid);
+    expect(add.textContent!.trim()).toBe(face);
+    expect(add.disabled).toBe(false);
+    expect(add.getAttribute('aria-disabled')).toBe('true');
+    expect(add.title).toBe(reason);
+    const described = root().querySelector(`#${add.getAttribute('aria-describedby')}`)!;
+    expect(described.textContent).toBe(reason);
+    const before = users.state();
+    await press(add);
+    expect(users.state()).toBe(before);
+    expect(document.activeElement).toBe(add);
+  }
+
+  it('withholds an add in place when every copy is used', async () => {
+    await press(addOf(crawlid));
+    await expectWithheld('Every copy you hold is already in Deck 1.', 'Add to Deck 1');
+    await press(removes()[0]);
+    expect(addOf(crawlid).getAttribute('aria-disabled')).toBeNull();
+    expect(addOf(crawlid).getAttribute('title')).toBeNull();
+  });
+
+  it('withholds an add in place when the deck is full', async () => {
+    for (const key of STARTER_CARD_KEYS) page.onAddToDeck(indexOf(page, CARD_BY_KEY.get(key)!));
+    fixture.detectChanges();
+    await expectWithheld('Deck 1 is full.', 'Add to Deck 1');
+  });
+
+  it('withholds an add in place when there is no deck', async () => {
+    page.onDeleteDeck(0);
+    fixture.detectChanges();
+    await expectWithheld('Create a deck first.', 'Add to deck');
+  });
+
+  // ─── Removing ───────────────────────────────────────────────────────────
+
+  const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
+  const gruzzer = CARD_BY_KEY.get(cardKeyOf('FC', 8))!;
+
+  function fill(): void {
+    for (const card of [crawlid, vengefly, gruzzer]) page.onAddToDeck(indexOf(page, card));
+    fixture.detectChanges();
+  }
+
+  it('shows Remove beneath every filled position and no other', () => {
+    fill();
+    expect(slots()).toHaveLength(9);
+    expect(removes().map((b) => b.textContent!.trim())).toEqual(['Remove', 'Remove', 'Remove']);
+    expect(removes()[1].getAttribute('aria-label')).toBe('Remove Vengefly from Deck 1');
+    expect(root().querySelectorAll('.slot .slot-strip')).toHaveLength(9);
+    const stops = [...slots()[0].querySelectorAll('button')];
+    expect(stops).toEqual([cardIn(slots()[0]), removes()[0]]);
+  });
+
+  it('removes that copy, focusing the Remove now at its position', async () => {
+    fill();
+    await press(removes()[1]);
+    expect(page.selectedDeckCards()).toEqual([cardKeyOf('FC', 1), cardKeyOf('FC', 8)]);
+    expect(reader()).toBeNull();
+    expect(document.activeElement).toBe(removes()[1]);
+    expect(removes()[1].getAttribute('aria-label')).toBe('Remove Gruzzer from Deck 1');
+  });
+
+  it('focuses the last card’s Remove when the last is removed', async () => {
+    fill();
+    await press(removes()[2]);
+    expect(document.activeElement).toBe(removes()[1]);
+  });
+
+  it('focuses the selected deck’s button when the only card is removed', async () => {
+    page.onAddToDeck(indexOf(page, crawlid));
+    fixture.detectChanges();
+    await press(removes()[0]);
+    expect(removes()).toEqual([]);
+    expect(document.activeElement).toBe(root().querySelector('.deck-btn.is-selected'));
+  });
+
+  // ─── The badge ──────────────────────────────────────────────────────────
+
+  it('inverts an exhausted badge and adds no mark to it', async () => {
+    const badge = () => tileOf(crawlid).querySelector('.badge')!;
+    expect(badge().classList).not.toContain('is-exhausted');
+    await press(addOf(crawlid));
+    expect(badge().classList).toContain('is-exhausted');
+    expect(badge().textContent!.trim()).toBe('1/1');
+    expect(badge().querySelector('svg, img')).toBeNull();
   });
 
   it('leaves the deck on screen alone when the order changes', () => {
@@ -184,7 +355,7 @@ describe('the Decks page', () => {
     users.grantCards([goam]);
     page.onCreateDeck();
     page.onSort('name');
-    page.onSelectCollectionCard(0);
+    page.onRead('collection', 0);
     page.askToReset();
     expect(page.confirmingReset()).toBe(true);
 
@@ -196,7 +367,6 @@ describe('the Decks page', () => {
     expect(users.decks()).toEqual([{ cards: [] }]);
     expect(page.selectedDeck()).toBe(0);
     expect(page.sort()).toEqual({ key: 'rarity', direction: 'desc' });
-    expect(page.openMenu()).toBeNull();
     expect(page.reading()).toBeNull();
   });
 

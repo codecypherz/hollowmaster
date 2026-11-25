@@ -48,8 +48,8 @@ test.describe('the card renderer, on the style guide', () => {
     await expect(atGate.locator('.cf-set')).toBeVisible();
     await expect(atGate.locator('.cf-set')).not.toBeEmpty();
     await expect(atGate.locator('.cf-number')).toBeVisible();
-    // The collector number is zero-padded to three.
-    await expect(atGate.locator('.cf-number')).toHaveText(/^\d{3}$/);
+    // The collector number is marked, and not padded.
+    await expect(atGate.locator('.cf-number')).toHaveText(/^#[1-9]\d*$/);
 
     // The same card either side of the gate, so what differs is the width alone.
     await expect(belowGate.locator('.cf-name-text')).toHaveText(

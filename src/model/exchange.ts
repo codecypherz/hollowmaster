@@ -1,24 +1,95 @@
-import { CARD_BY_KEY, Card, CardKey, cardKey } from './card';
+import { CARD_BY_KEY, Card, CardKey, STARS_MAX, STARS_MIN, cardKey } from './card';
 import { trimDecks } from './deck';
 import { UserState, quantityOf } from './user';
 
+/** What one copy of a card of some rarity sells for, and what it costs. */
+export interface RosaryRate {
+  readonly sell: number;
+  readonly buy: number;
+}
+
 /**
- * What a star of rarity is worth in Rosaries, to sell and to buy.
+ * The Rosary rate of each rarity.
  *
- * The one statement of both multipliers: every price the application shows or
- * charges is derived from here. Selling at a tenth of the purchase price is
- * what keeps a sale below its purchase for every card.
+ * The one statement of every rate: each price the application shows or charges
+ * is looked up here.
  */
-export const ROSARY_PRICE_PER_STAR = Object.freeze({ sell: 10, buy: 100 });
+export const ROSARY_RATES: Readonly<Record<number, RosaryRate>> = Object.freeze({
+  1: Object.freeze({ sell: 1, buy: 4 }),
+  2: Object.freeze({ sell: 3, buy: 12 }),
+  3: Object.freeze({ sell: 9, buy: 27 }),
+  4: Object.freeze({ sell: 33, buy: 99 }),
+  5: Object.freeze({ sell: 330, buy: 660 }),
+  6: Object.freeze({ sell: 5000, buy: 9999 }),
+});
+
+/**
+ * Checks that every rating a card may have has whole-number rates, and that
+ * none sells at or above its purchase price. Run at module load, so a mis-stated
+ * table fails at app start rather than in a player's purse.
+ */
+export function assertRosaryRates(rates: Readonly<Record<number, RosaryRate>>): void {
+  for (let stars = STARS_MIN; stars <= STARS_MAX; stars++) {
+    const rate = rates[stars];
+    if (!rate) throw new Error(`Rarity ${stars} has no Rosary rate`);
+    if (![rate.sell, rate.buy].every((price) => Number.isInteger(price) && price > 0)) {
+      throw new Error(`Rarity ${stars} must have whole-number Rosary rates`);
+    }
+    if (rate.sell >= rate.buy) {
+      throw new Error(`Rarity ${stars} must sell for less than it costs`);
+    }
+  }
+}
+
+assertRosaryRates(ROSARY_RATES);
 
 /** What selling one copy of `card` credits. */
 export function salePrice(card: Card): number {
-  return card.stars * ROSARY_PRICE_PER_STAR.sell;
+  return ROSARY_RATES[card.stars].sell;
 }
 
 /** What buying one copy of `card` costs. */
 export function purchasePrice(card: Card): number {
-  return card.stars * ROSARY_PRICE_PER_STAR.buy;
+  return ROSARY_RATES[card.stars].buy;
+}
+
+// ─── The rate that has to be earned ─────────────────────────────────────────
+
+/** The rarity whose rate the player does not know from the start. */
+export const SECRET_RARITY = 6;
+
+/**
+ * The Rosary balance that, once held, makes the secret rate known. A milestone,
+ * stated apart from the purchase rate it happens to equal.
+ */
+export const SECRET_RATE_PEAK = 9999;
+
+/**
+ * Whether the player knows the rate of that rarity. The one rule every surface
+ * that shows a price asks, and the one `settleOrder` enforces.
+ */
+export function knowsRate({ milestones }: UserState, stars: number): boolean {
+  if (stars < SECRET_RARITY) return true;
+  return milestones.rarestHeld >= SECRET_RARITY || milestones.peakRosaries >= SECRET_RATE_PEAK;
+}
+
+/** One rarity's rate, as the player may be shown it. */
+export interface RarityRate extends RosaryRate {
+  readonly stars: number;
+}
+
+/** The rates the player knows, lowest rarity first. */
+export function rosaryRates(state: UserState): RarityRate[] {
+  const known: RarityRate[] = [];
+  for (let stars = STARS_MIN; stars <= STARS_MAX; stars++) {
+    if (knowsRate(state, stars)) known.push({ stars, ...ROSARY_RATES[stars] });
+  }
+  return known;
+}
+
+/** An amount of Rosaries in words, for assistive technology: `1 Rosary`, `4 Rosaries`. */
+export function rosariesText(amount: number): string {
+  return `${amount} ${amount === 1 ? 'Rosary' : 'Rosaries'}`;
 }
 
 /** Which way a card is being exchanged. */
@@ -56,7 +127,8 @@ export function rosaryEffect(card: Card, action: ExchangeAction, quantity: numbe
  *
  * Or `null`, for an order that names a card twice or one the catalogue does
  * not hold, a quantity that is not a whole number of at least one, more sales
- * of a card than copies held, or a net the balance does not cover. Sales and
+ * of a card than copies held, a purchase whose rate the user did not know
+ * beforehand, or a net the balance does not cover. Sales and
  * purchases are one sum, so the order of the lines cannot matter and a sale
  * can pay for a purchase listed before it.
  */
@@ -75,6 +147,7 @@ export function settleOrder(state: UserState, order: readonly OrderLine[]): User
     const held = quantityOf(state.collection, card);
     rosaries += rosaryEffect(card, action, quantity);
     if (action === 'buy') {
+      if (!knowsRate(state, card.stars)) return null;
       collection.set(key, held + quantity);
       continue;
     }

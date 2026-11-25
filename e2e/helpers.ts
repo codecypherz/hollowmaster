@@ -328,6 +328,8 @@ export interface StoredUser {
   rosaries?: number;
   collection: { set: string; number: number; quantity: number }[];
   decks: { set: string; number: number }[][];
+  /** Left out, the app proves them from the balance and the collection. */
+  milestones?: { peakRosaries?: number; rarestHeld?: number };
 }
 
 /**
@@ -340,11 +342,12 @@ export async function storeUser(page: Page, user: StoredUser): Promise<void> {
   await page.evaluate(
     (record) => localStorage.setItem('hollowmaster.user.v1', JSON.stringify(record)),
     {
-      version: 3,
+      version: 4,
       geo: user.geo ?? 0,
       rosaries: user.rosaries ?? 0,
       collection: user.collection,
       decks: user.decks,
+      milestones: { peakRosaries: 0, rarestHeld: 0, ...user.milestones },
     },
   );
 }
@@ -372,17 +375,22 @@ export function tileNamed(page: Page, name: string): Locator {
   });
 }
 
-/** The one open action menu, if any. */
-export function openMenu(page: Page): Locator {
-  return page.locator('app-card-menu');
+/** The button beneath a collection tile's card that adds it to the selected deck. */
+export function addButton(tile: Locator): Locator {
+  return tile.locator('button.add');
 }
 
-/** Selects a card and waits for its menu, which is where its actions live. */
-export async function openCardMenu(holder: Locator): Promise<Locator> {
-  await holder.locator('app-card button').click();
-  const menu = holder.locator('app-card-menu');
-  await expect(menu).toBeVisible();
-  return menu;
+/** The button beneath a deck position's card that takes it out. */
+export function removeButton(slot: Locator): Locator {
+  return slot.locator('button.remove');
+}
+
+/** Reads a card and waits for the presentation to be up. */
+export async function readCard(holder: Locator): Promise<Locator> {
+  await cardButton(holder).click();
+  const reader = cardReader(holder.page());
+  await expect(reader).toBeVisible();
+  return reader;
 }
 
 /**
@@ -502,6 +510,8 @@ export function exchangeRow(tile: Locator, action: 'sell' | 'buy') {
   const row = tile.locator(`[data-row^="${action}-"]`);
   return {
     row,
+    bar: row.locator('.hk-seg'),
+    /** The quantity: a field, so read it by its value. */
     value: row.locator('.value'),
     lower: row.locator('button.lower'),
     raise: row.locator('button.raise'),
@@ -527,6 +537,26 @@ export async function openCart(page: Page): Promise<Locator> {
   await expect(dialog).toBeVisible();
   await expect.poll(() => dialog.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
   return dialog;
+}
+
+/** The button the purse is, which opens the exchange rates. */
+export function purseButton(page: Page): Locator {
+  return page.getByRole('button', { name: /^Your Rosaries, / });
+}
+
+/** The exchange-rate dropdown, open or not. */
+export function exchangeRates(page: Page): Locator {
+  return page.getByTestId('exchange-rates');
+}
+
+/** A card tile's card, which opens its reading presentation. */
+export function cardButton(holder: Locator): Locator {
+  return holder.locator('app-card button');
+}
+
+/** The reading presentation, on either page that has one. */
+export function cardReader(page: Page): Locator {
+  return page.locator('app-card-reader');
 }
 
 /** The Rosary purse's amount. */

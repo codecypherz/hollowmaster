@@ -17,8 +17,9 @@ export interface CardOptions {
   number: number;
 }
 
-const STARS_MIN = 1;
-const STARS_MAX = 6;
+/** The lowest and the highest rarity a card may have. */
+export const STARS_MIN = 1;
+export const STARS_MAX = 6;
 const STAT_MIN = 1;
 const STAT_MAX = 100;
 
@@ -331,6 +332,14 @@ export function indexByKey(cards: readonly Card[]): ReadonlyMap<CardKey, Card> {
 }
 
 export const CARD_BY_KEY: ReadonlyMap<CardKey, Card> = indexByKey(CARD_DB);
+
+/**
+ * A card's collection number as the player reads it, e.g. `FC #1`: never
+ * padded. Not an identity — `cardKey` is — and never parsed back.
+ */
+export function collectionNumber(card: Card): string {
+  return `${card.set} #${card.number}`;
+}
 
 // ─── Sets ───────────────────────────────────────────────────────────────────
 

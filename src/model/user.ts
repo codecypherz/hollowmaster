@@ -1,9 +1,20 @@
-import { Card, CardKey, CARD_BY_KEY, cardKey, cardKeyOf } from './card';
+import { Card, CardKey, CARD_BY_KEY, STARS_MAX, cardKey, cardKeyOf } from './card';
 import { DECK_SIZE, Deck, MAX_DECKS, emptyDeck } from './deck';
 
 /**
+ * What the player has at some time held, whatever they hold now. Each only ever
+ * rises, through `withMilestones`.
+ */
+export interface Milestones {
+  /** The highest Rosary balance ever held. */
+  readonly peakRosaries: number;
+  /** The highest star rating of any card ever held; zero before the first. */
+  readonly rarestHeld: number;
+}
+
+/**
  * Everything a player owns: the cards they hold, the Geo and the Rosaries they
- * can spend, and the decks they have built.
+ * can spend, the decks they have built, and the milestones they have reached.
  *
  * None is derived from another, and the whole shape is plain data — no
  * class, no methods — so serializing it is a near-identity mapping rather than
@@ -27,6 +38,8 @@ export interface UserState {
    * rules that bound it and the operations that change it.
    */
   readonly decks: readonly Deck[];
+  /** Bounded below by what is held now, but not derivable from it. */
+  readonly milestones: Milestones;
 }
 
 /**
@@ -80,12 +93,35 @@ assertStarterSet(STARTER_CARD_KEYS);
  * empty deck, so the Decks page has somewhere to build on first arrival.
  */
 export function seedUser(): UserState {
-  return {
+  return withMilestones({
     geo: 0,
     rosaries: 0,
     collection: new Map(STARTER_CARD_KEYS.map((key) => [key, 1])),
     decks: [emptyDeck()],
-  };
+    milestones: NO_MILESTONES,
+  });
+}
+
+// ─── Milestones ─────────────────────────────────────────────────────────────
+
+/** Nothing ever held: what `withMilestones` raises from. */
+export const NO_MILESTONES: Milestones = Object.freeze({ peakRosaries: 0, rarestHeld: 0 });
+
+/**
+ * The user with each milestone raised to what their balance and collection now
+ * prove, or the same object when neither is passed. Run on every settled state
+ * rather than by the operations that earn, so a new way of gaining cards or
+ * Rosaries cannot forget to.
+ */
+export function withMilestones(state: UserState): UserState {
+  const { peakRosaries, rarestHeld } = state.milestones;
+  const peak = Math.max(peakRosaries, state.rosaries);
+  let rarest = rarestHeld;
+  for (const key of state.collection.keys()) {
+    rarest = Math.max(rarest, CARD_BY_KEY.get(key)?.stars ?? 0);
+  }
+  if (peak === peakRosaries && rarest === rarestHeld) return state;
+  return { ...state, milestones: { peakRosaries: peak, rarestHeld: rarest } };
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -130,20 +166,23 @@ export function distinctCards(collection: ReadonlyMap<CardKey, number>): number 
  * The shape persisted data is written in.
  *
  * Version 1 held a collection and a balance; version 2 adds the decks; version
- * 3 adds the Rosary balance. A read
+ * 3 adds the Rosary balance; version 4 adds the milestones. A read
  * dispatches on the version rather than demanding equality: a version this
  * application knows an *earlier* shape for is upgraded, because an earlier
  * record is a complete user of its own time and a player must not lose their
  * collection or their Geo because the shape around it grew. A version it knows
  * nothing about is still unreadable rather than hopefully-current.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** The first shape written: a collection and a balance, and no decks. */
 const VERSION_WITHOUT_DECKS = 1;
 
 /** The second shape: decks beside the collection and the Geo, but no Rosaries. */
 const VERSION_WITHOUT_ROSARIES = 2;
+
+/** The third shape: Rosaries beside the rest, but no milestones. */
+const VERSION_WITHOUT_MILESTONES = 3;
 
 /** One card's holding, as it is stored: identity and quantity, nothing else. */
 export interface PersistedEntry {
@@ -185,6 +224,8 @@ export interface PersistedUser {
   readonly rosaries: number;
   readonly collection: readonly PersistedEntry[];
   readonly decks: readonly PersistedDeck[];
+  /** As the record states them; `fromPersisted` lifts them to what it proves. */
+  readonly milestones: Milestones;
 }
 
 export function toPersisted(state: UserState): PersistedUser {
@@ -211,6 +252,7 @@ export function toPersisted(state: UserState): PersistedUser {
     rosaries: state.rosaries,
     collection,
     decks,
+    milestones: state.milestones,
   };
 }
 
@@ -223,7 +265,8 @@ export function toPersisted(state: UserState): PersistedUser {
  * wrong root shape, an impossible balance — costs the whole record and the
  * caller seeds a fresh user. A malformed *entry* costs only that entry, so one
  * unknown or corrupt card never costs the player the rest of their collection,
- * the rest of a deck, or their Geo.
+ * the rest of a deck, or their Geo. A milestone that cannot be read costs only
+ * itself.
  */
 export function parsePersistedUser(raw: unknown): PersistedUser | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
@@ -232,6 +275,7 @@ export function parsePersistedUser(raw: unknown): PersistedUser | null {
   const version = record['version'];
   if (
     version !== SCHEMA_VERSION &&
+    version !== VERSION_WITHOUT_MILESTONES &&
     version !== VERSION_WITHOUT_ROSARIES &&
     version !== VERSION_WITHOUT_DECKS
   ) {
@@ -240,8 +284,9 @@ export function parsePersistedUser(raw: unknown): PersistedUser | null {
   if (!isCount(record['geo'])) return null;
 
   // Records written before Rosaries existed upgrade to a user holding none. A
-  // current record must state a possible balance, the same rule Geo follows.
-  const rosaries = version === SCHEMA_VERSION ? record['rosaries'] : 0;
+  // later record must state a possible balance, the same rule Geo follows.
+  const beforeRosaries = version === VERSION_WITHOUT_DECKS || version === VERSION_WITHOUT_ROSARIES;
+  const rosaries = beforeRosaries ? 0 : record['rosaries'];
   if (!isCount(rosaries)) return null;
 
   if (!Array.isArray(record['collection'])) return null;
@@ -258,7 +303,11 @@ export function parsePersistedUser(raw: unknown): PersistedUser | null {
   // one entry" rule the collection follows, applied to the whole field.
   const decks = version === VERSION_WITHOUT_DECKS ? [] : parseDecks(record['decks']);
 
-  return { version, geo: record['geo'], rosaries, collection, decks };
+  // Before milestones a record states none, so it proves its own.
+  const milestones =
+    version === SCHEMA_VERSION ? parseMilestones(record['milestones']) : NO_MILESTONES;
+
+  return { version, geo: record['geo'], rosaries, collection, decks, milestones };
 }
 
 /** Turns a read record back into state, dropping cards the catalogue has lost. */
@@ -290,7 +339,23 @@ export function fromPersisted(persisted: PersistedUser): UserState {
     return { cards };
   });
 
-  return { geo: persisted.geo, rosaries: persisted.rosaries, collection, decks };
+  return withMilestones({
+    geo: persisted.geo,
+    rosaries: persisted.rosaries,
+    collection,
+    decks,
+    milestones: persisted.milestones,
+  });
+}
+
+/** Each milestone alone: one that is not a possible value reads as nothing held. */
+function parseMilestones(raw: unknown): Milestones {
+  if (typeof raw !== 'object' || raw === null) return NO_MILESTONES;
+  const { peakRosaries, rarestHeld } = raw as Record<string, unknown>;
+  return {
+    peakRosaries: isCount(peakRosaries) ? peakRosaries : 0,
+    rarestHeld: isCount(rarestHeld) && rarestHeld <= STARS_MAX ? rarestHeld : 0,
+  };
 }
 
 function parseDecks(raw: unknown): PersistedDeck[] {

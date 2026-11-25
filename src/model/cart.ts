@@ -10,18 +10,29 @@ export type CartLine = OrderLine;
 /** The most copies of one card that may be pending for purchase. */
 export const MAX_PENDING_BUY = 99;
 
+/** Why a card whose rate is not known cannot be bought. */
+export const RATE_UNKNOWN = 'You do not know its price yet';
+
 /**
  * The most copies that may be pending in that direction: every copy held for a
- * sale, and `MAX_PENDING_BUY` for a purchase. The balance is not a bound — what
- * is affordable is decided on the whole cart's net.
+ * sale, and `MAX_PENDING_BUY` for a purchase, or none where the player does not
+ * know the card's rate. The balance is not a bound — what is affordable is
+ * decided on the whole cart's net.
  */
-export function maxPending(action: ExchangeAction, held: number): number {
-  return action === 'sell' ? held : MAX_PENDING_BUY;
+export function maxPending(action: ExchangeAction, held: number, rateKnown: boolean): number {
+  if (action === 'sell') return held;
+  return rateKnown ? MAX_PENDING_BUY : 0;
 }
 
 /** Why one more copy cannot be pending, or empty when it can. */
-export function raiseRefusal(action: ExchangeAction, held: number, quantity: number): string {
-  if (quantity < maxPending(action, held)) return '';
+export function raiseRefusal(
+  action: ExchangeAction,
+  held: number,
+  quantity: number,
+  rateKnown: boolean,
+): string {
+  if (quantity < maxPending(action, held, rateKnown)) return '';
+  if (action === 'buy' && !rateKnown) return RATE_UNKNOWN;
   if (action === 'buy') return `${MAX_PENDING_BUY} is the most that can be pending`;
   return held === 0 ? 'You hold none to sell' : 'Every copy you hold is pending';
 }
@@ -47,8 +58,10 @@ export function setQuantity(
   action: ExchangeAction,
   quantity: number,
   held: number,
+  rateKnown: boolean,
 ): readonly CartLine[] {
-  const clamped = Math.min(Math.max(0, Math.trunc(quantity)), maxPending(action, held));
+  const max = maxPending(action, held, rateKnown);
+  const clamped = Math.min(Math.max(0, Math.trunc(quantity)), max);
   const index = lines.findIndex((line) => line.key === key);
 
   if (clamped === 0) {
@@ -113,6 +126,11 @@ export function raiseLabel(action: ExchangeAction, card: Card): string {
 
 export function lowerLabel(action: ExchangeAction, card: Card): string {
   return `${actionLabel(action)} one fewer ${card.name}`;
+}
+
+/** What a row's quantity field is called. */
+export function quantityLabel(action: ExchangeAction, card: Card): string {
+  return `Copies of ${card.name} to ${action}`;
 }
 
 /** A DOM-safe form of a card's key, for ids and `data-` hooks. */

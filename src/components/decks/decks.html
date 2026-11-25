@@ -25,14 +25,11 @@
       <app-deck-bar
         [decks]="decks()"
         [selectedIndex]="selectedDeck()"
-        [openPosition]="openDeckPosition()"
         (selectDeck)="onSelectDeck($event)"
         (createDeck)="onCreateDeck()"
         (deleteDeck)="onDeleteDeck($event)"
-        (selectCard)="onSelectDeckCard($event)"
         (removeCard)="onRemoveFromDeck($event)"
         (readCard)="onRead('deck', $event)"
-        (dismissMenu)="dismissMenu()"
       />
 
       <div class="sort-row">
@@ -86,12 +83,9 @@
       [sections]="sections()"
       [generation]="sortGeneration()"
       [deckName]="selectedDeckName()"
-      [openIndex]="openCollectionIndex()"
       [addLabel]="addLabel()"
-      (selectCard)="onSelectCollectionCard($event)"
       (addCard)="onAddToDeck($event)"
       (readCard)="onRead('collection', $event)"
-      (dismissMenu)="dismissMenu()"
     />
   </main>
 </div>

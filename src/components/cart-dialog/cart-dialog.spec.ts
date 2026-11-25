@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CARD_BY_KEY, cardKeyOf } from '../../model/card';
-import { PersistedUser, SCHEMA_VERSION } from '../../model/user';
+import { NO_MILESTONES, PersistedUser, SCHEMA_VERSION } from '../../model/user';
 import { CartService } from '../../services/cart.service';
 import { USER_STORE, UserStore } from '../../services/user-store';
 import { UserService } from '../../services/user.service';
@@ -22,6 +22,7 @@ function storeWith(record: Partial<PersistedUser>): UserStore {
       rosaries: 0,
       collection: [],
       decks: [],
+      milestones: NO_MILESTONES,
       ...record,
     }),
     save: async () => {},
@@ -90,15 +91,15 @@ describe('CartDialog', () => {
     const sale = line('FC-5');
     expect(text(sale.querySelector('.line-action'))).toBe('Sell');
     expect(sale.querySelector('.line-name')!.textContent!.trim()).toBe('Aspid Mother');
-    expect(text(sale.querySelector('.value'))).toBe('3');
-    expect(effect('FC-5')).toBe('+60');
+    expect(sale.querySelector<HTMLInputElement>('.value')!.value).toBe('3');
+    expect(effect('FC-5')).toBe('+9');
     expect(sale.querySelector('.line-effect img.rosary-mark')).not.toBeNull();
-    expect(sale.querySelector('.line-effect .sr-only')!.textContent).toBe('gains 60 Rosaries');
+    expect(sale.querySelector('.line-effect .sr-only')!.textContent).toBe('gains 9 Rosaries');
 
     expect(text(line('FC-1').querySelector('.line-action'))).toBe('Buy');
-    expect(effect('FC-1')).toBe('−200');
+    expect(effect('FC-1')).toBe('−8');
     expect(line('FC-1').querySelector('.line-effect .sr-only')!.textContent).toBe(
-      'spends 200 Rosaries',
+      'spends 8 Rosaries',
     );
     // The sign comes immediately before the amount, and the mark after it.
     const signed = line('FC-1').querySelector('.signed')!;
@@ -131,10 +132,10 @@ describe('CartDialog', () => {
     expect(raise.getAttribute('aria-label')).toBe('Sell one more Crawlid');
     press(raise);
     expect(cart.quantityFor(crawlid, 'sell')).toBe(3);
-    expect(effect('FC-1')).toBe('+30');
-    expect(total('net')).toBe('+30');
-    expect(total('after')).toBe('80');
-    expect(text(confirm())).toBe('Confirm+30');
+    expect(effect('FC-1')).toBe('+3');
+    expect(total('net')).toBe('+3');
+    expect(total('after')).toBe('53');
+    expect(text(confirm())).toBe('Confirm+3');
     expect(announced()).toBe('3 Crawlid pending for sale.');
 
     // Every copy held is now pending, and the press that got there kept focus.
@@ -151,6 +152,109 @@ describe('CartDialog', () => {
     expect(unavailable(raise)).toBe(true);
     press(raise);
     expect(cart.count()).toBe(99);
+  });
+
+  // ─── Typed quantities ─────────────────────────────────────────────────────
+
+  const field = (slug: string) => line(slug).querySelector<HTMLInputElement>('.value')!;
+
+  function type(slug: string, value: string): void {
+    field(slug).focus();
+    field(slug).value = value;
+    field(slug).dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+  }
+
+  function pressIn(node: HTMLElement, name: string): void {
+    node.dispatchEvent(
+      new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }),
+    );
+    fixture.detectChanges();
+  }
+
+  it('takes a typed quantity on Enter, with everything following', async () => {
+    await open({ rosaries: 50 }, () => cart.setQuantity(crawlid, 'buy', 1));
+    expect(field('FC-1').getAttribute('aria-label')).toBe('Copies of Crawlid to buy');
+    type('FC-1', '12');
+    expect(cart.count()).toBe(1);
+    pressIn(field('FC-1'), 'Enter');
+    expect(effect('FC-1')).toBe('−48');
+    expect(total('net')).toBe('−48');
+    expect(text(confirm())).toBe('Confirm−48');
+    expect(cart.quantityFor(crawlid, 'buy')).toBe(12);
+    expect(announced()).toBe('12 Crawlid pending for purchase.');
+    expect(closed).toBe(0);
+    expect(document.activeElement).toBe(field('FC-1'));
+  });
+
+  it('bounds a typed quantity on leaving the field', async () => {
+    await open({ collection: [held(7, 3)] }, () => {
+      cart.setQuantity(crawlid, 'buy', 1);
+      cart.setQuantity(vengefly, 'sell', 3);
+    });
+    type('FC-1', '200');
+    field('FC-1').blur();
+    fixture.detectChanges();
+    expect(field('FC-1').value).toBe('99');
+
+    type('FC-7', '50');
+    field('FC-7').blur();
+    fixture.detectChanges();
+    expect(field('FC-7').value).toBe('3');
+    // Clamped back to what it was, which is not a change.
+    expect(announced()).toBe('99 Crawlid pending for purchase.');
+  });
+
+  it('reads a typed zero as one, keeping the row', async () => {
+    await open({}, () => cart.setQuantity(crawlid, 'buy', 4));
+    type('FC-1', '0');
+    pressIn(field('FC-1'), 'Enter');
+    expect(lines()).toHaveLength(1);
+    expect(field('FC-1').value).toBe('1');
+    type('FC-1', '0');
+    pressIn(field('FC-1'), 'Enter');
+    expect(field('FC-1').value).toBe('1');
+    expect(cart.count()).toBe(1);
+  });
+
+  it('abandons an edit on Escape before it closes', async () => {
+    await open({}, () => cart.setQuantity(crawlid, 'buy', 2));
+    type('FC-1', '7');
+    pressIn(field('FC-1'), 'Escape');
+    expect(field('FC-1').value).toBe('2');
+    expect(closed).toBe(0);
+    pressIn(field('FC-1'), 'Escape');
+    expect(closed).toBe(1);
+    expect(cart.quantityFor(crawlid, 'buy')).toBe(2);
+  });
+
+  it('counts a typed quantity before confirming', async () => {
+    await open({ rosaries: 4 }, () => cart.setQuantity(crawlid, 'buy', 1));
+    expect(unavailable(confirm())).toBe(false);
+    type('FC-1', '9');
+    // As a press does: focus leaves the field, and then the control is activated.
+    confirm().focus();
+    confirm().click();
+    fixture.detectChanges();
+    expect(confirmed).toBe(0);
+    expect(cart.quantityFor(crawlid, 'buy')).toBe(9);
+    expect(unavailable(confirm())).toBe(true);
+  });
+
+  it('accents a purchase and a sale apart', async () => {
+    await open({ collection: [held(7, 1)] }, () => {
+      cart.setQuantity(crawlid, 'buy', 1);
+      cart.setQuantity(vengefly, 'sell', 1);
+    });
+    const bar = (slug: string) => line(slug).querySelector('.hk-seg')!;
+    expect(bar('FC-1').classList).toContain('soul');
+    expect(bar('FC-7').classList).not.toContain('soul');
+  });
+
+  it('words an amount of one in the singular', async () => {
+    await open({ collection: [held(1, 1)] }, () => cart.setQuantity(crawlid, 'sell', 1));
+    expect(line('FC-1').querySelector('.line-effect .sr-only')!.textContent).toBe('gains 1 Rosary');
+    expect(confirm().getAttribute('aria-label')).toBe('Confirm, gain 1 Rosary');
   });
 
   it('stops lowering at one', async () => {
@@ -175,7 +279,7 @@ describe('CartDialog', () => {
     press(removal('FC-1'));
     await fixture.whenStable();
     expect(lines().map((row) => row.dataset['line'])).toEqual(['FC-2', 'FC-7']);
-    expect(total('net')).toBe('−500');
+    expect(total('net')).toBe('−35');
     expect(announced()).toBe('0 Crawlid pending for sale.');
     expect(document.activeElement).toBe(removal('FC-2'));
 
@@ -209,10 +313,10 @@ describe('CartDialog', () => {
     await open({ rosaries: 50, collection: [held(5, 3)] }, () =>
       cart.setQuantity(aspidMother, 'sell', 3),
     );
-    expect([total('balance'), total('net'), total('after')]).toEqual(['50', '+60', '110']);
-    expect(text(confirm())).toBe('Confirm+60');
+    expect([total('balance'), total('net'), total('after')]).toEqual(['50', '+9', '59']);
+    expect(text(confirm())).toBe('Confirm+9');
     expect(confirm().querySelector('img.rosary-mark')).not.toBeNull();
-    expect(confirm().getAttribute('aria-label')).toBe('Confirm, gain 60 Rosaries');
+    expect(confirm().getAttribute('aria-label')).toBe('Confirm, gain 9 Rosaries');
     press(confirm());
     expect(confirmed).toBe(1);
     // It asks; the page that opened it settles.
@@ -222,17 +326,17 @@ describe('CartDialog', () => {
   it('states a spend that sales pay part of', async () => {
     await open({ rosaries: 50, collection: [held(5, 3)] }, () => {
       cart.setQuantity(aspidMother, 'sell', 3);
-      cart.setQuantity(crawlid, 'buy', 1);
+      cart.setQuantity(crawlid, 'buy', 5);
     });
-    expect([total('balance'), total('net'), total('after')]).toEqual(['50', '−40', '10']);
-    expect(text(confirm())).toBe('Confirm−40');
-    expect(confirm().getAttribute('aria-label')).toBe('Confirm, spend 40 Rosaries');
+    expect([total('balance'), total('net'), total('after')]).toEqual(['50', '−11', '39']);
+    expect(text(confirm())).toBe('Confirm−11');
+    expect(confirm().getAttribute('aria-label')).toBe('Confirm, spend 11 Rosaries');
     expect(unavailable(confirm())).toBe(false);
   });
 
   it('can confirm a net of zero', async () => {
     await open({ collection: [held(1, 10)] }, () => {
-      cart.setQuantity(crawlid, 'sell', 10);
+      cart.setQuantity(crawlid, 'sell', 4);
       cart.setQuantity(vengefly, 'buy', 1);
     });
     expect(total('net')).toBe('0');
@@ -243,16 +347,16 @@ describe('CartDialog', () => {
   });
 
   it('can confirm a net of exactly the balance', async () => {
-    await open({ rosaries: 100 }, () => cart.setQuantity(crawlid, 'buy', 1));
+    await open({ rosaries: 4 }, () => cart.setQuantity(crawlid, 'buy', 1));
     expect(total('after')).toBe('0');
     expect(unavailable(confirm())).toBe(false);
     expect(confirm().getAttribute('title')).toBeNull();
   });
 
   it('states a shortfall in place of the balance after, and withholds confirm', async () => {
-    await open({ rosaries: 50 }, () => cart.setQuantity(gruzMother, 'buy', 1));
+    await open({ rosaries: 20 }, () => cart.setQuantity(gruzMother, 'buy', 1));
     expect(q('[data-total="short"] dt').textContent).toBe('Short by');
-    expect(total('short')).toBe('250');
+    expect(total('short')).toBe('7');
     expect(total('after')).toBeNull();
 
     expect(confirm().disabled).toBe(false);
@@ -266,7 +370,7 @@ describe('CartDialog', () => {
   });
 
   it('makes confirm available as soon as the cart is affordable', async () => {
-    await open({ rosaries: 100 }, () => cart.setQuantity(crawlid, 'buy', 2));
+    await open({ rosaries: 4 }, () => cart.setQuantity(crawlid, 'buy', 2));
     expect(unavailable(confirm())).toBe(true);
     press(line('FC-1').querySelector<HTMLElement>('.lower')!);
     expect(unavailable(confirm())).toBe(false);
@@ -315,6 +419,13 @@ describe('CartDialog', () => {
     expect(document.activeElement).toBe(q('.cart-close'));
     key('Tab', true);
     expect(document.activeElement).toBe(confirm());
+
+    // A row's field is a stop like any other, so leaving it is left to the browser.
+    field('FC-1').focus();
+    key('Tab');
+    expect(document.activeElement).toBe(field('FC-1'));
+    key('Tab', true);
+    expect(document.activeElement).toBe(field('FC-1'));
 
     // From the dialog's own ground, back to its first control.
     q('.cart').focus();

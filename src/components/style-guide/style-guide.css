@@ -267,6 +267,33 @@
   text-align: center;
 }
 
+.seg-demo {
+  width: 130px;
+}
+
+.seg-demo.no-field {
+  width: auto;
+}
+
+.seg-row-demo {
+  align-items: flex-start;
+  margin-top: 1.6rem;
+}
+
+/* The width and the columns a Collection tile gives a row. */
+.seg-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 4px;
+  width: 178px;
+}
+
+.seg-row-price {
+  font-size: 0.64rem;
+  color: var(--color-text-bright);
+}
+
 .state-label.centred {
   position: absolute;
   bottom: 8px;

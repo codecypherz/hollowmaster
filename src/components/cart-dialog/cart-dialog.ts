@@ -17,10 +17,12 @@ import {
   cardSlug,
   changeText,
   lowerLabel,
+  quantityLabel,
   raiseLabel,
   raiseRefusal,
 } from '../../model/cart';
 import { listOf } from '../../model/deck';
+import { rosariesText } from '../../model/exchange';
 import { CartRow, CartService } from '../../services/cart.service';
 import { UserService } from '../../services/user.service';
 import { trapTab } from '../focus-trap';
@@ -82,7 +84,7 @@ export class CartDialog implements AfterViewInit, OnDestroy {
   readonly confirmLabel = computed(() => {
     const net = this.net();
     if (net === 0) return 'Confirm, no Rosaries gained or spent';
-    return `Confirm, ${net > 0 ? 'gain' : 'spend'} ${Math.abs(net)} Rosaries`;
+    return `Confirm, ${net > 0 ? 'gain' : 'spend'} ${rosariesText(Math.abs(net))}`;
   });
 
   readonly announcement = signal('');
@@ -92,6 +94,7 @@ export class CartDialog implements AfterViewInit, OnDestroy {
   readonly actionLabel = actionLabel;
   readonly slug = cardSlug;
   readonly lowerLabel = lowerLabel;
+  readonly quantityLabel = quantityLabel;
   readonly raiseLabel = raiseLabel;
   readonly raiseRefusal = raiseRefusal;
   readonly abs = Math.abs;
@@ -117,8 +120,19 @@ export class CartDialog implements AfterViewInit, OnDestroy {
   }
 
   onStep(row: CartRow, by: 1 | -1): void {
-    const change = this.cart.setQuantity(row.card, row.action, row.quantity + by);
-    this.announcement.set(changeText(change));
+    // From the cart rather than the row: a quantity typed a moment ago may not
+    // have been rendered yet.
+    this.setQuantity(row, this.cart.quantityFor(row.card, row.action) + by);
+  }
+
+  onEntered(row: CartRow, quantity: number): void {
+    this.setQuantity(row, quantity);
+  }
+
+  private setQuantity(row: CartRow, quantity: number): void {
+    const before = this.cart.quantityFor(row.card, row.action);
+    const change = this.cart.setQuantity(row.card, row.action, Math.max(LEAST, quantity));
+    if (change.quantity !== before) this.announcement.set(changeText(change));
   }
 
   /** Takes the row out; focus goes to the next row's remove control, else the previous's. */
@@ -154,6 +168,6 @@ export class CartDialog implements AfterViewInit, OnDestroy {
   /** A signed amount in words. */
   effectText(amount: number): string {
     if (amount === 0) return 'no change';
-    return `${amount > 0 ? 'gains' : 'spends'} ${Math.abs(amount)} Rosaries`;
+    return `${amount > 0 ? 'gains' : 'spends'} ${rosariesText(Math.abs(amount))}`;
   }
 }

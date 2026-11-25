@@ -19,6 +19,15 @@ export interface RatingSample {
   synthetic: boolean;
 }
 
+/** One segmented control on the guide, and the state it is pinned in. */
+interface SegmentedSample {
+  readonly label: string;
+  readonly field: boolean;
+  readonly focus?: 'button' | 'field';
+  readonly unavailable?: boolean;
+  readonly readOnly?: boolean;
+}
+
 /**
  * The card's declared minimum supported width, and the width its ability
  * section appears at. The ladder is built from them so the guide can never
@@ -164,6 +173,16 @@ export class StyleGuide {
   readonly vars = particleVars;
 
   readonly buttonStates = ['resting', 'is-hover', 'is-focus', 'disabled'] as const;
+
+  readonly segAccents = ['gold', 'soul'] as const;
+  readonly segStates: readonly SegmentedSample[] = [
+    { label: 'with a field', field: true },
+    { label: 'without a field', field: false },
+    { label: 'button focused', field: true, focus: 'button' },
+    { label: 'field focused', field: true, focus: 'field' },
+    { label: 'segment unavailable', field: true, unavailable: true },
+    { label: 'field not editable', field: true, readOnly: true, unavailable: true },
+  ];
 
   /**
    * Every tier the catalogue offers, so each wrapper's printed name is on the

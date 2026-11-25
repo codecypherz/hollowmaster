@@ -54,7 +54,7 @@
       <span class="cf-sink" aria-hidden="true"></span>
       <span class="cf-plate">
         <span class="cf-set">{{ card()!.set }}</span>
-        <span class="cf-number">{{ setNumber() }}</span>
+        <span class="cf-number">#{{ card()!.number }}</span>
       </span>
       <span class="cf-ability-text" [id]="abilityId">{{ card()!.ability }}</span>
     </span>
@@ -74,7 +74,8 @@
       class="frame"
       [attr.aria-label]="description()"
       [attr.aria-describedby]="abilityId"
-      [attr.aria-pressed]="selected()"
+      [attr.aria-haspopup]="opensDialog() ? 'dialog' : null"
+      [attr.aria-pressed]="opensDialog() ? null : selected()"
       (click)="onActivate()"
     >
       <ng-container [ngTemplateOutlet]="frame" />

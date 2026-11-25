@@ -2,26 +2,25 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import { cardKey } from '../../model/card';
 import { CardComponent } from '../card/card';
-import { CardMenu } from '../card-menu/card-menu';
 import type { Tile, TileSection } from '../decks/decks';
 
 /**
  * The scrolling collection: one tile per distinct card the player holds, with
- * the count of copies drawn over the bottom of each.
+ * the count of copies drawn over the bottom of each and the button that adds it
+ * to the selected deck beneath.
  *
  * The tile does not draw a card face of its own. It renders the shared card
  * renderer at a width in the 120–199px band, which is what makes the ability
  * text absent — the renderer's own width gate, not a second mode. The badge is
  * the tile's, drawn over the card and changing nothing the renderer drew.
  *
- * Holds no state: which tile's menu is open is the page's, as is how the tiles
- * are sectioned, what the add action is called, and whether it is on offer for
- * each card. Every tile is addressed by its *flat* index in the page's sorted
+ * Holds no state: how the tiles are sectioned, what the add action is called,
+ * and whether it is on offer for each card are all the page's. Every tile is addressed by its *flat* index in the page's sorted
  * list, whichever section it is drawn in.
  */
 @Component({
   selector: 'app-collection-grid',
-  imports: [CardComponent, CardMenu, NgTemplateOutlet],
+  imports: [CardComponent, NgTemplateOutlet],
   templateUrl: './collection-grid.html',
   styleUrl: './collection-grid.css',
 })
@@ -38,16 +37,11 @@ export class CollectionGrid {
   /** The selected deck's name, or null when there is none. */
   readonly deckName = input<string | null>(null);
 
-  /** The tile whose menu is open, if the open menu is one of the grid's. */
-  readonly openIndex = input<number | null>(null);
-
   /** What the add action is called — `Add to Deck 1`. */
   readonly addLabel = input('Add to deck');
 
-  readonly selectCard = output<number>();
   readonly addCard = output<number>();
   readonly readCard = output<number>();
-  readonly dismissMenu = output<void>();
 
   /**
    * The sections with each tile's identity *stored on it*: the generation the
@@ -72,6 +66,11 @@ export class CollectionGrid {
       })),
     }));
   });
+
+  /** Unavailable is focusable but inert. */
+  onAdd(tile: Tile, index: number): void {
+    if (tile.addReason === '') this.addCard.emit(index);
+  }
 
   /** `5 stars`, `1 star` — the heading's words. */
   starsText(stars: number): string {

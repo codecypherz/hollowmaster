@@ -1,3 +1,4 @@
+import { addSixStarCard } from '../testing/six-star';
 import { Card, CardKey, CARD_BY_KEY, CARD_DB, cardKey, cardKeyOf } from './card';
 import {
   STARTER_CARD_KEYS,
@@ -7,6 +8,7 @@ import {
   quantityOf,
   seedUser,
   totalCards,
+  withMilestones,
 } from './user';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
@@ -113,5 +115,52 @@ describe('seedUser', () => {
     expect(a.decks).toEqual(b.decks);
     expect(a.decks).not.toBe(b.decks);
     expect(a.geo).toBe(b.geo);
+  });
+});
+
+describe('the milestones', () => {
+  const twoStar = CARD_DB.find((card) => card.stars === 2)!;
+
+  it('start at no Rosaries and the rarest starter card', () => {
+    expect(seedUser().milestones).toEqual({ peakRosaries: 0, rarestHeld: 1 });
+  });
+
+  it('rise to the balance and to the rarest card held', () => {
+    const state = withMilestones({
+      ...seedUser(),
+      rosaries: 600,
+      collection: grantAll(empty, [crawlid, twoStar]),
+    });
+    expect(state.milestones).toEqual({ peakRosaries: 600, rarestHeld: 2 });
+
+    const six = addSixStarCard();
+    const rarer = withMilestones({ ...state, collection: grantAll(state.collection, [six]) });
+    expect(rarer.milestones).toEqual({ peakRosaries: 600, rarestHeld: 6 });
+  });
+
+  it('never fall when the Rosaries are spent or the cards are sold', () => {
+    const peak = { ...seedUser(), milestones: { peakRosaries: 600, rarestHeld: 4 } };
+    const after = withMilestones({ ...peak, rosaries: 100 });
+    expect(after.milestones).toEqual({ peakRosaries: 600, rarestHeld: 4 });
+    expect(withMilestones({ ...after, rosaries: 0, collection: empty }).milestones).toEqual({
+      peakRosaries: 600,
+      rarestHeld: 4,
+    });
+  });
+
+  it('return the same object when neither is passed', () => {
+    const seeded = seedUser();
+    expect(withMilestones(seeded)).toBe(seeded);
+    const spent = { ...seeded, milestones: { peakRosaries: 9, rarestHeld: 3 } };
+    expect(withMilestones(spent)).toBe(spent);
+  });
+
+  it('are nothing for an empty collection that has never held a card', () => {
+    const state = {
+      ...seedUser(),
+      collection: empty,
+      milestones: { peakRosaries: 0, rarestHeld: 0 },
+    };
+    expect(withMilestones(state)).toBe(state);
   });
 });

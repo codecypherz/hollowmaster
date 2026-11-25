@@ -39,10 +39,7 @@
         <span class="screen-header-rule is-end" aria-hidden="true"></span>
       </header>
 
-      <!-- The purse. Always shown, and zero is a number like any other. -->
-      <p class="purse" aria-label="Your Rosaries">
-        <app-rosary class="purse-amount" data-testid="rosary-purse" [amount]="rosaries()" />
-      </p>
+      <app-exchange-rates class="rates" />
     </div>
 
     <!-- ─── The scrolling sections ──────────────────────────────────────── -->
@@ -76,7 +73,13 @@
                   <span class="tile-number">{{ tile.number }}</span>
 
                   <div class="tile-card">
-                    <app-card [card]="tile.card" />
+                    <app-card
+                      [card]="tile.card"
+                      interactive
+                      selectable
+                      opensDialog
+                      (select)="read(tile.card)"
+                    />
 
                     @if (tile.quantity === 0) {
                       <!-- An overlay rather than a filter on the renderer, so
@@ -95,60 +98,70 @@
                   <div class="rows">
                     @for (row of tile.rows; track row.action) {
                       @let hook = row.action + '-' + tile.slug;
-                      <!-- The price is the row's tooltip and description: it is
-                           not drawn on the tile. -->
                       <div
                         class="row"
                         role="group"
                         [attr.data-row]="hook"
                         [attr.aria-label]="row.label + ' ' + tile.card.name"
-                        [attr.aria-describedby]="
-                          'price-' + hook + (row.warning ? ' trim-' + hook : '')
-                        "
-                        [attr.title]="row.priceTitle"
+                        [attr.aria-describedby]="rowDescription(row, hook)"
                       >
-                        <span class="row-label" aria-hidden="true">{{ row.label }}</span>
-                        <!-- Always in the layout, so a warning arriving moves nothing. -->
-                        <span class="warn-slot">
-                          @if (row.warning) {
-                            <span class="warn" [attr.title]="row.warning">
-                              <svg
-                                class="warn-mark"
-                                viewBox="0 0 10 10"
-                                aria-hidden="true"
-                                focusable="false"
-                              >
-                                <path d="M5 1.2 9.2 8.8H0.8Z" />
-                                <path d="M5 4v2.2M5 7.4v.2" />
-                              </svg>
-                            </span>
-                            <span hidden [id]="'trim-' + hook">{{ row.warning }}</span>
-                          }
-                        </span>
+                        <div class="row-head">
+                          <span class="row-label" aria-hidden="true">{{ row.label }}</span>
+                          <!-- Always in the layout, so a warning arriving moves nothing. -->
+                          <span class="warn-slot">
+                            @if (row.warning) {
+                              <span class="warn" [attr.title]="row.warning">
+                                <svg
+                                  class="warn-mark"
+                                  viewBox="0 0 10 10"
+                                  aria-hidden="true"
+                                  focusable="false"
+                                >
+                                  <path d="M5 1.2 9.2 8.8H0.8Z" />
+                                  <path d="M5 4v2.2M5 7.4v.2" />
+                                </svg>
+                              </span>
+                              <span hidden [id]="'trim-' + hook">{{ row.warning }}</span>
+                            }
+                          </span>
+                          <!-- Likewise kept where there is no price to show. -->
+                          <span class="row-price" aria-hidden="true">
+                            @if (row.price !== null) {
+                              <app-rosary [amount]="row.price" />
+                            }
+                          </span>
+                        </div>
                         <app-quantity-stepper
+                          [class.soul]="row.action === 'buy'"
                           [value]="row.quantity"
                           [canLower]="row.quantity > 0"
                           [canRaise]="row.canRaise"
+                          [editable]="row.editable"
                           [raiseReason]="row.raiseReason"
                           [lowerLabel]="row.lowerLabel"
                           [raiseLabel]="row.raiseLabel"
+                          [fieldLabel]="row.fieldLabel"
                           (decrease)="onStep(tile, row, -1)"
                           (increase)="onStep(tile, row, 1)"
-                        />
-                        <!-- Unavailable stays focusable — not the native
-                             `disabled` — so its reason can be read. -->
-                        <button
-                          type="button"
-                          class="hk-btn sm target"
-                          [attr.aria-label]="row.target.label"
-                          [attr.aria-disabled]="row.target.reason ? 'true' : null"
-                          [attr.aria-describedby]="row.target.reason ? 'target-' + hook : null"
-                          [attr.title]="row.target.reason || null"
-                          (click)="onTarget(tile, row)"
+                          (entered)="onEntered(tile, row, $event)"
                         >
-                          {{ row.target.face }}
-                        </button>
-                        <span hidden [id]="'price-' + hook">{{ row.priceText }}</span>
+                          <!-- Unavailable stays focusable — not the native
+                               `disabled` — so its reason can be read. -->
+                          <button
+                            type="button"
+                            class="hk-btn sm target"
+                            [attr.aria-label]="row.target.label"
+                            [attr.aria-disabled]="row.target.reason ? 'true' : null"
+                            [attr.aria-describedby]="row.target.reason ? 'target-' + hook : null"
+                            [attr.title]="row.target.reason || null"
+                            (click)="onTarget(tile, row)"
+                          >
+                            {{ row.target.face }}
+                          </button>
+                        </app-quantity-stepper>
+                        @if (row.priceText) {
+                          <span hidden [id]="'price-' + hook">{{ row.priceText }}</span>
+                        }
                         @if (row.target.reason) {
                           <span hidden [id]="'target-' + hook">{{ row.target.reason }}</span>
                         }
@@ -165,6 +178,11 @@
   </main>
 
   <p class="sr-only" aria-live="polite" data-testid="exchange-announcement">{{ announcement() }}</p>
+
+  @if (reading(); as card) {
+    <!-- Read only: no exchange and no deck action here. -->
+    <app-card-reader [card]="card" (close)="closeReader()" />
+  }
 
   @if (cartOpen()) {
     <app-cart-dialog (confirm)="onConfirm()" (close)="closeCart()" />

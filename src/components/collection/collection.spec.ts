@@ -1,12 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { addSixStarCard } from '../../testing/six-star';
 import { CARD_BY_KEY, CARD_DB, cardKeyOf } from '../../model/card';
-import { PersistedUser, SCHEMA_VERSION, quantityOf } from '../../model/user';
+import { NO_MILESTONES, PersistedUser, SCHEMA_VERSION, quantityOf } from '../../model/user';
 import { USER_STORE, UserStore } from '../../services/user-store';
 import { CartService } from '../../services/cart.service';
 import { UserService } from '../../services/user.service';
 import { Collection, summaryText } from './collection';
 
-const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // one star, 100 to buy, 10 to sell
+const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // one star, 4 to buy, 1 to sell
 const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
 const FC_TOTAL = CARD_DB.filter((card) => card.set === 'FC').length;
 
@@ -22,6 +23,7 @@ function storeWith(record: Partial<PersistedUser> | null): UserStore {
         rosaries: 0,
         collection: [],
         decks: [],
+        milestones: NO_MILESTONES,
         ...record,
       },
     save: async () => {},
@@ -71,8 +73,9 @@ describe('the Collection page', () => {
     el.querySelector<HTMLElement>(`[data-row="${action}-${slug}"]`)!;
   const part = (slug: string, action: 'sell' | 'buy', name: 'lower' | 'raise' | 'target') =>
     row(slug, action).querySelector<HTMLButtonElement>(`.${name}`)!;
-  const amount = (slug: string, action: 'sell' | 'buy') =>
-    Number(row(slug, action).querySelector('.value')!.textContent!.trim());
+  const amount = (slug: string, action: 'sell' | 'buy') => Number(field(slug, action).value);
+  const field = (slug: string, action: 'sell' | 'buy') =>
+    row(slug, action).querySelector<HTMLInputElement>('.value')!;
   const unavailable = (control: HTMLElement) => control.getAttribute('aria-disabled') === 'true';
   const badge = (slug: string) => tile(slug).querySelector('.badge')!.getAttribute('aria-label');
   const progress = () =>
@@ -106,7 +109,7 @@ describe('the Collection page', () => {
   it('shows a zero purse as zero, named as Rosaries', async () => {
     await open();
     expect(purse()).toBe('0');
-    expect(el.querySelector('.purse')!.getAttribute('aria-label')).toBe('Your Rosaries');
+    expect(el.querySelector('.purse')!.getAttribute('aria-label')).toBe('Your Rosaries, 0');
     expect(el.querySelector('.purse img.rosary-mark')!.getAttribute('alt')).toBe('Rosaries');
   });
 
@@ -177,10 +180,10 @@ describe('the Collection page', () => {
     expect(named).toEqual(['tile-number', 'card', 'badge', 'sell-FC-1', 'buy-FC-1']);
   });
 
-  it('pads the collection number and keeps it, and the rows, off the card', async () => {
+  it('shows the collection number unpadded and keeps it, and the rows, off the card', async () => {
     await open();
-    expect(tile('FC-1').querySelector('.tile-number')!.textContent!.trim()).toBe('FC 001');
-    expect(tile('FC-14').querySelector('.tile-number')!.textContent!.trim()).toBe('FC 014');
+    expect(tile('FC-1').querySelector('.tile-number')!.textContent!.trim()).toBe('FC #1');
+    expect(tile('FC-10').querySelector('.tile-number')!.textContent!.trim()).toBe('FC #10');
     expect(tile('FC-1').querySelector('.tile-card .tile-number, .tile-card .row')).toBeNull();
     // The veil covers the card and nothing else of the frame.
     expect(tile('FC-2').querySelector('.veil')!.parentElement!.className).toBe('tile-card');
@@ -213,15 +216,85 @@ describe('the Collection page', () => {
     expect(part('FC-1', 'buy', 'target').textContent!.trim()).toBe('↑9');
   });
 
-  it('gives each price as a tooltip and, in words, to assistive technology', async () => {
+  const price = (slug: string, action: 'sell' | 'buy') =>
+    row(slug, action).querySelector('.row-price .rosary-value')?.textContent ?? null;
+
+  it('shows each price under its label and, in words, tells assistive technology', async () => {
     await open();
-    // Aspid Mother has two stars.
-    expect(row('FC-5', 'sell').getAttribute('title')).toBe('Sells for 20 each');
-    expect(described(row('FC-5', 'sell'))).toEqual(['20 Rosaries each']);
-    expect(row('FC-5', 'buy').getAttribute('title')).toBe('Costs 200 each');
-    expect(described(row('FC-5', 'buy'))).toEqual(['200 Rosaries each']);
-    // Not on the tile's face.
-    expect(tile('FC-5').querySelector('app-rosary')).toBeNull();
+    const first = (stars: number) => CARD_DB.find((card) => card.stars === stars);
+    for (const [stars, sell, buy] of [
+      [1, 1, 4],
+      [2, 3, 12],
+      [3, 9, 27],
+      [4, 33, 99],
+      [5, 330, 660],
+    ]) {
+      const card = first(stars);
+      if (!card) continue;
+      const slug = `FC-${card.number}`;
+      expect(price(slug, 'sell')).toBe(String(sell));
+      expect(price(slug, 'buy')).toBe(String(buy));
+      expect(described(row(slug, 'buy'))).toEqual([`${buy} Rosaries each`]);
+      expect(row(slug, 'sell').getAttribute('title')).toBeNull();
+    }
+    expect(described(row('FC-1', 'sell'))).toEqual(['1 Rosary each']);
+    expect(described(row('FC-5', 'sell'))).toEqual(['3 Rosaries each']);
+    expect(row('FC-5', 'sell').querySelector('.row-price')!.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
+    expect(row('FC-5', 'sell').querySelector('.row-price img.rosary-mark')).not.toBeNull();
+  });
+
+  it('draws each row as one segmented bar, the Buy row in soul', async () => {
+    await open();
+    for (const action of ['sell', 'buy'] as const) {
+      const bar = row('FC-1', action).querySelector('.hk-seg')!;
+      const segments = [...bar.querySelectorAll(':scope > button, :scope > input')];
+      expect(segments.map((node) => node.className.split(' ').at(-1))).toEqual([
+        'lower',
+        'value',
+        'raise',
+        'target',
+      ]);
+      expect(bar.classList.contains('soul')).toBe(action === 'buy');
+    }
+  });
+
+  it('shows and announces no price it does not know, and cannot buy there', async () => {
+    addSixStarCard();
+    await open();
+    const slug = 'FC-900';
+    for (const action of ['sell', 'buy'] as const) {
+      expect(price(slug, action)).toBeNull();
+      expect(row(slug, action).querySelector('.row-price')).not.toBeNull();
+      expect(described(row(slug, action))).toEqual([]);
+    }
+    for (const name of ['lower', 'raise', 'target'] as const) {
+      expect(unavailable(part(slug, 'buy', name)), name).toBe(true);
+      press(part(slug, 'buy', name));
+    }
+    expect(amount(slug, 'buy')).toBe(0);
+    expect(cart.isEmpty()).toBe(true);
+    for (const name of ['raise', 'target'] as const) {
+      expect(part(slug, 'buy', name).title).toBe('You do not know its price yet');
+      expect(described(part(slug, 'buy', name))).toEqual(['You do not know its price yet']);
+    }
+    expect(field(slug, 'buy').readOnly).toBe(true);
+    expect(described(field(slug, 'buy'))).toEqual(['You do not know its price yet']);
+    expect(tile(slug).textContent).not.toMatch(/5000|9999/);
+  });
+
+  it('shows the price and offers the purchase once the rate is earned', async () => {
+    addSixStarCard();
+    await open({ rosaries: 9998, collection: [held(1, 1)] });
+    expect(price('FC-900', 'buy')).toBeNull();
+    users.settle([{ key: cardKeyOf('FC', 1), action: 'sell', quantity: 1 }]);
+    render();
+    expect(price('FC-900', 'sell')).toBe('5000');
+    expect(price('FC-900', 'buy')).toBe('9999');
+    expect(described(row('FC-900', 'buy'))).toEqual(['9999 Rosaries each']);
+    press(part('FC-900', 'buy', 'raise'));
+    expect(amount('FC-900', 'buy')).toBe(1);
   });
 
   it('steps the pending sale up and down', async () => {
@@ -338,6 +411,170 @@ describe('the Collection page', () => {
     expect(amount('FC-1', 'buy')).toBe(0);
   });
 
+  // ─── Typed quantities ─────────────────────────────────────────────────
+
+  function type(slug: string, action: 'sell' | 'buy', value: string): void {
+    field(slug, action).focus();
+    field(slug, action).value = value;
+    field(slug, action).dispatchEvent(new Event('input', { bubbles: true }));
+    render();
+  }
+
+  function pressIn(node: HTMLElement, key: string): void {
+    node.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    render();
+  }
+
+  it('names each field for its direction and card', async () => {
+    await open({ collection: [held(1, 1)] });
+    expect(field('FC-1', 'sell').getAttribute('aria-label')).toBe('Copies of Crawlid to sell');
+    expect(field('FC-1', 'buy').getAttribute('aria-label')).toBe('Copies of Crawlid to buy');
+  });
+
+  it('takes a typed purchase on Enter, and announces it', async () => {
+    await open();
+    type('FC-1', 'buy', '25');
+    expect(cart.count()).toBe(0);
+    expect(announced()).toBe('');
+    pressIn(field('FC-1', 'buy'), 'Enter');
+    expect(amount('FC-1', 'buy')).toBe(25);
+    expect(cart.quantityFor(crawlid, 'buy')).toBe(25);
+    expect(announced()).toBe('25 Crawlid pending for purchase.');
+  });
+
+  it('takes a typed purchase on leaving the field', async () => {
+    await open();
+    type('FC-1', 'buy', '4');
+    field('FC-1', 'buy').blur();
+    expect(cart.quantityFor(crawlid, 'buy')).toBe(4);
+  });
+
+  it('brings a quantity beyond the bound to the bound, again and again', async () => {
+    await open({ collection: [held(1, 3)] });
+    for (let i = 0; i < 2; i++) {
+      type('FC-1', 'sell', '50');
+      pressIn(field('FC-1', 'sell'), 'Enter');
+      expect(amount('FC-1', 'sell')).toBe(3);
+    }
+    type('FC-1', 'buy', '1000');
+    pressIn(field('FC-1', 'buy'), 'Enter');
+    expect(amount('FC-1', 'buy')).toBe(99);
+  });
+
+  it('announces nothing for a typed quantity that changes nothing', async () => {
+    await open({ collection: [held(1, 3)] });
+    type('FC-1', 'sell', '3');
+    pressIn(field('FC-1', 'sell'), 'Enter');
+    press(part('FC-7', 'buy', 'raise'));
+    expect(announced()).toBe('1 Vengefly pending for purchase.');
+    type('FC-1', 'sell', '50');
+    pressIn(field('FC-1', 'sell'), 'Enter');
+    expect(announced()).toBe('1 Vengefly pending for purchase.');
+  });
+
+  it('excludes the other row, and takes the line out at zero', async () => {
+    await open({ collection: [held(1, 2)] });
+    press(part('FC-1', 'buy', 'raise'), 3);
+    type('FC-1', 'sell', '1');
+    pressIn(field('FC-1', 'sell'), 'Enter');
+    expect(amount('FC-1', 'sell')).toBe(1);
+    expect(amount('FC-1', 'buy')).toBe(0);
+
+    type('FC-1', 'sell', '0');
+    pressIn(field('FC-1', 'sell'), 'Enter');
+    expect(cart.isEmpty()).toBe(true);
+  });
+
+  it('has the deck warning follow a typed sale', async () => {
+    await open({ collection: [held(1, 3)], decks: [[ref(1), ref(1)]] });
+    type('FC-1', 'sell', '2');
+    pressIn(field('FC-1', 'sell'), 'Enter');
+    expect(row('FC-1', 'sell').querySelector('.warn')).not.toBeNull();
+  });
+
+  it('keeps the quantity when the field is emptied or the edit abandoned', async () => {
+    await open();
+    press(part('FC-1', 'buy', 'raise'), 3);
+    type('FC-1', 'buy', '');
+    field('FC-1', 'buy').blur();
+    render();
+    expect(amount('FC-1', 'buy')).toBe(3);
+
+    type('FC-1', 'buy', '8');
+    pressIn(field('FC-1', 'buy'), 'Escape');
+    expect(amount('FC-1', 'buy')).toBe(3);
+    expect(cart.quantityFor(crawlid, 'buy')).toBe(3);
+  });
+
+  it('carries the plus control on from what was typed', async () => {
+    await open();
+    type('FC-1', 'buy', '5');
+    press(part('FC-1', 'buy', 'raise'));
+    expect(amount('FC-1', 'buy')).toBe(6);
+  });
+
+  it('cannot be typed in where nothing could be pending, but says why', async () => {
+    await open();
+    const sale = field('FC-2', 'sell');
+    expect(sale.value).toBe('0');
+    expect(sale.readOnly).toBe(true);
+    expect(sale.title).toBe('You hold none to sell');
+    expect(described(sale)).toEqual(['You hold none to sell']);
+    sale.focus();
+    expect(document.activeElement).toBe(sale);
+    // A purchase that has reached its bound is still there to be lowered.
+    cart.setQuantity(crawlid, 'buy', 99);
+    render();
+    expect(field('FC-1', 'buy').readOnly).toBe(false);
+  });
+
+  // ─── Reading ──────────────────────────────────────────────────────────
+
+  const reader = () => el.querySelector<HTMLElement>('app-card-reader');
+  const cardOf = (slug: string) =>
+    tile(slug).querySelector<HTMLButtonElement>('.tile-card button')!;
+
+  it('reads an owned and an unowned card, offering only to close', async () => {
+    await open({ collection: [held(1, 1)] });
+    for (const [slug, name] of [
+      ['FC-1', 'Crawlid'],
+      ['FC-2', 'Gruz Mother'],
+    ]) {
+      expect(cardOf(slug).getAttribute('aria-haspopup')).toBe('dialog');
+      expect(cardOf(slug).getAttribute('aria-pressed')).toBeNull();
+      press(cardOf(slug));
+      expect(reader()!.getAttribute('aria-label')).toBe(`Reading ${name}`);
+      expect(reader()!.querySelector('.veil')).toBeNull();
+      const controls = [...reader()!.querySelectorAll('button')];
+      expect(controls.map((control) => control.textContent!.trim())).toEqual(['Close']);
+      expect(document.activeElement).toBe(controls[0]);
+
+      reader()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      render();
+      await Promise.resolve();
+      expect(reader()).toBeNull();
+      expect(document.activeElement).toBe(cardOf(slug));
+    }
+  });
+
+  it('changes neither the user nor the cart by reading', async () => {
+    await open({ collection: [held(1, 2)] });
+    press(part('FC-1', 'sell', 'raise'));
+    const [state, lines] = [users.state(), cart.lines()];
+    press(cardOf('FC-1'));
+    press(reader()!.querySelector<HTMLElement>('button')!);
+    expect(users.state()).toBe(state);
+    expect(cart.lines()).toBe(lines);
+  });
+
+  it('does not read from the rows', async () => {
+    await open({ collection: [held(1, 12)] });
+    for (const name of ['raise', 'lower', 'target'] as const) press(part('FC-1', 'sell', name));
+    field('FC-1', 'buy').click();
+    render();
+    expect(reader()).toBeNull();
+  });
+
   // ─── The deck warning ─────────────────────────────────────────────────
 
   it('warns, naming the decks, only once the sale that trims them is pending', async () => {
@@ -348,12 +585,12 @@ describe('the Collection page', () => {
     const sell = row('FC-1', 'sell');
     const text = 'Selling removes it from Deck 1 and Deck 3';
     expect(sell.querySelector('.warn')).toBeNull();
-    expect(described(sell)).toEqual(['10 Rosaries each']);
+    expect(described(sell)).toEqual(['1 Rosary each']);
 
     press(part('FC-1', 'sell', 'raise'));
     expect(sell.querySelector('.warn')!.getAttribute('title')).toBe(text);
     expect(sell.querySelector('.warn .warn-mark')).not.toBeNull();
-    expect(described(sell)).toEqual(['10 Rosaries each', text]);
+    expect(described(sell)).toEqual(['1 Rosary each', text]);
     expect(row('FC-1', 'buy').querySelector('.warn')).toBeNull();
 
     press(part('FC-1', 'sell', 'lower'));
@@ -468,7 +705,7 @@ describe('the Collection page', () => {
     await fixture.whenStable();
 
     expect(dialog()).toBeNull();
-    expect(purse()).toBe('10');
+    expect(purse()).toBe('52');
     expect(quantityOf(users.collection(), crawlid)).toBe(0);
     expect(quantityOf(users.collection(), vengefly)).toBe(1);
     expect(badge('FC-1')).toBe('Not owned');
@@ -477,17 +714,17 @@ describe('the Collection page', () => {
     expect(users.decks()[1].cards).toEqual([]);
     expect(cart.isEmpty()).toBe(true);
     expect(amount('FC-1', 'sell')).toBe(0);
-    expect(announced()).toBe('6 sold, 1 bought, 40 Rosaries spent. Cards removed from Deck 2.');
+    expect(announced()).toBe('6 sold, 1 bought, 2 Rosaries gained. Cards removed from Deck 2.');
     expect(document.activeElement).toBe(cartControl());
   });
 
   it('does nothing, and keeps the dialog up, for a cart that cannot be afforded', async () => {
-    await open({ rosaries: 50 });
+    await open({ rosaries: 3 });
     press(part('FC-1', 'buy', 'raise'));
     press(cartControl());
     press(within('.cart-confirm'));
     expect(dialog()).not.toBeNull();
-    expect(users.rosaries()).toBe(50);
+    expect(users.rosaries()).toBe(3);
     expect(cart.count()).toBe(1);
   });
 });
@@ -499,6 +736,9 @@ describe('a confirmed cart in words', () => {
     );
     expect(summaryText({ sold: 3, bought: 0, net: 60, trims: [] })).toBe(
       '3 sold, 0 bought, 60 Rosaries gained.',
+    );
+    expect(summaryText({ sold: 1, bought: 0, net: 1, trims: [] })).toBe(
+      '1 sold, 0 bought, 1 Rosary gained.',
     );
     expect(summaryText({ sold: 10, bought: 1, net: 0, trims: [] })).toBe(
       '10 sold, 1 bought, no Rosaries gained or spent.',
