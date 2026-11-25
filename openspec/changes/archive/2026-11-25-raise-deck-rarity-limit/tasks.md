@@ -21,5 +21,5 @@
 
 ## 3. Whole-change verification
 
-- [ ] 3.1 Run `ng test`, `ng build`, and `npm run e2e`, and verify that all three pass. Verify that
+- [x] 3.1 Run `ng test`, `ng build`, and `npm run e2e`, and verify that all three pass. Verify that
       `grep -rnE "only 1 is allowed|allowed: 1" src e2e` is empty.

@@ -193,7 +193,7 @@ whenever the same contents are evaluated.
 
 #### Scenario: A full deck within the limit is ready
 
-- **WHEN** a deck holds nine cards, at most one of which has four stars or more
+- **WHEN** a deck holds nine cards, at most two of which have four stars or more
 - **THEN** its standing is Ready
 - **AND** no problem is reported
 
@@ -212,7 +212,7 @@ whenever the same contents are evaluated.
 
 #### Scenario: Both problems are reported together
 
-- **WHEN** a deck holds six cards, two of which have four stars
+- **WHEN** a deck holds six cards, three of which have four stars
 - **THEN** its standing reports both Invalid and Incomplete
 - **AND** Invalid is ranked first
 
@@ -222,11 +222,11 @@ whenever the same contents are evaluated.
 - **THEN** the persisted user carries no standing for any deck
 - **AND** each deck's standing, worked out again, is unchanged
 
-### Requirement: A deck holds at most one card of four stars or more
+### Requirement: A deck holds at most two cards of four stars or more
 
-A deck SHALL be Invalid when it holds more than one card whose star rating is four or higher.
-Repeated copies count: two copies of the same four-star card break the limit. Both the star
-threshold (four) and the number of such cards allowed (one) SHALL be stated in exactly one place,
+A deck SHALL be Invalid when it holds more than two cards whose star rating is four or higher.
+Repeated copies count: three copies of the same four-star card break the limit. Both the star
+threshold (four) and the number of such cards allowed (two) SHALL be stated in exactly one place,
 and the standing, its message, and battle eligibility SHALL all derive from that statement.
 
 When the standing reports Invalid, it SHALL say which rule was broken and how many cards over the
@@ -237,20 +237,26 @@ limit the deck is, so the player can be told what to remove.
 - **WHEN** a deck holds exactly one card of four stars
 - **THEN** it is not Invalid
 
-#### Scenario: Two high-rarity cards break the limit
+#### Scenario: Two high-rarity cards are allowed
 
-- **WHEN** a deck holds two different cards of four stars
+- **WHEN** a deck holds exactly two cards of four stars, whether different cards or two copies of one
+- **THEN** it is not Invalid
+
+#### Scenario: Three high-rarity cards break the limit
+
+- **WHEN** a deck holds three different cards of four stars
 - **THEN** it is Invalid
-- **AND** the standing says the deck holds two cards of four stars or more, where one is allowed
+- **AND** the standing says the deck holds three cards of four stars or more, where two are
+  allowed
 
-#### Scenario: Two copies of one card break the limit
+#### Scenario: Three copies of one card break the limit
 
-- **WHEN** a deck holds two copies of the same four-star card
+- **WHEN** a deck holds three copies of the same four-star card
 - **THEN** it is Invalid
 
 #### Scenario: Ratings above four count toward the limit
 
-- **WHEN** a deck holds one four-star card and one card rated five or six stars
+- **WHEN** a deck holds two four-star cards and one card rated five or six stars
 - **THEN** it is Invalid
 
 #### Scenario: Ratings below four never count
@@ -268,14 +274,21 @@ valid again by removing cards.
 
 #### Scenario: A second four-star card is accepted
 
-- **WHEN** a four-star card is added to a deck that already holds a different four-star card, and
-  the deck has a free position
+- **WHEN** a four-star card is added to a deck that holds exactly one card of four stars or more,
+  a different one, and the deck has a free position
+- **THEN** the addition succeeds
+- **AND** the deck does not become Invalid
+
+#### Scenario: A third four-star card is accepted
+
+- **WHEN** a four-star card is added to a deck that already holds two other four-star cards, and the
+  deck has a free position
 - **THEN** the addition succeeds
 - **AND** the deck's standing becomes Invalid
 
 #### Scenario: Removal restores validity
 
-- **WHEN** one of the two four-star cards is removed from an Invalid deck
+- **WHEN** one of the three four-star cards is removed from an Invalid deck
 - **THEN** the deck is no longer Invalid
 
 ### Requirement: Only a ready deck is eligible for battle

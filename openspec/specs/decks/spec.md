@@ -520,7 +520,7 @@ standing then states the problem.
 
 #### Scenario: A card that breaks the rarity limit can still be added
 
-- **WHEN** the selected deck holds a four-star card and has a free position, and the collection
+- **WHEN** the selected deck holds two four-star cards and has a free position, and the collection
   holds a different four-star card
 - **THEN** adding that card is available
 - **AND** adding it places it in the deck and the region states the deck is invalid
@@ -674,8 +674,8 @@ beside it. At every viewport the page supports, the header SHALL occupy a single
 Beneath the selected deck's nine positions, the pinned region SHALL state the deck's standing in
 plain words:
 
-- **Invalid**: an error naming the broken rule and what to remove. For example, the deck holds two
-  cards of four stars or more, only one is allowed, and one must be removed.
+- **Invalid**: an error naming the broken rule and what to remove. For example, the deck holds three
+  cards of four stars or more, only two are allowed, and one must be removed.
 - **Incomplete**: a warning stating how many more cards the deck needs to be ready for battle, and
   that they can be added from the collection below.
 - **Ready**: a quiet confirmation that the deck is ready for battle.
@@ -704,21 +704,21 @@ announced to assistive technology when it changes.
 
 #### Scenario: An invalid deck is an error
 
-- **WHEN** a full deck holding two cards of four stars is shown
-- **THEN** an error states that only one card of four stars or more is allowed, and one must be
+- **WHEN** a full deck holding three cards of four stars is shown
+- **THEN** an error states that only two cards of four stars or more are allowed, and one must be
   removed
 - **AND** the error is shown in the error status colour
 - **AND** no warning is shown
 
 #### Scenario: Both problems are stated, error first
 
-- **WHEN** a deck holding six cards, two of them of four stars, is shown
+- **WHEN** a deck holding six cards, three of them of four stars, is shown
 - **THEN** both the error and the warning are stated
 - **AND** the error precedes the warning
 
 #### Scenario: A ready deck says so
 
-- **WHEN** a full deck holding at most one card of four stars or more is shown
+- **WHEN** a full deck holding at most two cards of four stars or more is shown
 - **THEN** the region states that the deck is ready for battle
 - **AND** neither an error nor a warning is shown
 
@@ -729,7 +729,7 @@ announced to assistive technology when it changes.
 
 #### Scenario: The statement follows the deck
 
-- **WHEN** the player adds a second four-star card to a deck
+- **WHEN** the player adds a third four-star card to a deck
 - **THEN** the error appears without the page being reloaded
 - **AND** when they remove one of those cards, the error is gone
 
