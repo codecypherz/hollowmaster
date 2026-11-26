@@ -1,11 +1,54 @@
-import { Injectable, computed, signal } from '@angular/core';
-import { CARD_BY_KEY, CARD_DB, Card, Direction } from '../model/card';
-import { Deck, isBattleReady } from '../model/deck';
-import { BOARD_SIZE, Coord, GameState, HAND_SIZE, Owner, PlacedCard } from '../model/game';
+import { DestroyRef, Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
+import { CARD_BY_KEY, CARD_DB, Card } from '../model/card';
+import {
+  Resolution,
+  ResolutionEvent,
+  beginResolution,
+  fight,
+  finish,
+  opponentCombatOrder,
+} from '../model/combat';
+import { Deck, isBattleReady, randomReadyDeck } from '../model/deck';
+import {
+  BOARD_SIZE,
+  Board,
+  Coord,
+  GameState,
+  Owner,
+  PlaceEvent,
+  TurnEvent,
+  decideFirstTurn,
+  starTotal,
+} from '../model/game';
+
+/**
+ * Where every chance in a match comes from — each roll, the opponent's deal,
+ * the first-turn coin, and the opponent's choice of cell. A uniform [0, 1)
+ * source like `Math.random`, which is the default; specs provide a scripted
+ * sequence so a rule can be pinned to the exact rolls it turns on.
+ */
+export const GAME_RANDOM = new InjectionToken<() => number>('GAME_RANDOM', {
+  providedIn: 'root',
+  // Wrapped rather than handed over, so a stubbed `Math.random` is still seen.
+  factory: () => () => Math.random(),
+});
+
+/** How long the opponent appears to deliberate before placing its card. */
+export const OPPONENT_THINK_MS = 900;
+
+/**
+ * How long one combat's clash takes to play, in milliseconds — mirrors
+ * `--dur-clash`, the same mirrored-constant convention as the scoreboard's
+ * `SCORE_STEP_MS`. The opponent waits this long per combat of the turn before
+ * it, so it does not place over a clash that is still playing. The screen
+ * queues its presentation regardless, so a mismatch only delays visuals.
+ */
+export const CLASH_MS = 1800;
 
 @Injectable({ providedIn: 'root' })
 export class GameService {
   private readonly _state = signal<GameState | null>(null);
+  private readonly rng = inject(GAME_RANDOM);
 
   readonly state = this._state.asReadonly();
   readonly isActive = computed(() => this._state() !== null);
@@ -20,10 +63,21 @@ export class GameService {
   /** The deck the current match was begun with, so Play Again deals it again. */
   private deck: Deck | null = null;
 
+  /** The last event `seq` handed out. Never reset, so it only ever grows. */
+  private seq = 0;
+
+  /** The opponent's scheduled move, so a new match or a retreat can cancel it. */
+  private opponentTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.cancelOpponent());
+  }
+
   /**
    * Begins a match with `deck` as the player's hand, in deck order, and an
-   * opponent dealt from the card database. Refused, changing nothing, for a
-   * deck that is not `isBattleReady`.
+   * opponent dealt a random Ready deck from the card database. The heavier
+   * deck moves first; when that is the opponent, its move is scheduled at once.
+   * Refused, changing nothing, for a deck that is not `isBattleReady`.
    *
    * Handed a deck rather than reaching for the user, so the game knows
    * nothing about where decks are kept. A Ready deck has survived the load's
@@ -31,20 +85,26 @@ export class GameService {
    */
   startGame(deck: Deck): boolean {
     if (!isBattleReady(deck)) return false;
+    this.cancelOpponent();
     this.deck = deck;
     const playerHand = deck.cards.map((key) => CARD_BY_KEY.get(key)!);
-    const [opponentHand] = dealHands(CARD_DB, 1, HAND_SIZE);
+    const opponentHand = randomReadyDeck(CARD_DB, this.rng).cards.map((key) =>
+      CARD_BY_KEY.get(key)!,
+    );
+    const firstTurn = decideFirstTurn(starTotal(playerHand), starTotal(opponentHand), this.rng);
     this._state.set({
       board: emptyBoard(),
       player: { hand: playerHand },
       opponent: { hand: opponentHand },
-      phase: 'player-turn',
+      phase: firstTurn.first === 'player' ? 'player-turn' : 'opponent-turn',
       selectedCardIndex: null,
       winner: null,
-      lastFlipped: [],
-      lastPlaced: null,
+      events: [],
+      resolution: null,
+      firstTurn,
       inspected: null,
     });
+    if (firstTurn.first === 'opponent') this.scheduleOpponent(OPPONENT_THINK_MS);
     return true;
   }
 
@@ -65,7 +125,7 @@ export class GameService {
   /**
    * Shows a card in the inspector. Reading a card is not playing one, so this
    * deliberately carries no phase guard: the player may study a card while the
-   * opponent is moving and after the match has ended.
+   * opponent is moving, while choosing a combat, and after the match has ended.
    */
   inspect(card: Card): void {
     if (!this._state()) return;
@@ -79,40 +139,36 @@ export class GameService {
     const card = s.player.hand[s.selectedCardIndex];
     if (!card) return;
 
-    const board = s.board.map((r) => [...r]);
-    board[row][col] = { card, owner: 'player' };
-
     const hand = [...s.player.hand];
     hand[s.selectedCardIndex] = null;
+    this.place({ ...s, player: { hand }, selectedCardIndex: null }, card, { row, col }, 'player');
+  }
 
-    const { board: resolved, flipped } = resolveBattles(board, row, col, 'player');
+  /**
+   * Fights the combat against the card at `row`, `col` while the player is
+   * choosing. Refused, changing nothing, for any cell that is not one of the
+   * placement's remaining combat targets.
+   */
+  chooseCombat(row: number, col: number): void {
+    const s = this._state();
+    if (!s || s.phase !== 'player-choosing' || !s.resolution) return;
+    if (!s.resolution.combatTargets.some((t) => t.row === row && t.col === col)) return;
+    this.resolve(s, s.board, s.resolution, { row, col }, [...s.events]);
+  }
 
-    const next: GameState = {
-      ...s,
-      board: resolved,
-      player: { hand },
-      selectedCardIndex: null,
-      lastFlipped: flipped,
-      lastPlaced: { row, col },
-      phase: 'opponent-turn',
-    };
-
-    if (isGameOver(next)) {
-      this._state.set(finalize(next));
-      return;
-    }
-
-    this._state.set(next);
-    setTimeout(() => this.opponentMove(), OPPONENT_THINK_MS);
+  exitGame(): void {
+    this.cancelOpponent();
+    this._state.set(null);
   }
 
   private opponentMove(): void {
+    this.opponentTimer = null;
     const s = this._state();
     if (!s || s.phase !== 'opponent-turn') return;
 
     const cardIdx = s.opponent.hand.findIndex((c) => c !== null);
     if (cardIdx === -1) {
-      this._state.update((st) => ({ ...st!, phase: 'player-turn' }));
+      this._state.set({ ...s, phase: 'player-turn' });
       return;
     }
 
@@ -122,131 +178,110 @@ export class GameService {
       return;
     }
 
-    const { row, col } = empties[Math.floor(Math.random() * empties.length)];
+    const at = empties[Math.floor(this.rng() * empties.length)];
     const card = s.opponent.hand[cardIdx]!;
+    const hand = [...s.opponent.hand];
+    hand[cardIdx] = null;
+    this.place({ ...s, opponent: { hand } }, card, at, 'opponent');
+  }
 
+  /** Puts `card` down at `at` for `side`, opening a fresh record, and resolves it. */
+  private place(s: GameState, card: Card, at: Coord, side: Owner): void {
     const board = s.board.map((r) => [...r]);
-    board[row][col] = { card, owner: 'opponent' };
+    board[at.row][at.col] = { card, owner: side };
+    const placed: PlaceEvent = { kind: 'place', at, side };
+    const events = [this.stamp(placed)];
+    this.resolve(s, board, beginResolution(board, at, side), null, events);
+  }
 
-    const oppHand = [...s.opponent.hand];
-    oppHand[cardIdx] = null;
+  /**
+   * The one driver for a placement's resolution, for both sides.
+   *
+   * `chosen` is fought first when given. After that, while combats remain:
+   * the player is asked to choose whenever two or more are left, and the
+   * opponent picks by its own policy; a lone combat is simply fought. When the
+   * combats are done — or the attacker has lost — the defenseless targets are
+   * taken (if the attacker survived) and the turn passes.
+   */
+  private resolve(
+    s: GameState,
+    board: Board,
+    res: Resolution | null,
+    chosen: Coord | null,
+    events: TurnEvent[],
+  ): void {
+    const side = res!.side;
+    let target = chosen;
 
-    const { board: resolved, flipped } = resolveBattles(board, row, col, 'opponent');
+    while (res && (target || res.combatTargets.length > 0)) {
+      if (!target) {
+        if (side === 'player' && res.combatTargets.length >= 2) {
+          this._state.set({ ...s, board, events, resolution: res, phase: 'player-choosing' });
+          return;
+        }
+        target =
+          side === 'player'
+            ? res.combatTargets[0]
+            : opponentCombatOrder(board, res.combatTargets)[0];
+      }
+      const step = fight(board, res, target, this.rng);
+      board = step.board;
+      res = step.res;
+      events.push(...step.events.map((e) => this.stamp(e)));
+      target = null;
+    }
+
+    if (res) {
+      const end = finish(board, res);
+      board = end.board;
+      events.push(...end.events.map((e) => this.stamp(e)));
+    }
 
     const next: GameState = {
       ...s,
-      board: resolved,
-      opponent: { hand: oppHand },
-      lastFlipped: flipped,
-      lastPlaced: { row, col },
-      phase: 'player-turn',
+      board,
+      events,
+      resolution: null,
+      phase: side === 'player' ? 'opponent-turn' : 'player-turn',
     };
 
-    this._state.set(isGameOver(next) ? finalize(next) : next);
+    if (isGameOver(next)) {
+      this._state.set(finalize(next));
+      return;
+    }
+    this._state.set(next);
+    if (next.phase === 'opponent-turn') {
+      const combats = events.filter((e) => e.kind === 'combat').length;
+      this.scheduleOpponent(OPPONENT_THINK_MS + combats * CLASH_MS);
+    }
   }
 
-  exitGame(): void {
-    this._state.set(null);
+  private stamp(event: PlaceEvent | ResolutionEvent): TurnEvent {
+    return { ...event, seq: ++this.seq };
+  }
+
+  private scheduleOpponent(delay: number): void {
+    this.cancelOpponent();
+    this.opponentTimer = setTimeout(() => this.opponentMove(), delay);
+  }
+
+  private cancelOpponent(): void {
+    if (this.opponentTimer !== null) clearTimeout(this.opponentTimer);
+    this.opponentTimer = null;
   }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/** How long the opponent appears to deliberate before placing its card. */
-const OPPONENT_THINK_MS = 900;
-
-/** Combat varies each stat by up to this fraction of its stated value. */
-const STAT_VARIANCE = 0.2;
-
-const DIR_DELTA: Record<Direction, [number, number]> = {
-  N: [-1, 0],
-  NE: [-1, 1],
-  E: [0, 1],
-  SE: [1, 1],
-  S: [1, 0],
-  SW: [1, -1],
-  W: [0, -1],
-  NW: [-1, -1],
-};
-
-export function emptyBoard(): (PlacedCard | null)[][] {
+export function emptyBoard(): Board {
   return Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
 }
 
-function onBoard(row: number, col: number): boolean {
-  return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
-}
-
-export function emptyCells(board: (PlacedCard | null)[][]): Coord[] {
+export function emptyCells(board: Board): Coord[] {
   const empties: Coord[] = [];
   for (let row = 0; row < BOARD_SIZE; row++)
     for (let col = 0; col < BOARD_SIZE; col++) if (!board[row][col]) empties.push({ row, col });
   return empties;
-}
-
-/**
- * Deals `hands` hands of `size` cards each from `db`.
- *
- * The database is shuffled and dealt through in order, reshuffling only once
- * the pool runs out. A database smaller than the deal therefore still fills
- * every hand — duplicates are permitted — while no card is dealt a second time
- * until every other card has been dealt once, which keeps the spread as varied
- * as the database allows.
- */
-export function dealHands(db: readonly Card[], hands: number, size: number): Card[][] {
-  if (db.length === 0) throw new Error('cannot deal a hand from an empty card database');
-  const dealt: Card[][] = [];
-  let pool: Card[] = [];
-  for (let h = 0; h < hands; h++) {
-    const hand: Card[] = [];
-    while (hand.length < size) {
-      if (pool.length === 0) pool = shuffle(db);
-      hand.push(pool.pop()!);
-    }
-    dealt.push(hand);
-  }
-  return dealt;
-}
-
-function shuffle(cards: readonly Card[]): Card[] {
-  const out = [...cards];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
-export function resolveBattles(
-  board: (PlacedCard | null)[][],
-  row: number,
-  col: number,
-  attacker: Owner,
-): { board: (PlacedCard | null)[][]; flipped: Coord[] } {
-  const placed = board[row][col]!;
-  const flipped: Coord[] = [];
-
-  for (const dir of placed.card.arrows) {
-    const [dr, dc] = DIR_DELTA[dir];
-    const nr = row + dr;
-    const nc = col + dc;
-    if (!onBoard(nr, nc)) continue;
-    const target = board[nr][nc];
-    if (!target || target.owner === attacker) continue;
-
-    if (roll(placed.card.attack) - roll(target.card.defense) > 0) {
-      board[nr][nc] = { ...target, owner: attacker };
-      flipped.push({ row: nr, col: nc });
-      const combo = resolveBattles(board, nr, nc, attacker);
-      flipped.push(...combo.flipped);
-    }
-  }
-
-  return { board, flipped };
-}
-
-function roll(base: number): number {
-  return base * (1 - STAT_VARIANCE + Math.random() * STAT_VARIANCE * 2);
 }
 
 /**
@@ -272,5 +307,5 @@ export function isGameOver(s: GameState): boolean {
 export function finalize(s: GameState): GameState {
   const { player, opponent } = countOwned(s);
   const winner = player > opponent ? 'player' : opponent > player ? 'opponent' : 'draw';
-  return { ...s, phase: 'game-over', winner };
+  return { ...s, phase: 'game-over', winner, resolution: null };
 }

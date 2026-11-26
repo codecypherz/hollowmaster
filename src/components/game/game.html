@@ -69,17 +69,77 @@
             [class.cell-occupied]="!!cell"
             [class.cell-empty]="!cell"
             [class.cell-placeable]="isPlaceable(ri, ci)"
+            [class.cell-choosable]="isChoosable(ri, ci)"
             [style.--flip-index]="flipIndex(ri, ci)"
             (click)="onCellActivate(ri, ci)"
-            [attr.aria-label]="cell ? null : cellLabel(ri, ci)"
+            [attr.aria-label]="cellLabel(ri, ci)"
           >
             @if (cell) {
               <app-card [card]="cell.card" [owner]="cell.owner" [flipped]="isFlipped(ri, ci)" />
+              @if (isChoosable(ri, ci)) {
+                <!-- Marked by a glyph and an outline as well as by colour. -->
+                <span class="choose-glyph" aria-hidden="true"></span>
+              }
             } @else {
               <span class="cell-rune" aria-hidden="true"></span>
             }
           </button>
         }
+      }
+
+      <!-- The first-turn announcement. The live region is always present so
+           its arrival is announced; the banner inside it comes and goes, and
+           neither ever takes a pointer. -->
+      <div class="first-turn-region" role="status">
+        @if (announcement(); as a) {
+          <div class="first-turn" (animationend)="onAnnouncementEnd($event)">
+            <p class="ft-title">
+              {{ a.first === 'player' ? 'You move first' : 'Player 2 moves first' }}
+            </p>
+            <p class="ft-stars">
+              <span
+                >Your deck {{ a.playerStars }}<span aria-hidden="true">★</span
+                ><span class="sr-only"> stars</span></span
+              >
+              <span class="ft-sep" aria-hidden="true">·</span>
+              <span
+                >Player 2 {{ a.opponentStars }}<span aria-hidden="true">★</span
+                ><span class="sr-only"> stars</span></span
+              >
+            </p>
+            <p class="ft-reason">
+              {{ a.coinFlip ? 'Equal stars — decided by coin flip' : 'The heavier deck leads' }}
+            </p>
+          </div>
+        }
+      </div>
+
+      <!-- The clash: one combat at a time, laid over the board and never over
+           the codex, and never in the way of a click. -->
+      <div class="sr-only" role="status">{{ clash()?.summary }}</div>
+      @if (clash(); as c) {
+        <div class="clash" (animationend)="onClashAnimationEnd($event)" aria-hidden="true">
+          @for (f of [c.attacker, c.defender]; track f.role) {
+            <div
+              class="fighter"
+              [class.fighter-attacker]="f.role === 'ATK'"
+              [class.fighter-defender]="f.role === 'DEF'"
+              [class.is-victor]="f.victor"
+              [class.is-loser]="!f.victor"
+            >
+              <span class="fighter-role">{{ f.role }}</span>
+              <div class="fighter-card">
+                <app-card [card]="f.card" [owner]="f.owner" />
+              </div>
+              <span class="fighter-roll">{{ f.roll }}</span>
+              <span class="fighter-power" [class.is-outright]="f.outright">{{ f.power }}</span>
+              <span class="fighter-victor">{{ f.victor ? 'Victor' : '' }}</span>
+            </div>
+            @if (f.role === 'ATK') {
+              <div class="clash-strike"><span class="clash-vs">vs</span></div>
+            }
+          }
+        </div>
       }
     </div>
 

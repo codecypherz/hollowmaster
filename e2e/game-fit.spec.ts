@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  GAME_LADDER,
   arena,
   columns,
   expectNoScroll,
@@ -9,14 +10,7 @@ import {
   type Size,
 } from './helpers';
 
-/** The sizes the in-game screen is expected to be looked at on. */
-const LADDER: Size[] = [
-  { width: 1920, height: 1080 },
-  { width: 1600, height: 900 },
-  { width: 1440, height: 900 },
-  { width: 1366, height: 768 },
-  { width: 1100, height: 620 },
-];
+const LADDER = GAME_LADDER;
 
 /**
  * Smaller than the arena needs at the card renderer's 120px minimum — the arena
@@ -48,8 +42,8 @@ test.describe('the in-game arena fits the viewport', () => {
     // Scaled, not re-laid-out: the card unit stays at the renderer's minimum
     // and the shortfall is expressed as a uniform transform on the arena.
     await expect(arena(page)).toHaveClass(/arena-scaled/);
-    const scale = await arena(page).evaluate(
-      (el) => Number(getComputedStyle(el).getPropertyValue('--arena-scale')),
+    const scale = await arena(page).evaluate((el) =>
+      Number(getComputedStyle(el).getPropertyValue('--arena-scale')),
     );
     expect(scale).toBeGreaterThan(0);
     expect(scale).toBeLessThan(1);

@@ -153,9 +153,24 @@
   --dur-pulse: 1.4s;
   --dur-breathe: 2.5s;
   --dur-drift: 14s;
+  /* A card landing on the field: the settle and the ring of soul light. */
+  --dur-land: 0.45s;
+  /* One combat's whole clash, from the fighters entering to the layer leaving.
+     Mirrored in TS as `CLASH_MS` (game.service.ts), which paces the opponent. */
+  --dur-clash: 1.8s;
+  /* How long the first-turn announcement stays over the board. */
+  --dur-announce: 3s;
 
   /* ── Easing ──────────────────────────────────────────────────────────── */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Overshoots and settles back: an arrival with weight behind it. */
+  --ease-impact: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Gathers and then commits: the moment before a strike lands. */
+  --ease-strike: cubic-bezier(0.7, 0, 0.84, 0);
+  /* Symmetric in and out: a pulse that breathes rather than ticks. */
+  --ease-pulse: cubic-bezier(0.45, 0, 0.55, 1);
+  /* An even clock, for an envelope whose own keyframes carry the shape. */
+  --ease-linear: linear;
 
   /* ── Elevation ───────────────────────────────────────────────────────── */
   --elev-card-hover: 0 4px 20px rgba(120, 165, 255, 0.34);

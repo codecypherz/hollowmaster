@@ -110,6 +110,47 @@ export function isBattleReady(deck: Deck): boolean {
   return deckStanding(deck).problems.length === 0;
 }
 
+/**
+ * A random Ready deck drawn from `db`: what the opponent is dealt.
+ *
+ * The database is shuffled and dealt through in order, reshuffling only once
+ * the pool runs out, so no card is dealt a second time until every other card
+ * has had its turn and a database smaller than a deck still fills one. Once
+ * the rarity limit's allowance is held, any card at or above its threshold is
+ * passed over — the opponent is held to the same rule as the player.
+ *
+ * Throws for a database with no card below the threshold, the one case where
+ * no Ready deck can be built from it.
+ */
+export function randomReadyDeck(db: readonly Card[], rng: () => number): Deck {
+  const isRare = (card: Card) => card.stars >= RARITY_LIMIT.minStars;
+  if (!db.some((card) => !isRare(card))) {
+    throw new Error('cannot deal a Ready deck from a database with no card below the rarity limit');
+  }
+  const cards: CardKey[] = [];
+  let rare = 0;
+  let pool: Card[] = [];
+  while (cards.length < DECK_SIZE) {
+    if (pool.length === 0) pool = shuffle(db, rng);
+    const card = pool.pop()!;
+    if (isRare(card)) {
+      if (rare >= RARITY_LIMIT.allowed) continue;
+      rare++;
+    }
+    cards.push(cardKey(card));
+  }
+  return { cards };
+}
+
+function shuffle<T>(items: readonly T[], rng: () => number): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 /** An empty deck. */
 export function emptyDeck(): Deck {
   return { cards: [] };

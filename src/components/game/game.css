@@ -206,6 +206,447 @@
   --flip-delay: calc(var(--flip-index, 0) * var(--stagger));
 }
 
+/* Landing. Once the travel ends the cell settles with weight — a press down
+   and back — while a ring of soul light spreads from under it. The ring is the
+   cell's own pseudo-element, absolutely placed, so nothing around the cell
+   moves. */
+.board-cell.is-landing {
+  z-index: 4;
+  animation: land var(--dur-land) var(--ease-impact) both;
+}
+
+.board-cell.is-landing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-soul);
+  border-radius: 4px;
+  box-shadow:
+    0 0 18px var(--color-soul-glow),
+    inset 0 0 12px var(--color-soul-glow-sm);
+  pointer-events: none;
+  animation: landRing var(--dur-land) var(--ease-out-soft) both;
+}
+
+@keyframes land {
+  0% {
+    transform: scale(1.08);
+  }
+  45% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes landRing {
+  from {
+    opacity: 0.9;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+/* An offered combat target. Marked three ways so it survives being read
+   without colour: a gold outline, a crossed-nail glyph over the card, and the
+   cell's accessible name. The outline is an outline, not a border, so the
+   tile's box does not change. */
+.cell-choosable {
+  cursor: pointer;
+  outline: 2px dashed var(--color-gold-light);
+  outline-offset: 2px;
+  z-index: 3;
+  animation: choosablePulse var(--dur-pulse) var(--ease-pulse) infinite;
+}
+
+.cell-choosable:focus-visible {
+  outline: 3px solid var(--color-gold-light);
+}
+
+@keyframes choosablePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 6px var(--color-gold-glow);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--color-gold-glow);
+  }
+}
+
+/* Two crossed nails in a dark medallion, centred on the card. */
+.choose-glyph {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--cw) * 0.42);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--color-gold-light);
+  border-radius: 50%;
+  background: var(--color-scrim);
+  box-shadow: 0 0 12px var(--color-gold-glow);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.choose-glyph::before,
+.choose-glyph::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  left: calc(50% - 1.5px);
+  width: 3px;
+  height: 64%;
+  background: linear-gradient(var(--color-gold-shimmer), var(--color-gold-dim));
+  clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
+}
+
+.choose-glyph::before {
+  transform: rotate(45deg);
+}
+
+.choose-glyph::after {
+  transform: rotate(-45deg);
+}
+
+/* ─── The clash ───────────────────────────────────────────────────────────────
+   One combat, presented over the board and only the board: the layer is the
+   board's own absolutely placed child, so it can neither resize a column nor
+   reach the codex, and it never takes a pointer. Every beat is a fraction of
+   `--dur-clash` — the fighters enter, the rolls show, the powers resolve, the
+   strike lands, the loser recoils and the victor is named, and the layer goes.
+   The resting style of every part is its finished state; the animations only
+   hold each part back until its beat, which is what lets reduced motion show
+   the whole result by simply taking them away.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.clash {
+  --beat: var(--dur-clash);
+
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--cw) * 0.2);
+  background: var(--color-scrim);
+  pointer-events: none;
+  animation: clashLife var(--beat) var(--ease-linear) both;
+}
+
+@keyframes clashLife {
+  0% {
+    opacity: 0;
+  }
+  8%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fighter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--cw) * 0.06);
+  width: calc(var(--cw) * 1.6);
+}
+
+.fighter-attacker {
+  animation: enterLeft calc(var(--beat) * 0.12) var(--ease-out-soft) both;
+}
+
+.fighter-defender {
+  animation: enterRight calc(var(--beat) * 0.12) var(--ease-out-soft) both;
+}
+
+@keyframes enterLeft {
+  from {
+    transform: translateX(calc(var(--cw) * -0.8));
+    opacity: 0;
+  }
+}
+
+@keyframes enterRight {
+  from {
+    transform: translateX(calc(var(--cw) * 0.8));
+    opacity: 0;
+  }
+}
+
+.fighter-role {
+  font-family: var(--font-display);
+  font-size: calc(var(--cw) * 0.16);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  padding: 0.1em 0.6em;
+  border: 1px solid currentColor;
+}
+
+.fighter-attacker .fighter-role {
+  color: var(--color-attack);
+}
+
+.fighter-defender .fighter-role {
+  color: var(--color-defense);
+}
+
+.fighter-card {
+  width: 100%;
+}
+
+/* The card lunges at the strike, and the loser is thrown back from it. */
+.fighter-attacker .fighter-card {
+  animation: lungeRight calc(var(--beat) * 0.1) var(--ease-strike) calc(var(--beat) * 0.5) both;
+}
+
+.fighter-defender .fighter-card {
+  animation: lungeLeft calc(var(--beat) * 0.1) var(--ease-strike) calc(var(--beat) * 0.5) both;
+}
+
+.fighter.is-loser .fighter-card {
+  opacity: 0.55;
+  filter: grayscale(0.7);
+}
+
+.fighter-attacker.is-loser .fighter-card {
+  animation: recoilLeft calc(var(--beat) * 0.28) var(--ease-out-soft) calc(var(--beat) * 0.5) both;
+}
+
+.fighter-defender.is-loser .fighter-card {
+  animation: recoilRight calc(var(--beat) * 0.28) var(--ease-out-soft) calc(var(--beat) * 0.5) both;
+}
+
+@keyframes lungeRight {
+  50% {
+    transform: translateX(calc(var(--cw) * 0.25));
+  }
+}
+
+@keyframes lungeLeft {
+  50% {
+    transform: translateX(calc(var(--cw) * -0.25));
+  }
+}
+
+@keyframes recoilLeft {
+  0% {
+    opacity: 1;
+    filter: none;
+  }
+  25% {
+    opacity: 1;
+    filter: none;
+    transform: translateX(calc(var(--cw) * 0.25));
+  }
+  45% {
+    transform: translateX(calc(var(--cw) * -0.18)) rotate(-6deg);
+  }
+  60% {
+    transform: translateX(calc(var(--cw) * -0.08)) rotate(-3deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes recoilRight {
+  0% {
+    opacity: 1;
+    filter: none;
+  }
+  25% {
+    opacity: 1;
+    filter: none;
+    transform: translateX(calc(var(--cw) * -0.25));
+  }
+  45% {
+    transform: translateX(calc(var(--cw) * 0.18)) rotate(6deg);
+  }
+  60% {
+    transform: translateX(calc(var(--cw) * 0.08)) rotate(3deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.fighter-roll {
+  font-family: var(--font-ui);
+  font-size: calc(var(--cw) * 0.13);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-bright);
+  animation: reveal calc(var(--beat) * 0.08) var(--ease-out-soft) calc(var(--beat) * 0.14) both;
+}
+
+.fighter-power {
+  font-family: var(--font-display);
+  font-size: calc(var(--cw) * 0.34);
+  font-weight: 900;
+  line-height: 1;
+  color: var(--color-gold-light);
+  text-shadow: 0 0 14px var(--color-gold-glow);
+  animation: revealPop calc(var(--beat) * 0.1) var(--ease-impact) calc(var(--beat) * 0.32) both;
+}
+
+.fighter-power.is-outright {
+  letter-spacing: 0.12em;
+}
+
+.fighter-victor {
+  min-height: 1.4em;
+  font-family: var(--font-display);
+  font-size: calc(var(--cw) * 0.17);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-soul-bright);
+  text-shadow: 0 0 12px var(--color-soul-glow);
+  animation: revealPop calc(var(--beat) * 0.1) var(--ease-impact) calc(var(--beat) * 0.64) both;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--cw) * 0.08));
+  }
+}
+
+@keyframes revealPop {
+  from {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+/* The meeting point: a quiet "vs" that becomes the flash of the strike. */
+.clash-strike {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--cw) * 0.5);
+  aspect-ratio: 1;
+}
+
+.clash-strike::before {
+  content: '';
+  position: absolute;
+  inset: -60%;
+  background: radial-gradient(
+    circle,
+    var(--color-soul-bright) 0%,
+    var(--color-soul-glow) 30%,
+    transparent 65%
+  );
+  opacity: 0;
+  animation: strikeFlash calc(var(--beat) * 0.16) var(--ease-out-soft) calc(var(--beat) * 0.55) both;
+}
+
+.clash-vs {
+  position: relative;
+  font-family: var(--font-flavor);
+  font-size: calc(var(--cw) * 0.16);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+@keyframes strikeFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+/* ─── First-turn announcement ─────────────────────────────────────────────── */
+
+.first-turn-region {
+  position: absolute;
+  inset: auto 0 calc(var(--ch) * 0.35);
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.first-turn {
+  padding: calc(var(--cw) * 0.12) calc(var(--cw) * 0.3);
+  background: var(--color-scrim);
+  border: 1px solid var(--color-gold-dim);
+  box-shadow: var(--elev-overlay);
+  text-align: center;
+  animation: announce var(--dur-announce) var(--ease-out-soft) both;
+}
+
+@keyframes announce {
+  0% {
+    opacity: 0;
+    transform: translateY(calc(var(--cw) * 0.15));
+  }
+  12%,
+  82% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.ft-title {
+  font-family: var(--font-display);
+  font-size: calc(var(--cw) * 0.2);
+  font-weight: 700;
+  color: var(--color-gold-light);
+  letter-spacing: 0.08em;
+}
+
+.ft-stars {
+  display: flex;
+  justify-content: center;
+  gap: 0.6em;
+  margin-top: 0.3em;
+  font-size: calc(var(--cw) * 0.12);
+  letter-spacing: 0.1em;
+  color: var(--color-text-bright);
+}
+
+.ft-reason {
+  margin-top: 0.2em;
+  font-family: var(--font-flavor);
+  font-size: calc(var(--cw) * 0.12);
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ─── Board logo background ──────────────────────────────────────────────── */
 
 .board-logo {
@@ -376,8 +817,35 @@
 
 @media (prefers-reduced-motion: reduce) {
   .board-cell.is-flying,
+  .board-cell.is-landing,
+  .board-cell.is-landing::after,
+  .cell-choosable,
   .overlay,
-  .overlay-inner {
+  .overlay-inner,
+  .first-turn {
     animation: none;
+  }
+
+  /* The landing ring is a motion; without it there is nothing to draw. */
+  .board-cell.is-landing::after {
+    content: none;
+  }
+
+  /* The choosable marking keeps its glow at rest. */
+  .cell-choosable {
+    box-shadow: 0 0 14px var(--color-gold-glow);
+  }
+
+  /* The clash is drawn finished — both rolls, both powers, the victor — with
+     no entrance, count, lunge, shake, or burst. */
+  .clash,
+  .clash *,
+  .clash *::before,
+  .clash *::after {
+    animation: none !important;
+  }
+
+  .clash-strike::before {
+    opacity: 0;
   }
 }

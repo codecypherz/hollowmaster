@@ -65,6 +65,15 @@ export interface Size {
   height: number;
 }
 
+/** The sizes the in-game screen is expected to be looked at on. */
+export const GAME_LADDER: readonly Size[] = [
+  { width: 1920, height: 1080 },
+  { width: 1600, height: 900 },
+  { width: 1440, height: 900 },
+  { width: 1366, height: 768 },
+  { width: 1100, height: 620 },
+];
+
 /** A viewport's name in a test title or an artifact filename. */
 export const label = ({ width, height }: Size) => `${width}x${height}`;
 
@@ -112,6 +121,118 @@ export async function expectNothingClipped(page: Page, size: Size): Promise<void
 
   await expect(page.locator('app-game .board-cell')).toHaveCount(BOARD_CELLS);
   await expect(page.locator('app-game app-hand-rack .slot')).toHaveCount(HAND_POSITIONS);
+}
+
+// ─── Playing a match ────────────────────────────────────────────────────────
+
+/**
+ * Makes the page's `Math.random` a seeded generator (mulberry32), installed
+ * before any of the app's code runs. Every chance in a match reads it — the
+ * opponent's deal, the first-turn coin, its choice of cell, every roll — so a
+ * seeded match plays out the same way on every run, which is what lets a check
+ * reach a combat without leaving it to luck. Call it before `startMatch`.
+ */
+export async function seedRandom(page: Page, seed: number): Promise<void> {
+  await page.addInitScript((initial) => {
+    let a = initial >>> 0;
+    Math.random = () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }, seed);
+}
+
+/** The standing panel's line saying whose move it is. */
+export function turnStatus(page: Page): Locator {
+  return page.locator('app-game app-scoreboard .status-text');
+}
+
+/**
+ * Waits for the player's turn. The heavier deck moves first, so a match may
+ * well open with the opponent placing a card before the player can act.
+ */
+export async function yourTurn(page: Page): Promise<void> {
+  await expect(turnStatus(page)).toHaveText('Your Turn', { timeout: 15_000 });
+}
+
+/** A card still in the player's hand, ready to be selected. */
+export function playableHandCard(page: Page): Locator {
+  return page.locator('app-game .rack-player .slot:not(.slot-empty) app-card .frame').first();
+}
+
+/**
+ * The cell a check should play into: one beside an opposing card where there
+ * is one, so the placement has something to contest, else the first empty
+ * cell. Read from the board rather than assumed, since the opponent may have
+ * moved first.
+ */
+export async function cellToPlay(page: Page): Promise<Locator> {
+  const key = await page.locator('app-game .board').evaluate((board) => {
+    const at = (r: number, c: number) =>
+      board.querySelector<HTMLElement>(`.board-cell[data-cell="${r}-${c}"]`);
+    const empties = [...board.querySelectorAll<HTMLElement>('.board-cell.cell-empty')];
+    const contested = empties.find((cell) => {
+      const [r, c] = cell.dataset['cell']!.split('-').map(Number);
+      for (let dr = -1; dr <= 1; dr++)
+        for (let dc = -1; dc <= 1; dc++)
+          if (at(r + dr, c + dc)?.querySelector('app-card.owner-opponent')) return true;
+      return false;
+    });
+    return (contested ?? empties[0])?.dataset['cell'] ?? null;
+  });
+  expect(key, 'an empty cell to play into').not.toBeNull();
+  return page.locator(`app-game .board-cell[data-cell="${key}"]`);
+}
+
+/** Plays one card on the player's turn, into `cellToPlay`. Returns the cell. */
+export async function playACard(page: Page): Promise<Locator> {
+  await yourTurn(page);
+  const cell = await cellToPlay(page);
+  await playableHandCard(page).click();
+  await expect(cell).toHaveClass(/cell-placeable/);
+  await cell.click();
+  await expect(cell).toHaveClass(/cell-occupied/);
+  return cell;
+}
+
+/** The combat presentation laid over the board. */
+export function clashLayer(page: Page): Locator {
+  return page.locator('app-game .clash');
+}
+
+/** The board cells offered as the next combat to fight. */
+export function choosableCells(page: Page): Locator {
+  return page.locator('app-game .board-cell.cell-choosable');
+}
+
+/**
+ * Plays the match on — the player's turns by `playACard`, the opponent's by
+ * waiting — until `stop` is reached: a clash on screen, or a combat waiting to
+ * be chosen. Offered combats are chosen (the first one) when stopping at a
+ * clash. Meant for a seeded match (`seedRandom`), where the moment is fixed.
+ */
+export async function playUntil(page: Page, stop: 'clash' | 'choice'): Promise<void> {
+  const clash = clashLayer(page);
+  const choice = choosableCells(page).first();
+  const yours = turnStatus(page).filter({ hasText: /Your Turn|Choose your battle/ });
+  const over = page.getByRole('dialog', { name: 'Game result' });
+  // Stopping at a choice, a clash is only something to wait past.
+  const next = (stop === 'clash' ? clash.or(yours) : yours).or(over).first();
+  for (let move = 0; move < 30; move++) {
+    await expect(next).toBeVisible({ timeout: 15_000 });
+    if (stop === 'clash' && (await clash.isVisible())) return;
+    if (await over.isVisible()) throw new Error(`the match ended before a ${stop}`);
+    if (await choice.isVisible()) {
+      if (stop === 'choice') return;
+      await choice.click();
+      continue;
+    }
+    await playACard(page);
+  }
+  throw new Error(`no ${stop} was reached`);
 }
 
 // ─── The Shop ───────────────────────────────────────────────────────────────

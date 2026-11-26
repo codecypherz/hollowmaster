@@ -29,9 +29,15 @@ import {
   revealedRarities,
   rosaryPurse,
   READY_STARTER_USER,
+  cellToPlay,
+  clashLayer,
+  playableHandCard,
+  playUntil,
+  seedRandom,
   startMatch,
   storeUser,
   type Size,
+  yourTurn,
 } from './helpers';
 
 /**
@@ -39,6 +45,9 @@ import {
  * preference through the browser — see `playwright.config.ts`.
  */
 const VIEWPORT: Size = { width: 1440, height: 900 };
+
+/** A seed whose match fights a combat by the third card down; see `seedRandom`. */
+const COMBAT_SEED = 2;
 
 test('a card can be played, and the screen still fits, under reduced motion', async ({ page }) => {
   // The browser is honouring the preference for this project.
@@ -49,23 +58,65 @@ test('a card can be played, and the screen still fits, under reduced motion', as
   await page.setViewportSize(VIEWPORT);
   await startMatch(page);
 
-  const centre = page.locator('app-game .board-cell[data-cell="2-2"]');
-  await expect(centre).toHaveClass(/cell-empty/);
+  // The opponent may move first; play only once it is our turn, into a cell
+  // that is still empty.
+  await yourTurn(page);
+  const cell = await cellToPlay(page);
+  await expect(cell).toHaveClass(/cell-empty/);
 
   // Choose a card, then the cell to play it into.
-  await page.locator('app-game .rack-player .slot app-card .frame').first().click();
-  await expect(centre).toHaveClass(/cell-placeable/);
-  await centre.click();
+  await playableHandCard(page).click();
+  await expect(cell).toHaveClass(/cell-placeable/);
+  await cell.click();
 
   // The post-placement state is reached with the motion suppressed: the card is
   // on the board, and the position it came from is empty.
-  await expect(centre).toHaveClass(/cell-occupied/);
-  await expect(centre.locator('app-card')).toBeVisible();
+  await expect(cell).toHaveClass(/cell-occupied/);
+  await expect(cell.locator('app-card')).toBeVisible();
   await expect(page.locator('app-game .rack-player .slot-empty')).toHaveCount(1);
 
   // And the fit still holds around it.
   await expectNoScroll(page);
   await expectNothingClipped(page, VIEWPORT);
+});
+
+test('a combat is drawn finished, rolls and powers and victor, under reduced motion', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize(VIEWPORT);
+  await seedRandom(page, COMBAT_SEED);
+  await startMatch(page);
+  await playUntil(page, 'clash');
+
+  const clash = clashLayer(page);
+  // Nothing in the clash animates: it is in its finished state from the start.
+  const moving = await clash.evaluate(
+    (root) =>
+      [root, ...root.querySelectorAll('*')].filter(
+        (el) => getComputedStyle(el).animationName !== 'none',
+      ).length,
+  );
+  expect(moving).toBe(0);
+
+  // Both sides' roll and power, and the victor, are all legible at once.
+  const rolls = clash.locator('.fighter-roll');
+  await expect(rolls).toHaveCount(2);
+  for (const roll of await rolls.all()) {
+    await expect(roll).toBeVisible();
+    await expect(roll).toHaveText(/^(Roll \d+|Carried)$/);
+  }
+  const powers = clash.locator('.fighter-power');
+  for (const power of await powers.all()) {
+    await expect(power).toBeVisible();
+    await expect(power).toHaveText(/^(\d+|WIN|FAIL)$/);
+    expect(await power.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  }
+  await expect(clash.locator('.fighter-victor', { hasText: 'Victor' })).toHaveCount(1);
+  await expect(clash.locator('.fighter-victor', { hasText: 'Victor' })).toBeVisible();
+  await expect(clash.locator('.fighter-role')).toHaveText(['ATK', 'DEF']);
+
+  await page.screenshot({ path: test.info().outputPath('clash-reduced-motion.png') });
 });
 
 test('a pack opens without animated arrival, and still reads as rare', async ({ page }) => {

@@ -17,6 +17,7 @@ import {
   emptyDeck,
   isBattleReady,
   listOf,
+  randomReadyDeck,
   removeCardFromDeck,
   trimDecks,
 } from './deck';
@@ -30,6 +31,8 @@ import {
   withMilestones,
 } from './user';
 import { settleOrder } from './exchange';
+import { CARD_DB } from './card';
+import { addSixStarCard } from '../testing/six-star';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
 const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
@@ -725,5 +728,48 @@ describe('the remembered battle deck', () => {
       expect(raised).not.toBe(state);
       expect(raised.battleDeck).toBe(0);
     });
+  });
+});
+
+describe("the opponent's random Ready deck", () => {
+  it('is Ready in every one of five hundred deals, rare cards in play', () => {
+    const sixStar = addSixStarCard();
+    let sawRare = false;
+    for (let deal = 0; deal < 500; deal++) {
+      const deck = randomReadyDeck(CARD_DB, Math.random);
+      expect(deck.cards).toHaveLength(DECK_SIZE);
+      expect(isBattleReady(deck), deck.cards.join(',')).toBe(true);
+      sawRare ||= deck.cards.some((key) => CARD_BY_KEY.get(key)!.stars >= RARITY_LIMIT.minStars);
+      for (const key of deck.cards) expect(CARD_BY_KEY.has(key)).toBe(true);
+    }
+    expect(sawRare).toBe(true);
+    expect(CARD_DB).toContain(sixStar);
+  });
+
+  it('deals nine copies from a database of one common card', () => {
+    const deck = randomReadyDeck([crawlid], Math.random);
+    expect(deck.cards).toEqual(Array(DECK_SIZE).fill(cardKey(crawlid)));
+  });
+
+  it('fills a deck from a database smaller than one, rare cards included', () => {
+    const rare = CARD_DB.filter((card) => card.stars >= RARITY_LIMIT.minStars);
+    expect(rare.length).toBeGreaterThan(0);
+    for (let deal = 0; deal < 50; deal++) {
+      const deck = randomReadyDeck([crawlid, ...rare], Math.random);
+      expect(isBattleReady(deck)).toBe(true);
+    }
+  });
+
+  it('throws for a database with nothing below the rarity limit', () => {
+    const rare = CARD_DB.filter((card) => card.stars >= RARITY_LIMIT.minStars);
+    expect(() => randomReadyDeck(rare, Math.random)).toThrow();
+    expect(() => randomReadyDeck([], Math.random)).toThrow();
+  });
+
+  it('varies between deals', () => {
+    const deals = new Set<string>();
+    for (let deal = 0; deal < 10; deal++)
+      deals.add(randomReadyDeck(CARD_DB, Math.random).cards.join());
+    expect(deals.size).toBeGreaterThan(1);
   });
 });
