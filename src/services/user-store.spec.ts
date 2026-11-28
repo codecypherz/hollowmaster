@@ -18,7 +18,9 @@ import {
 } from '../model/user';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
-const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
+const goam = CARD_BY_KEY.get(cardKeyOf('FC', 10))!;
+const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 3))!;
+const falseKnight = CARD_BY_KEY.get(cardKeyOf('FC', 17))!; // four stars
 
 /** The substitutable store a test provides through the token. */
 class InMemoryUserStore implements UserStore {
@@ -88,7 +90,7 @@ describe('the persisted shape', () => {
       version: SCHEMA_VERSION,
       geo: 12,
       rosaries: 0,
-      collection: [{ set: 'FC', number: 6, quantity: 2 }],
+      collection: [{ set: 'FC', number: 10, quantity: 2 }],
       decks: [],
       battleDeck: null,
       milestones: { peakRosaries: 0, rarestHeld: 4 },
@@ -106,18 +108,18 @@ describe('the persisted shape', () => {
   });
 
   it("survives a catalogued card's properties being edited", () => {
-    // The record names FC#6 only; whatever FC#6 says about itself today is
+    // The record names FC#10 only; whatever FC#10 says about itself today is
     // resolved at load time, never stored.
     const persisted = toPersisted({
       geo: 0,
       rosaries: 0,
-      collection: new Map([[cardKeyOf('FC', 6), 3]]),
+      collection: new Map([[cardKeyOf('FC', 10), 3]]),
       decks: [],
       battleDeck: null,
       milestones: NO_MILESTONES,
     });
-    expect(persisted.collection).toEqual([{ set: 'FC', number: 6, quantity: 3 }]);
-    expect(fromPersisted(persisted).collection.get(cardKeyOf('FC', 6))).toBe(3);
+    expect(persisted.collection).toEqual([{ set: 'FC', number: 10, quantity: 3 }]);
+    expect(fromPersisted(persisted).collection.get(cardKeyOf('FC', 10))).toBe(3);
   });
 
   it('writes the current schema version', () => {
@@ -253,7 +255,7 @@ describe('persisted decks', () => {
     expect(persisted.decks[1]).toEqual([
       { set: 'FC', number: 1 },
       { set: 'FC', number: 1 },
-      { set: 'FC', number: 6 },
+      { set: 'FC', number: 10 },
     ]);
   });
 
@@ -402,7 +404,7 @@ describe('persisted decks', () => {
       cardKey(crawlid),
       cardKey(goam),
       cardKey(crawlid),
-      cardKeyOf('FC', 7),
+      cardKey(vengefly),
     ]);
   });
 
@@ -572,7 +574,8 @@ describe('a version 3 record', () => {
   });
 
   it('is restored with the milestones it proves, and no others', () => {
-    const proved = { peakRosaries: 12000, rarestHeld: 4 };
+    // The first catalogue's FC#6 is Goam, now three stars.
+    const proved = { peakRosaries: 12000, rarestHeld: 3 };
     expect(fromPersisted(parsePersistedUser(v3())!).milestones).toEqual(proved);
     const stray = v3({ milestones: { peakRosaries: 99999, rarestHeld: 6 } });
     expect(fromPersisted(parsePersistedUser(stray)!).milestones).toEqual(proved);
@@ -592,16 +595,26 @@ describe('a version 3 record', () => {
 // ─── The remembered battle deck ─────────────────────────────────────────────
 
 /** Nine starter cards: a Ready deck the starter collection can hold. */
-const READY_REFS = [1, 7, 8, 9, 10, 11, 12, 13, 14].map((number) => ({ set: 'FC', number }));
+const READY_REFS = [1, 3, 5, 2, 9, 11, 12, 13, 14].map((number) => ({ set: 'FC', number }));
 const STARTER_HOLDINGS = READY_REFS.map((ref) => ({ ...ref, quantity: 1 }));
+
+/** The same nine cards as a record written before the renumbering names them. */
+const FIRST_CATALOGUE_READY_REFS = [1, 7, 8, 9, 10, 11, 12, 13, 14].map((number) => ({
+  set: 'FC',
+  number,
+}));
+const FIRST_CATALOGUE_STARTER_HOLDINGS = FIRST_CATALOGUE_READY_REFS.map((ref) => ({
+  ...ref,
+  quantity: 1,
+}));
 
 describe('a version 4 record', () => {
   const v4 = () => ({
     version: 4,
     geo: 320,
     rosaries: 45,
-    collection: STARTER_HOLDINGS,
-    decks: [READY_REFS, [{ set: 'FC', number: 1 }]],
+    collection: FIRST_CATALOGUE_STARTER_HOLDINGS,
+    decks: [FIRST_CATALOGUE_READY_REFS, [{ set: 'FC', number: 1 }]],
     milestones: { peakRosaries: 900, rarestHeld: 1 },
   });
 
@@ -631,9 +644,172 @@ describe('a version 4 record', () => {
     expect(store.saved[0].battleDeck).toBeNull();
     expect(store.saved[0].geo).toBe(320);
     expect(store.saved[0].rosaries).toBe(45);
-    expect(store.saved[0].decks).toEqual(v4().decks);
+    expect(store.saved[0].decks).toEqual([READY_REFS, [{ set: 'FC', number: 1 }]]);
     expect(store.saved[0].milestones).toEqual({ peakRosaries: 900, rarestHeld: 1 });
     expect(users.state().battleDeck).toBeNull();
+  });
+});
+
+// ─── The first catalogue's numbering ────────────────────────────────────────
+
+describe('a record written before the renumbering', () => {
+  const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
+  const tiktik = CARD_BY_KEY.get(cardKeyOf('FC', 2))!;
+  const v5 = (extra: Record<string, unknown> = {}) => ({
+    version: 5,
+    geo: 410,
+    rosaries: 60,
+    collection: [
+      { set: 'FC', number: 2, quantity: 2 }, // Gruz Mother, then
+      { set: 'FC', number: 9, quantity: 1 }, // Tiktik, then
+    ],
+    decks: [],
+    battleDeck: null,
+    milestones: { peakRosaries: 700, rarestHeld: 3 },
+    ...extra,
+  });
+  const restore = (raw: unknown) => fromPersisted(parsePersistedUser(raw)!);
+
+  it('keeps the cards the player owned', () => {
+    const state = restore(v5());
+    expect(gruzMother.name).toBe('Gruz Mother');
+    expect(tiktik.name).toBe('Tiktik');
+    expect([...state.collection.entries()].sort()).toEqual(
+      [
+        [cardKey(gruzMother), 2],
+        [cardKey(tiktik), 1],
+      ].sort(),
+    );
+  });
+
+  it('keeps a deck its cards and their order', () => {
+    const state = restore(
+      v5({
+        collection: [
+          { set: 'FC', number: 6, quantity: 1 },
+          { set: 'FC', number: 1, quantity: 1 },
+          { set: 'FC', number: 7, quantity: 1 },
+        ],
+        decks: [
+          [
+            { set: 'FC', number: 6 },
+            { set: 'FC', number: 1 },
+            { set: 'FC', number: 7 },
+          ],
+        ],
+      }),
+    );
+    expect(state.decks[0].cards).toEqual([cardKey(goam), cardKey(crawlid), cardKey(vengefly)]);
+    expect(state.decks[0].cards).toEqual([
+      cardKeyOf('FC', 10),
+      cardKeyOf('FC', 1),
+      cardKeyOf('FC', 3),
+    ]);
+  });
+
+  it('is renumbered at every recognised version before the current one', () => {
+    const collection = [{ set: 'FC', number: 7, quantity: 1 }];
+    const decks = [[{ set: 'FC', number: 7 }]];
+    for (const version of [1, 2, 3, 4, 5]) {
+      const state = restore({ version, geo: 0, rosaries: 0, collection, decks, milestones: {} });
+      expect([...state.collection.keys()], `version ${version}`).toEqual([cardKey(vengefly)]);
+      if (version > 1)
+        expect(state.decks[0].cards, `version ${version}`).toEqual([cardKey(vengefly)]);
+    }
+  });
+
+  it('is never applied to a current record', () => {
+    const state = restore({
+      ...v5(),
+      version: SCHEMA_VERSION,
+      collection: [{ set: 'FC', number: 7, quantity: 1 }],
+    });
+    expect([...state.collection.keys()]).toEqual([cardKeyOf('FC', 7)]);
+    expect(CARD_BY_KEY.get(cardKeyOf('FC', 7))!.name).toBe('Aspid Hunter');
+  });
+
+  it('drops a number the first catalogue never held, and restores the rest', () => {
+    const parsed = parsePersistedUser(
+      v5({
+        collection: [
+          { set: 'FC', number: 16, quantity: 1 },
+          { set: 'FC', number: 1, quantity: 1 },
+        ],
+        decks: [
+          [
+            { set: 'FC', number: 16 },
+            { set: 'FC', number: 1 },
+          ],
+        ],
+      }),
+    )!;
+    expect(parsed.collection).toEqual([{ set: 'FC', number: 1, quantity: 1 }]);
+    expect(parsed.decks).toEqual([[{ set: 'FC', number: 1 }]]);
+    expect(parsed.geo).toBe(410);
+  });
+
+  it('keeps its balances, its milestones, and its remembered battle deck', () => {
+    const state = restore(v5({ decks: [[], [{ set: 'FC', number: 2 }]], battleDeck: 1 }));
+    expect(state.geo).toBe(410);
+    expect(state.rosaries).toBe(60);
+    expect(state.milestones).toEqual({ peakRosaries: 700, rarestHeld: 3 });
+    expect(state.battleDeck).toBe(1);
+    expect(state.decks[1].cards).toEqual([cardKey(gruzMother)]);
+  });
+
+  it('reports the version it was read at', () => {
+    expect(parsePersistedUser(v5())!.version).toBe(5);
+  });
+
+  it('is rewritten at the current version and never translated twice', async () => {
+    const store = new InMemoryUserStore(parsePersistedUser(v5()));
+    TestBed.configureTestingModule({ providers: [{ provide: USER_STORE, useValue: store }] });
+    const users = TestBed.inject(UserService);
+    await users.load();
+    const first = [...users.collection().entries()].sort();
+
+    expect(store.saved).toHaveLength(1);
+    expect(store.saved[0].version).toBe(SCHEMA_VERSION);
+    expect(store.saved[0].geo).toBe(410);
+    expect(store.saved[0].rosaries).toBe(60);
+    expect(store.saved[0].milestones).toEqual({ peakRosaries: 700, rarestHeld: 3 });
+
+    // What a real store would read back: the rewritten record, through the reader.
+    const reread = new InMemoryUserStore(
+      parsePersistedUser(JSON.parse(JSON.stringify(store.saved[0]))),
+    );
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [{ provide: USER_STORE, useValue: reread }] });
+    const reloaded = TestBed.inject(UserService);
+    await reloaded.load();
+
+    expect([...reloaded.collection().entries()].sort()).toEqual(first);
+    expect(first).toEqual(
+      [
+        [cardKey(gruzMother), 2],
+        [cardKey(tiktik), 1],
+      ].sort(),
+    );
+    expect(reread.saved).toHaveLength(0);
+  });
+});
+
+describe('a current record', () => {
+  it('round-trips through the writer and the reader unchanged', () => {
+    const state = {
+      geo: 90,
+      rosaries: 12,
+      collection: new Map([
+        [cardKeyOf('FC', 7), 1],
+        [cardKeyOf('FC', 17), 2],
+      ]),
+      decks: [{ cards: [cardKeyOf('FC', 17), cardKeyOf('FC', 7)] }],
+      battleDeck: 0,
+      milestones: { peakRosaries: 30, rarestHeld: 4 },
+    };
+    const persisted = toPersisted(state);
+    expect(persisted.version).toBe(6);
+    expect(parsePersistedUser(JSON.parse(JSON.stringify(persisted)))).toEqual(persisted);
   });
 });
 
@@ -684,25 +860,28 @@ describe('persisted milestones', () => {
     version: SCHEMA_VERSION,
     geo: 5,
     rosaries,
-    collection: [{ set: 'FC', number: 6, quantity: 1 }], // four stars
-    decks: [[{ set: 'FC', number: 6 }]],
+    collection: [{ set: 'FC', number: 17, quantity: 1 }], // False Knight, four stars
+    decks: [[{ set: 'FC', number: 17 }]],
     milestones,
   });
   const restore = (raw: unknown) => fromPersisted(parsePersistedUser(raw)!);
 
   it('are proved by the records of versions 1 and 2', () => {
+    // The first catalogue's FC#6 is Goam, now three stars.
     const collection = [{ set: 'FC', number: 6, quantity: 1 }];
     for (const version of [1, 2]) {
       expect(restore({ version, geo: 5, collection, decks: [] }).milestones).toEqual({
         peakRosaries: 0,
-        rarestHeld: 4,
+        rarestHeld: 3,
       });
     }
   });
 
   it('survive a round trip after the Rosaries are spent', () => {
     const spender = restore(record({ peakRosaries: 9999, rarestHeld: 4 }, 9999));
-    const spent = settleOrder(spender, [{ key: cardKey(goam), action: 'buy', quantity: 101 }])!;
+    const spent = settleOrder(spender, [
+      { key: cardKey(falseKnight), action: 'buy', quantity: 101 },
+    ])!;
     expect(spent.rosaries).toBe(0);
     const reloaded = restore(JSON.parse(JSON.stringify(toPersisted(spent))));
     expect(reloaded.milestones.peakRosaries).toBe(9999);
@@ -730,7 +909,7 @@ describe('persisted milestones', () => {
       expect(state.milestones).toEqual({ peakRosaries: 300, rarestHeld: 4 });
       expect([state.geo, state.rosaries]).toEqual([5, 300]);
       expect(totalCards(state.collection)).toBe(1);
-      expect(state.decks).toEqual([{ cards: [cardKey(goam)] }]);
+      expect(state.decks).toEqual([{ cards: [cardKey(falseKnight)] }]);
     }
   });
 
@@ -766,7 +945,7 @@ describe('LocalStorageUserStore', () => {
       version: SCHEMA_VERSION,
       geo: 25,
       rosaries: 15,
-      collection: [{ set: 'FC', number: 6, quantity: 1 }],
+      collection: [{ set: 'FC', number: 10, quantity: 1 }],
       decks: [],
       battleDeck: null,
       milestones: { peakRosaries: 15, rarestHeld: 4 },
@@ -816,7 +995,7 @@ describe('UserService persistence', () => {
         version: SCHEMA_VERSION,
         geo: 640,
         rosaries: 0,
-        collection: [{ set: 'FC', number: 6, quantity: 2 }],
+        collection: [{ set: 'FC', number: 10, quantity: 2 }],
         decks: [],
         battleDeck: null,
         milestones: NO_MILESTONES,
@@ -825,7 +1004,7 @@ describe('UserService persistence', () => {
     await us.load();
     expect(us.geo()).toBe(640);
     expect(us.totalCards()).toBe(2);
-    expect(us.collection().get(cardKeyOf('FC', 6))).toBe(2);
+    expect(us.collection().get(cardKeyOf('FC', 10))).toBe(2);
   });
 
   it('seeds a user against an empty store, and persists that seed', async () => {

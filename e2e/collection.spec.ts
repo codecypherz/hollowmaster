@@ -35,7 +35,7 @@ const LARGE: Size = { width: 1920, height: 1080 };
 const SMALL: Size = { width: 1100, height: 620 };
 
 /** The starters, one copy each. */
-const STARTERS = [1, 7, 8, 9, 10, 11, 12, 13, 14].map((number) => ({
+const STARTERS = [1, 3, 5, 2, 9, 11, 12, 13, 14].map((number) => ({
   set: 'FC',
   number,
   quantity: 1,
@@ -169,21 +169,21 @@ for (const size of [LARGE, SMALL]) {
 for (const size of [LARGE, SMALL]) {
   test(`at ${label(size)} every frame is one size and holds its rows`, async ({ page }) => {
     await page.setViewportSize(size);
-    // FC 1 sells three digits' worth, FC 3 has a warned sale, FC 4 is unowned,
-    // and FC 7 is held twelve times.
+    // FC 1 sells three digits' worth, FC 4 has a warned sale, FC 7 is unowned,
+    // and FC 3 is held twelve times.
     await openCollectionAs(page, {
       rosaries: 450,
       collection: [
         { set: 'FC', number: 1, quantity: 130 },
-        { set: 'FC', number: 3, quantity: 1 },
-        { set: 'FC', number: 7, quantity: 12 },
+        { set: 'FC', number: 4, quantity: 1 },
+        { set: 'FC', number: 3, quantity: 12 },
       ],
-      decks: [[{ set: 'FC', number: 3 }]],
+      decks: [[{ set: 'FC', number: 4 }]],
     });
     await collectionSettled(page);
 
     // The warning's arrival moves nothing in its row.
-    const warned = sell(exchangeTile(page, 'FC', 3));
+    const warned = sell(exchangeTile(page, 'FC', 4));
     const still = [
       warned.row.locator('.row-label'),
       warned.row.locator('.row-price app-rosary'),
@@ -311,8 +311,8 @@ test('the badges obscure nothing the card draws', async ({ page }) => {
   await openCollectionAs(page, { collection: heldStarters({ 1: 9 }), decks: [] });
   await collectionSettled(page);
 
-  // Crawlid is held nine times; Gruz Mother (FC 2) is not held at all.
-  for (const tile of [exchangeTile(page, 'FC', 1), exchangeTile(page, 'FC', 2)]) {
+  // Crawlid is held nine times; Gruz Mother (FC 6) is not held at all.
+  for (const tile of [exchangeTile(page, 'FC', 1), exchangeTile(page, 'FC', 6)]) {
     const touched = await tile.evaluate((el) => {
       const b = el.querySelector('.badge')!.getBoundingClientRect();
       const hits = (sel: string) =>
@@ -469,7 +469,7 @@ test('the rarity 6 line is left out until it is earned, and then stays', async (
   await expect(rows.last()).toHaveText(/6 stars\s*5000\s*9999/);
 
   // Spent, and reloaded: still known.
-  await buy(exchangeTile(page, 'FC', 2)).raise.click();
+  await buy(exchangeTile(page, 'FC', 6)).raise.click();
   await confirm(await openCart(page)).click();
   await expect(rosaryPurse(page)).toHaveText('9972');
   await page.reload();
@@ -616,7 +616,7 @@ test('a quantity is typed on the page and in the dialog', async ({ page }) => {
 
 test('a row cannot be typed in where nothing could be pending, but is read', async ({ page }) => {
   await openCollectionAs(page, { collection: heldStarters(), decks: [] });
-  const unowned = sell(exchangeTile(page, 'FC', 2)).value;
+  const unowned = sell(exchangeTile(page, 'FC', 6)).value;
   await unowned.focus();
   await page.keyboard.type('4');
   await expect(unowned).toHaveValue('0');
@@ -632,7 +632,7 @@ test('a keyboard alone buys and sells through the cart, and it survives a reload
   await openCollectionAs(page, { rosaries: 400, collection: heldStarters(), decks: [] });
 
   const crawlid = exchangeTile(page, 'FC', 1);
-  const gruzMother = exchangeTile(page, 'FC', 2); // three stars, unowned
+  const gruzMother = exchangeTile(page, 'FC', 6); // three stars, unowned
   await expect(progress(page)).toHaveText('9 of 15 collected');
 
   // The cart control and the purse, then the first tile's card, Sell row, and
@@ -713,7 +713,7 @@ test('pending lines outlive the page but not a reload', async ({ page }) => {
     collection: heldStarters(),
     decks: [STARTERS.map(({ set, number }) => ({ set, number }))],
   });
-  await buy(exchangeTile(page, 'FC', 2)).target.click();
+  await buy(exchangeTile(page, 'FC', 6)).target.click();
   await sell(exchangeTile(page, 'FC', 1)).raise.click();
   await expect(cartControl(page)).toHaveAccessibleName('Cart, 10 cards pending');
 
@@ -735,7 +735,7 @@ test('pending lines outlive the page but not a reload', async ({ page }) => {
   await expect(page).toHaveURL(/\/battle$/);
 
   await goTo(page, 'Collection');
-  await expect(buy(exchangeTile(page, 'FC', 2)).value).toHaveValue('9');
+  await expect(buy(exchangeTile(page, 'FC', 6)).value).toHaveValue('9');
   await expect(sell(exchangeTile(page, 'FC', 1)).value).toHaveValue('1');
   const dialog = await openCart(page);
   await expect(dialog.locator('.line-name')).toHaveText(['Gruz Mother', 'Crawlid']);
@@ -756,7 +756,7 @@ test('sales pay for a purchase, and a shortfall blocks one', async ({ page }) =>
   });
   const crawlid = exchangeTile(page, 'FC', 1);
 
-  for (let i = 0; i < 2; i++) await buy(exchangeTile(page, 'FC', 7)).raise.click();
+  for (let i = 0; i < 2; i++) await buy(exchangeTile(page, 'FC', 3)).raise.click();
   let dialog = await openCart(page);
   await expect(dialog.locator('[data-total="short"]')).toContainText('5');
   await expect(confirm(dialog)).toHaveAttribute('aria-disabled', 'true');
@@ -790,7 +790,7 @@ test('sales pay for a purchase, and a shortfall blocks one', async ({ page }) =>
   await expect(dialog).toHaveCount(0);
   await expect(rosaryPurse(page)).toHaveText('1');
   await expect(badge(crawlid)).toHaveAccessibleName('Not owned');
-  await expect(badge(exchangeTile(page, 'FC', 7))).toHaveAccessibleName('3 held');
+  await expect(badge(exchangeTile(page, 'FC', 3))).toHaveAccessibleName('3 held');
 });
 
 test('a confirmed sale of the last copy a deck uses takes it out of that deck', async ({
@@ -799,7 +799,7 @@ test('a confirmed sale of the last copy a deck uses takes it out of that deck', 
   await page.setViewportSize(LARGE);
   await openCollectionAs(page, {
     collection: heldStarters(),
-    decks: [[{ set: 'FC', number: 1 }], [{ set: 'FC', number: 7 }], [{ set: 'FC', number: 1 }]],
+    decks: [[{ set: 'FC', number: 1 }], [{ set: 'FC', number: 3 }], [{ set: 'FC', number: 1 }]],
   });
 
   const crawlid = sell(exchangeTile(page, 'FC', 1));
@@ -813,7 +813,7 @@ test('a confirmed sale of the last copy a deck uses takes it out of that deck', 
   await expect(crawlid.row).toHaveAccessibleDescription(
     '1 Rosary each Selling removes it from Deck 1 and Deck 3',
   );
-  const gruzzer = sell(exchangeTile(page, 'FC', 8));
+  const gruzzer = sell(exchangeTile(page, 'FC', 5));
   await gruzzer.raise.click();
   await expect(gruzzer.warning).toHaveCount(0);
 
@@ -935,7 +935,7 @@ test('focus is held inside the dialog, wherever in it the player presses', async
 test("the Decks page's reset zeroes the purse and empties the cart", async ({ page }) => {
   await openCollectionAs(page, { rosaries: 340, collection: heldStarters(), decks: [[]] });
   await expect(rosaryPurse(page)).toHaveText('340');
-  await buy(exchangeTile(page, 'FC', 2)).raise.click();
+  await buy(exchangeTile(page, 'FC', 6)).raise.click();
   await sell(exchangeTile(page, 'FC', 1)).raise.click();
   await expect(cartControl(page)).toHaveAccessibleName('Cart, 2 cards pending');
 
@@ -949,4 +949,37 @@ test("the Decks page's reset zeroes the purse and empties the cart", async ({ pa
   await goTo(page, 'Collection');
   await expect(rosaryPurse(page)).toHaveText('0');
   await expect(cartControl(page)).toHaveAccessibleName('Cart, no cards pending');
+});
+
+test('a save written before the renumbering shows the cards it held', async ({ page }) => {
+  // Version 5 numbered the first catalogue's cards: there, FC 2 was Gruz Mother.
+  await page.goto('/battle');
+  await page.evaluate(() =>
+    localStorage.setItem(
+      'hollowmaster.user.v1',
+      JSON.stringify({
+        version: 5,
+        geo: 0,
+        rosaries: 0,
+        collection: [{ set: 'FC', number: 2, quantity: 2 }],
+        decks: [[{ set: 'FC', number: 2 }]],
+        battleDeck: null,
+        milestones: { peakRosaries: 0, rarestHeld: 3 },
+      }),
+    ),
+  );
+  await openCollection(page);
+
+  const gruzMother = exchangeTile(page, 'FC', 6);
+  await expect(gruzMother.locator('.cf-name-text')).toHaveText('Gruz Mother');
+  await expect(badge(gruzMother)).toHaveAccessibleName('2 held');
+  // FC 2 is Tiktik now, which the save never held.
+  await expect(badge(exchangeTile(page, 'FC', 2))).toHaveAccessibleName('Not owned');
+
+  // The record is rewritten in the current numbering, so a reload reads it as written.
+  expect(
+    await page.evaluate(() => JSON.parse(localStorage.getItem('hollowmaster.user.v1')!).version),
+  ).toBe(6);
+  await page.reload();
+  await expect(badge(exchangeTile(page, 'FC', 6))).toHaveAccessibleName('2 held');
 });

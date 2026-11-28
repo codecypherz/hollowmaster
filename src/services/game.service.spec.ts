@@ -43,7 +43,7 @@ function blankBoard(): Board {
   return Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
 }
 
-const goam = cardKeyOf('FC', 6); // four stars
+const falseKnight = cardKeyOf('FC', 17); // four stars
 
 /** Opens on the player's turn: see `HEAVY_TEST_DECK`. */
 const HEAVY_DECK = HEAVY_TEST_DECK;
@@ -124,7 +124,9 @@ describe('GameService', () => {
     });
 
     it('refuses an Invalid deck, starting nothing', () => {
-      const invalid: Deck = { cards: [goam, goam, goam, ...STARTER_CARD_KEYS.slice(0, 6)] };
+      const invalid: Deck = {
+        cards: [falseKnight, falseKnight, falseKnight, ...STARTER_CARD_KEYS.slice(0, 6)],
+      };
       expect(invalid.cards).toHaveLength(HAND_SIZE);
       expect(gs.startGame(invalid)).toBe(false);
       expect(gs.state()).toBeNull();

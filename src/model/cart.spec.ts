@@ -15,8 +15,8 @@ import {
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
 const c = cardKey(crawlid);
-const v = cardKeyOf('FC', 7);
-const g = cardKeyOf('FC', 8);
+const v = cardKeyOf('FC', 3);
+const g = cardKeyOf('FC', 5);
 
 const buying = (quantity: number, key = c): CartLine => ({ key, action: 'buy', quantity });
 const selling = (quantity: number, key = c): CartLine => ({ key, action: 'sell', quantity });

@@ -316,9 +316,9 @@ test('the Decks page is left aligned under reduced motion as it is otherwise', a
   );
 
   await page.setViewportSize(VIEWPORT);
-  // Starters, one two-star card, and Goam: three rarity sections.
+  // Starters, one two-star card, and False Knight: three rarity sections.
   await openDecksAs(page, {
-    collection: [1, 7, 8, 9, 10, 11, 12, 13, 14, 4, 6].map((number) => ({
+    collection: [1, 3, 5, 2, 9, 11, 12, 13, 14, 7, 17].map((number) => ({
       set: 'FC',
       number,
       quantity: 1,
@@ -339,10 +339,10 @@ test('the Collection page presents its tiles, cart, and purse without animation'
   await page.setViewportSize(VIEWPORT);
   await openCollectionAs(page, {
     rosaries: 50,
-    collection: [1, 7, 8, 9, 10, 11, 12, 13, 14].map((number) => ({
+    collection: [1, 3, 5, 2, 9, 11, 12, 13, 14].map((number) => ({
       set: 'FC',
       number,
-      quantity: number === 7 ? 3 : 1,
+      quantity: number === 3 ? 3 : 1,
     })),
     decks: [[{ set: 'FC', number: 1 }]],
   });
@@ -370,8 +370,8 @@ test('the Collection page presents its tiles, cart, and purse without animation'
 
   // Every treatment the motion might have carried is still there.
   const crawlid = exchangeTile(page, 'FC', 1);
-  const vengefly = exchangeTile(page, 'FC', 7);
-  const gruzMother = exchangeTile(page, 'FC', 2);
+  const vengefly = exchangeTile(page, 'FC', 3);
+  const gruzMother = exchangeTile(page, 'FC', 6);
   await expect(vengefly.locator('.badge')).toHaveAccessibleName('3 held');
   await expect(gruzMother.locator('.badge')).toHaveAccessibleName('Not owned');
   await expect(gruzMother.locator('.veil')).toBeVisible();

@@ -41,19 +41,22 @@ const LADDER: Size[] = [
 
 const DEFAULT: Size = { width: 1440, height: 900 };
 
-const goam = { set: 'FC', number: 6 }; // four stars
+const falseKnight = { set: 'FC', number: 17 }; // four stars
 
 /**
  * Four decks: an Incomplete Deck 1, a Ready Deck 2 (the starters), a Ready
- * Deck 3 (the starters reversed), and an Invalid Deck 4 (three Goams).
+ * Deck 3 (the starters reversed), and an Invalid Deck 4 (three False Knights).
  */
 const MIXED_USER: StoredUser = {
-  collection: [...STARTER_REFS.map((ref) => ({ ...ref, quantity: 1 })), { ...goam, quantity: 3 }],
+  collection: [
+    ...STARTER_REFS.map((ref) => ({ ...ref, quantity: 1 })),
+    { ...falseKnight, quantity: 3 },
+  ],
   decks: [
     STARTER_REFS.slice(0, 8),
     [...STARTER_REFS],
     [...STARTER_REFS].reverse(),
-    [goam, goam, goam, ...STARTER_REFS.slice(0, 6)],
+    [falseKnight, falseKnight, falseKnight, ...STARTER_REFS.slice(0, 6)],
   ],
 };
 

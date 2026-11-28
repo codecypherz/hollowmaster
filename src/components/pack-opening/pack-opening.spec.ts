@@ -5,11 +5,11 @@ import { PackOpening, OPENING_SIZE, dwellFor } from './pack-opening';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // ★1
 const huskWarrior = CARD_BY_KEY.get(cardKeyOf('FC', 15))!; // ★2
-const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 2))!; // ★3
-const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!; // ★4
+const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 6))!; // ★3
+const falseKnight = CARD_BY_KEY.get(cardKeyOf('FC', 17))!; // ★4
 
 /** A pack already in reveal order: common first, rarest last. */
-const pack: Card[] = revealOrder([goam, crawlid, gruzMother, crawlid, huskWarrior]);
+const pack: Card[] = revealOrder([falseKnight, crawlid, gruzMother, crawlid, huskWarrior]);
 
 function mount(cards: readonly Card[] = pack, def = PACKS[0]) {
   const fixture = TestBed.createComponent(PackOpening);
@@ -187,7 +187,7 @@ describe('PackOpening', () => {
 
   describe('dwell time', () => {
     it('holds a rarer card longer than a common one', () => {
-      expect(dwellFor(goam)).toBeGreaterThan(dwellFor(gruzMother));
+      expect(dwellFor(falseKnight)).toBeGreaterThan(dwellFor(gruzMother));
       expect(dwellFor(gruzMother)).toBeGreaterThan(dwellFor(huskWarrior));
       expect(dwellFor(huskWarrior)).toBeGreaterThan(dwellFor(crawlid));
     });

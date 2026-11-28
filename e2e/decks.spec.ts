@@ -269,13 +269,13 @@ test.describe('the width bands', () => {
 
 // ─── 13.4 The count badge ───────────────────────────────────────────────────
 
-/** The starter collection, one copy each, plus one Goam (FC 6, four stars). */
-const STARTERS = [1, 7, 8, 9, 10, 11, 12, 13, 14].map((number) => ({
+/** The starter collection, one copy each. `FALSE_KNIGHT` is FC 17, four stars. */
+const STARTERS = [1, 3, 5, 2, 9, 11, 12, 13, 14].map((number) => ({
   set: 'FC',
   number,
   quantity: 1,
 }));
-const GOAM = { set: 'FC', number: 6 };
+const FALSE_KNIGHT = { set: 'FC', number: 17 };
 const CRAWLID = { set: 'FC', number: 1 };
 
 /** The starters, with Crawlid raised to `quantity`. */
@@ -391,10 +391,10 @@ test('the badge separator is as heavy and as high in contrast as the used figure
   page,
 }) => {
   await page.setViewportSize(DEFAULT);
-  // Crawlid: one of three used, the normal badge. FC 7: its one copy used, exhausted.
+  // Crawlid: one of three used, the normal badge. FC 3: its one copy used, exhausted.
   await openDecksAs(page, {
     collection: startersWithCrawlid(3),
-    decks: [[CRAWLID, { set: 'FC', number: 7 }]],
+    decks: [[CRAWLID, { set: 'FC', number: 3 }]],
   });
   await decksSettled(page);
 
@@ -1097,26 +1097,29 @@ test('the deck controls are named icons, beside the deck buttons behind a separa
 
 test('the deck states its standing: error, warning, or ready', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  // Three Goam held, so one deck may hold all three and break the rarity limit.
-  await openDecksAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 3 }], decks: [[]] });
+  // Three False Knights held, so one deck may hold all three and break the rarity limit.
+  await openDecksAs(page, {
+    collection: [...STARTERS, { ...FALSE_KNIGHT, quantity: 3 }],
+    decks: [[]],
+  });
 
   // An empty deck is a warning, and nothing is an error.
   expect(await deckStanding(page)).toEqual([
     expect.objectContaining({ kind: 'incomplete', text: expect.stringMatching(/9 more cards/) }),
   ]);
 
-  // Rarity order puts Goam first. Two copies of it are within the limit.
-  const goam = collectionTiles(page).first();
-  await expect(goam.locator('.cf-name-text')).toHaveText(/goam/i);
+  // Rarity order puts False Knight first. Two copies of it are within the limit.
+  const falseKnight = collectionTiles(page).first();
+  await expect(falseKnight.locator('.cf-name-text')).toHaveText(/false knight/i);
   for (let i = 0; i < 2; i++) {
-    await addButton(goam).click();
+    await addButton(falseKnight).click();
   }
   await expect(deckCards(page)).toHaveCount(2);
   expect((await deckStanding(page)).map((l) => l.kind)).toEqual(['incomplete']);
 
   // A third breaks it, and the error arrives without a reload, ahead of the
   // warning.
-  await addButton(goam).click();
+  await addButton(falseKnight).click();
   await expect(deckCards(page)).toHaveCount(3);
   const both = await deckStanding(page);
   expect(both.map((l) => l.kind)).toEqual(['invalid', 'incomplete']);
@@ -1153,13 +1156,13 @@ test('the deck states its standing: error, warning, or ready', async ({ page }) 
     .locator('app-decks .pinned')
     .screenshot({ path: 'test-results/decks-standing-both.png' });
 
-  // Removing one Goam clears the error.
+  // Removing one False Knight clears the error.
   await removeButton(deckSlots(page).nth(1)).click();
   await expect(deckCards(page)).toHaveCount(2);
   expect((await deckStanding(page)).map((l) => l.kind)).toEqual(['incomplete']);
 
   // Filled to nine within the limit, the deck is ready: seven one-star
-  // starters after the two Goam, a copy of each.
+  // starters after the two False Knights, a copy of each.
   for (let i = 1; i <= DECK_SIZE - 2; i++) {
     await addButton(collectionTiles(page).nth(i)).click();
   }
@@ -1184,7 +1187,10 @@ async function tileAttacks(page: Page): Promise<number[]> {
 
 test('the active order shows its direction and reverses on a second choice', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  await openDecksAs(page, { collection: [...STARTERS, { ...GOAM, quantity: 1 }], decks: [[]] });
+  await openDecksAs(page, {
+    collection: [...STARTERS, { ...FALSE_KNIGHT, quantity: 1 }],
+    decks: [[]],
+  });
 
   // On arrival only Rarity carries a chevron, and it is announced descending.
   await expect(page.locator('.sort-option .sort-chevron')).toHaveCount(1);
@@ -1216,10 +1222,14 @@ test('the active order shows its direction and reverses on a second choice', asy
 
 test('ordering by rarity sections the collection', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
-  // The one-star starters, one two-star card (FC 4), and Goam at four stars.
+  // The one-star starters, one two-star card (FC 7), and False Knight at four stars.
   // Nothing at three, so no three-star section may appear.
   await openDecksAs(page, {
-    collection: [...STARTERS, { set: 'FC', number: 4, quantity: 1 }, { ...GOAM, quantity: 1 }],
+    collection: [
+      ...STARTERS,
+      { set: 'FC', number: 7, quantity: 1 },
+      { ...FALSE_KNIGHT, quantity: 1 },
+    ],
     decks: [[]],
   });
 
@@ -1283,7 +1293,11 @@ test('the collection is aligned to its left edge in every order', async ({ page 
   await page.setViewportSize(DEFAULT);
   // One four-star and one two-star card, so those sections are rows of one.
   await openDecksAs(page, {
-    collection: [...STARTERS, { set: 'FC', number: 4, quantity: 1 }, { ...GOAM, quantity: 1 }],
+    collection: [
+      ...STARTERS,
+      { set: 'FC', number: 7, quantity: 1 },
+      { ...FALSE_KNIGHT, quantity: 1 },
+    ],
     decks: [[]],
   });
 
@@ -1383,8 +1397,8 @@ test('reset restores a new player after confirmation', async ({ page }) => {
   await page.setViewportSize(DEFAULT);
   await openDecksAs(page, {
     geo: 750,
-    collection: [...startersWithCrawlid(3), { ...GOAM, quantity: 2 }],
-    decks: [[CRAWLID, CRAWLID, GOAM], [CRAWLID], []],
+    collection: [...startersWithCrawlid(3), { ...FALSE_KNIGHT, quantity: 2 }],
+    decks: [[CRAWLID, CRAWLID, FALSE_KNIGHT], [CRAWLID], []],
   });
   await chooseOrder(page, 'Name');
   await deckButton(page, 'Deck 2').click();

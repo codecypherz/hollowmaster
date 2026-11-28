@@ -29,10 +29,10 @@ class InMemoryUserStore implements UserStore {
 }
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
-const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
-const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 2))!;
+const falseKnight = CARD_BY_KEY.get(cardKeyOf('FC', 17))!; // four stars
+const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
 /** A starter card, so a freshly seeded user holds one. */
-const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
+const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 3))!;
 
 const sell = (card: Card, quantity = 1): OrderLine => ({
   key: cardKey(card),
@@ -46,7 +46,7 @@ const buy = (card: Card, quantity = 1): OrderLine => ({
 });
 
 /** Five cards to stand in for a pack. */
-const pack: Card[] = [crawlid, crawlid, goam, gruzMother, crawlid];
+const pack: Card[] = [crawlid, crawlid, falseKnight, gruzMother, crawlid];
 
 describe('UserService', () => {
   let us: UserService;
@@ -212,7 +212,7 @@ describe('UserService', () => {
     it('adds a held card and refuses one the collection does not hold', () => {
       expect(us.addCardToDeck(0, crawlid)).toBe(true);
       expect(us.decks()[0].cards).toEqual([cardKey(crawlid)]);
-      expect(us.addCardToDeck(0, goam)).toBe(false);
+      expect(us.addCardToDeck(0, falseKnight)).toBe(false);
       expect(us.decks()[0].cards).toEqual([cardKey(crawlid)]);
     });
 
@@ -281,7 +281,7 @@ describe('UserService', () => {
       us.addCardToDeck(1, crawlid);
       us.removeCardFromDeck(0, 0);
       us.deleteDeck(1);
-      us.addCardToDeck(0, goam); // refused
+      us.addCardToDeck(0, falseKnight); // refused
       TestBed.tick();
 
       expect(geoSeen).toEqual([500]);
@@ -436,7 +436,10 @@ describe('UserService', () => {
       TestBed.runInInjectionContext(() =>
         effect(() => {
           const s = us.state();
-          seen.push({ held: quantityOf(s.collection, goam), rarest: s.milestones.rarestHeld });
+          seen.push({
+            held: quantityOf(s.collection, falseKnight),
+            rarest: s.milestones.rarestHeld,
+          });
         }),
       );
       TestBed.tick();
@@ -450,9 +453,9 @@ describe('UserService', () => {
     });
 
     it('keep the rarest card held and the highest balance through sales and purchases', () => {
-      us.grantCards([goam]);
+      us.grantCards([falseKnight]);
       expect(us.state().milestones).toEqual({ peakRosaries: 0, rarestHeld: 4 });
-      us.settle([sell(goam)]);
+      us.settle([sell(falseKnight)]);
       expect(us.rosaries()).toBe(33);
       expect(us.state().milestones).toEqual({ peakRosaries: 33, rarestHeld: 4 });
       us.settle([buy(crawlid, 8)]);
@@ -461,8 +464,8 @@ describe('UserService', () => {
     });
 
     it('count only the balance an order settles at', () => {
-      us.grantCards([goam]);
-      us.settle([sell(goam), buy(crawlid, 8)]);
+      us.grantCards([falseKnight]);
+      us.settle([sell(falseKnight), buy(crawlid, 8)]);
       expect(us.state().milestones.peakRosaries).toBe(1);
     });
 
@@ -478,14 +481,14 @@ describe('UserService', () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({ providers: [{ provide: USER_STORE, useValue: store }] });
       const users = TestBed.inject(UserService);
-      users.grantCards([goam]);
+      users.grantCards([falseKnight]);
       expect(store.saved).toHaveLength(1);
       expect(store.saved[0].milestones).toEqual({ peakRosaries: 0, rarestHeld: 4 });
     });
 
     it('are a new player’s again after a reset', () => {
-      us.grantCards([goam]);
-      us.settle([sell(goam)]);
+      us.grantCards([falseKnight]);
+      us.settle([sell(falseKnight)]);
       us.reset();
       expect(us.state().milestones).toEqual(seedUser().milestones);
     });
@@ -496,14 +499,14 @@ describe('UserService', () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({ providers: [{ provide: USER_STORE, useValue: store }] });
       const users = TestBed.inject(UserService);
-      users.grantCards(Array<Card>(400).fill(goam));
+      users.grantCards(Array<Card>(400).fill(falseKnight));
       store.saved = [];
       const before = users.state();
-      expect(users.settle([sell(goam, 400), buy(six)])).toBe(false);
+      expect(users.settle([sell(falseKnight, 400), buy(six)])).toBe(false);
       expect(users.state()).toBe(before);
       expect(store.saved).toEqual([]);
 
-      expect(users.settle([sell(goam, 303)])).toBe(true);
+      expect(users.settle([sell(falseKnight, 303)])).toBe(true);
       expect(users.rosaries()).toBe(9999);
       expect(users.settle([buy(six)])).toBe(true);
       expect(quantityOf(users.collection(), six)).toBe(1);
@@ -521,12 +524,12 @@ describe('UserService', () => {
       const users = TestBed.inject(UserService);
 
       users.creditGeo(300);
-      users.grantCards([goam, gruzMother, crawlid]);
+      users.grantCards([falseKnight, gruzMother, crawlid]);
       users.createDeck();
       users.createDeck();
       users.addCardToDeck(0, crawlid);
-      users.addCardToDeck(1, goam);
-      users.settle([sell(goam)]);
+      users.addCardToDeck(1, falseKnight);
+      users.settle([sell(falseKnight)]);
       expect(users.rosaries()).toBeGreaterThan(0);
 
       users.reset();

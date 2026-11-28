@@ -225,9 +225,9 @@ describe('card identity', () => {
   });
 
   it('indexes the whole catalogue', () => {
-    expect(CARD_BY_KEY.size).toBe(15);
+    expect(CARD_BY_KEY.size).toBe(43);
     expect(CARD_BY_KEY.size).toBe(CARD_DB.length);
-    expect(CARD_BY_KEY.get('FC#7')?.name).toBe('Vengefly');
+    expect(CARD_BY_KEY.get('FC#7')?.name).toBe('Aspid Hunter');
     for (const c of CARD_DB) expect(CARD_BY_KEY.get(cardKey(c))).toBe(c);
   });
 

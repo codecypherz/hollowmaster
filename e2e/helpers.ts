@@ -469,7 +469,7 @@ export async function storeUser(page: Page, user: StoredUser): Promise<void> {
   await page.evaluate(
     (record) => localStorage.setItem('hollowmaster.user.v1', JSON.stringify(record)),
     {
-      version: 5,
+      version: 6,
       geo: user.geo ?? 0,
       rosaries: user.rosaries ?? 0,
       collection: user.collection,
@@ -482,7 +482,7 @@ export async function storeUser(page: Page, user: StoredUser): Promise<void> {
 
 /** The nine starter cards, by identity, in starter order. */
 export const STARTER_REFS: readonly { set: string; number: number }[] = [
-  1, 7, 8, 9, 10, 11, 12, 13, 14,
+  1, 3, 5, 2, 9, 11, 12, 13, 14,
 ].map((number) => ({ set: 'FC', number }));
 
 /** A new player's collection, with Deck 1 holding all nine: a Ready deck by construction. */

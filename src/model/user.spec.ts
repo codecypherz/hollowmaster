@@ -1,7 +1,9 @@
 import { addSixStarCard } from '../testing/six-star';
 import { Card, CardKey, CARD_BY_KEY, CARD_DB, cardKey, cardKeyOf } from './card';
 import {
+  FIRST_CATALOGUE_RENUMBERING,
   STARTER_CARD_KEYS,
+  assertRenumbering,
   UserState,
   distinctCards,
   grantAll,
@@ -12,8 +14,8 @@ import {
 } from './user';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
-const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
-const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
+const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 3))!;
+const goam = CARD_BY_KEY.get(cardKeyOf('FC', 10))!;
 
 const empty: ReadonlyMap<CardKey, number> = new Map();
 
@@ -162,5 +164,30 @@ describe('the milestones', () => {
       milestones: { peakRosaries: 0, rarestHeld: 0 },
     };
     expect(withMilestones(state)).toBe(state);
+  });
+});
+
+describe('the first-catalogue renumbering', () => {
+  it('states all fifteen first-catalogue cards, each landing on the card it names', () => {
+    expect(FIRST_CATALOGUE_RENUMBERING.map((row) => row.from)).toEqual(
+      Array.from({ length: 15 }, (_, i) => i + 1),
+    );
+    for (const row of FIRST_CATALOGUE_RENUMBERING) {
+      expect(CARD_BY_KEY.get(cardKeyOf('FC', row.to))?.name).toBe(row.name);
+    }
+    expect(() => assertRenumbering(FIRST_CATALOGUE_RENUMBERING)).not.toThrow();
+  });
+
+  it('rejects a row whose card is not at its stated number', () => {
+    const moved = FIRST_CATALOGUE_RENUMBERING.map((row) =>
+      row.name === 'Gruz Mother' ? { ...row, to: 2 } : row,
+    );
+    expect(() => assertRenumbering(moved)).toThrow(/Gruz Mother/);
+    expect(() => assertRenumbering([{ from: 1, name: 'Crawlid', to: 999 }])).toThrow(/no card/);
+  });
+
+  it('rejects two rows sending cards to the same number', () => {
+    const crawlidRow = { from: 1, name: 'Crawlid', to: 1 };
+    expect(() => assertRenumbering([crawlidRow, { ...crawlidRow, from: 16 }])).toThrow(/two cards/);
   });
 });

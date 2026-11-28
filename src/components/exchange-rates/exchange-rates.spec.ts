@@ -3,7 +3,7 @@ import { CARD_BY_KEY, Card, cardKeyOf } from '../../model/card';
 import { UserService } from '../../services/user.service';
 import { ExchangeRates } from './exchange-rates';
 
-const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!; // four stars, sells for 33
+const falseKnight = CARD_BY_KEY.get(cardKeyOf('FC', 17))!; // four stars, sells for 33
 
 describe('ExchangeRates', () => {
   let fixture: ComponentFixture<ExchangeRates>;
@@ -41,8 +41,8 @@ describe('ExchangeRates', () => {
 
   /** Earns Rosaries the way a player does: by selling cards. */
   function earn(copies: number): void {
-    users.grantCards(Array<Card>(copies).fill(goam));
-    users.settle([{ key: cardKeyOf('FC', 6), action: 'sell', quantity: copies }]);
+    users.grantCards(Array<Card>(copies).fill(falseKnight));
+    users.settle([{ key: cardKeyOf('FC', 17), action: 'sell', quantity: copies }]);
     fixture.detectChanges();
   }
 

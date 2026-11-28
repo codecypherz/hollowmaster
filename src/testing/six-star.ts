@@ -2,8 +2,9 @@ import { onTestFinished } from 'vitest';
 import { CARD_BY_KEY, CARD_DB, Card, cardKey } from '../model/card';
 
 /**
- * Catalogues a six-star card for the running test alone: no real card has six
- * stars yet, so the rules that only such a card reaches have nothing to run on.
+ * Catalogues a six-star card for the running test alone, at a number no real
+ * card uses, so a test that needs one is not bound to the catalogue's six-star
+ * cards — their stats, their numbers, or whether any are still catalogued.
  * Call it from a test or a `beforeEach`; the card is taken out when that test
  * ends, whatever its outcome.
  */

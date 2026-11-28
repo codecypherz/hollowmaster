@@ -8,7 +8,7 @@ import { UserService } from '../../services/user.service';
 import { Collection, summaryText } from './collection';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // one star, 4 to buy, 1 to sell
-const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
+const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 3))!;
 const FC_TOTAL = CARD_DB.filter((card) => card.set === 'FC').length;
 
 type Ref = { set: string; number: number };
@@ -158,14 +158,14 @@ describe('the Collection page', () => {
   // ─── Badges ───────────────────────────────────────────────────────────
 
   it('badges a held card with its count and an unowned one as not owned', async () => {
-    await open({ collection: [held(1, 3), held(7, 1)] });
+    await open({ collection: [held(1, 3), held(3, 1)] });
     const face = (slug: string) => tile(slug).querySelector('.badge')!.textContent!.trim();
     expect(badge('FC-1')).toBe('3 held');
     expect(face('FC-1')).toBe('3 held');
-    expect(badge('FC-7')).toBe('1 held');
-    expect(badge('FC-2')).toBe('Not owned');
-    expect(face('FC-2')).toBe('Not owned');
-    expect(tile('FC-2').querySelector('.veil')).not.toBeNull();
+    expect(badge('FC-3')).toBe('1 held');
+    expect(badge('FC-6')).toBe('Not owned');
+    expect(face('FC-6')).toBe('Not owned');
+    expect(tile('FC-6').querySelector('.veil')).not.toBeNull();
     expect(tile('FC-1').querySelector('.veil')).toBeNull();
   });
 
@@ -187,7 +187,7 @@ describe('the Collection page', () => {
     expect(tile('FC-10').querySelector('.tile-number')!.textContent!.trim()).toBe('FC#10');
     expect(tile('FC-1').querySelector('.tile-card .tile-number, .tile-card .row')).toBeNull();
     // The veil covers the card and nothing else of the frame.
-    expect(tile('FC-2').querySelector('.veil')!.parentElement!.className).toBe('tile-card');
+    expect(tile('FC-6').querySelector('.veil')!.parentElement!.className).toBe('tile-card');
   });
 
   // ─── The Sell row ─────────────────────────────────────────────────────
@@ -239,11 +239,11 @@ describe('the Collection page', () => {
       expect(row(slug, 'sell').getAttribute('title')).toBeNull();
     }
     expect(described(row('FC-1', 'sell'))).toEqual(['1 Rosary each']);
-    expect(described(row('FC-5', 'sell'))).toEqual(['3 Rosaries each']);
-    expect(row('FC-5', 'sell').querySelector('.row-price')!.getAttribute('aria-hidden')).toBe(
+    expect(described(row('FC-8', 'sell'))).toEqual(['3 Rosaries each']);
+    expect(row('FC-8', 'sell').querySelector('.row-price')!.getAttribute('aria-hidden')).toBe(
       'true',
     );
-    expect(row('FC-5', 'sell').querySelector('.row-price img.rosary-mark')).not.toBeNull();
+    expect(row('FC-8', 'sell').querySelector('.row-price img.rosary-mark')).not.toBeNull();
   });
 
   it('draws each row as one segmented bar, the Buy row in soul', async () => {
@@ -336,8 +336,8 @@ describe('the Collection page', () => {
   });
 
   it('withholds selling down at nine copies or fewer, with the reason', async () => {
-    await open({ collection: [held(1, 9), held(7, 2)] });
-    for (const slug of ['FC-1', 'FC-7', 'FC-2']) {
+    await open({ collection: [held(1, 9), held(3, 2)] });
+    for (const slug of ['FC-1', 'FC-3', 'FC-6']) {
       const target = part(slug, 'sell', 'target');
       expect(unavailable(target), slug).toBe(true);
       expect(target.disabled).toBe(false);
@@ -351,12 +351,12 @@ describe('the Collection page', () => {
 
   it('leaves every control of an unowned card’s Sell row unavailable', async () => {
     await open({ collection: [held(1, 1)] });
-    expect(amount('FC-2', 'sell')).toBe(0);
+    expect(amount('FC-6', 'sell')).toBe(0);
     for (const name of ['lower', 'raise', 'target'] as const) {
-      expect(unavailable(part('FC-2', 'sell', name)), name).toBe(true);
-      press(part('FC-2', 'sell', name));
+      expect(unavailable(part('FC-6', 'sell', name)), name).toBe(true);
+      press(part('FC-6', 'sell', name));
     }
-    expect(part('FC-2', 'sell', 'raise').getAttribute('title')).toBe('You hold none to sell');
+    expect(part('FC-6', 'sell', 'raise').getAttribute('title')).toBe('You hold none to sell');
     expect(cart.isEmpty()).toBe(true);
   });
 
@@ -367,23 +367,23 @@ describe('the Collection page', () => {
     press(part('FC-1', 'buy', 'raise'), 3);
     press(part('FC-1', 'buy', 'lower'));
     expect(amount('FC-1', 'buy')).toBe(2);
-    expect(unavailable(part('FC-2', 'buy', 'lower'))).toBe(true);
+    expect(unavailable(part('FC-6', 'buy', 'lower'))).toBe(true);
   });
 
   it('buys up to nine from the copies held', async () => {
     await open({ collection: [held(1, 2)] });
     press(part('FC-1', 'buy', 'target'));
     expect(amount('FC-1', 'buy')).toBe(7);
-    press(part('FC-2', 'buy', 'target'));
-    expect(amount('FC-2', 'buy')).toBe(9);
-    press(part('FC-2', 'buy', 'raise'));
-    press(part('FC-2', 'buy', 'target'));
-    expect(amount('FC-2', 'buy')).toBe(9);
+    press(part('FC-6', 'buy', 'target'));
+    expect(amount('FC-6', 'buy')).toBe(9);
+    press(part('FC-6', 'buy', 'raise'));
+    press(part('FC-6', 'buy', 'target'));
+    expect(amount('FC-6', 'buy')).toBe(9);
   });
 
   it('withholds buying up at nine copies or more, with the reason', async () => {
-    await open({ collection: [held(1, 9), held(7, 14)] });
-    for (const slug of ['FC-1', 'FC-7']) {
+    await open({ collection: [held(1, 9), held(3, 14)] });
+    for (const slug of ['FC-1', 'FC-3']) {
       const target = part(slug, 'buy', 'target');
       expect(unavailable(target), slug).toBe(true);
       expect(target.getAttribute('title')).toBe('You hold 9 or more');
@@ -466,7 +466,7 @@ describe('the Collection page', () => {
     await open({ collection: [held(1, 3)] });
     type('FC-1', 'sell', '3');
     pressIn(field('FC-1', 'sell'), 'Enter');
-    press(part('FC-7', 'buy', 'raise'));
+    press(part('FC-3', 'buy', 'raise'));
     expect(announced()).toBe('1 Vengefly pending for purchase.');
     type('FC-1', 'sell', '50');
     pressIn(field('FC-1', 'sell'), 'Enter');
@@ -516,7 +516,7 @@ describe('the Collection page', () => {
 
   it('cannot be typed in where nothing could be pending, but says why', async () => {
     await open();
-    const sale = field('FC-2', 'sell');
+    const sale = field('FC-6', 'sell');
     expect(sale.value).toBe('0');
     expect(sale.readOnly).toBe(true);
     expect(sale.title).toBe('You hold none to sell');
@@ -539,7 +539,7 @@ describe('the Collection page', () => {
     await open({ collection: [held(1, 1)] });
     for (const [slug, name] of [
       ['FC-1', 'Crawlid'],
-      ['FC-2', 'Gruz Mother'],
+      ['FC-6', 'Gruz Mother'],
     ]) {
       expect(cardOf(slug).getAttribute('aria-haspopup')).toBe('dialog');
       expect(cardOf(slug).getAttribute('aria-pressed')).toBeNull();
@@ -580,8 +580,8 @@ describe('the Collection page', () => {
 
   it('warns, naming the decks, only once the sale that trims them is pending', async () => {
     await open({
-      collection: [held(1, 1), held(7, 1)],
-      decks: [[ref(1)], [ref(7)], [ref(7), ref(1)]],
+      collection: [held(1, 1), held(3, 1)],
+      decks: [[ref(1)], [ref(3)], [ref(3), ref(1)]],
     });
     const sell = row('FC-1', 'sell');
     const text = 'Selling removes it from Deck 1 and Deck 3';
@@ -618,7 +618,7 @@ describe('the Collection page', () => {
     expect(count()).toBe('0');
     expect(name()).toBe('Cart, no cards pending');
 
-    press(part('FC-7', 'buy', 'raise'));
+    press(part('FC-3', 'buy', 'raise'));
     expect(count()).toBe('1');
     expect(name()).toBe('Cart, 1 card pending');
 
@@ -655,10 +655,10 @@ describe('the Collection page', () => {
     await open({ rosaries: 500, collection: [held(1, 1)], decks: [[ref(1)]] });
     const before = users.state();
     press(part('FC-1', 'sell', 'raise'));
-    press(part('FC-2', 'buy', 'raise'), 2);
+    press(part('FC-6', 'buy', 'raise'), 2);
     expect(purse()).toBe('500');
     expect(badge('FC-1')).toBe('1 held');
-    expect(badge('FC-2')).toBe('Not owned');
+    expect(badge('FC-6')).toBe('Not owned');
     expect(progress()).toBe(`1 of ${FC_TOTAL} collected`);
     expect(users.state()).toBe(before);
   });
@@ -700,7 +700,7 @@ describe('the Collection page', () => {
       decks: [[], [ref(1)]],
     });
     press(part('FC-1', 'sell', 'raise'), 6);
-    press(part('FC-7', 'buy', 'raise'));
+    press(part('FC-3', 'buy', 'raise'));
     press(cartControl());
     press(within('.cart-confirm'));
     await fixture.whenStable();
@@ -710,7 +710,7 @@ describe('the Collection page', () => {
     expect(quantityOf(users.collection(), crawlid)).toBe(0);
     expect(quantityOf(users.collection(), vengefly)).toBe(1);
     expect(badge('FC-1')).toBe('Not owned');
-    expect(badge('FC-7')).toBe('1 held');
+    expect(badge('FC-3')).toBe('1 held');
     expect(progress()).toBe(`1 of ${FC_TOTAL} collected`);
     expect(users.decks()[1].cards).toEqual([]);
     expect(cart.isEmpty()).toBe(true);

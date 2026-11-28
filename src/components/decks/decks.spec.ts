@@ -8,7 +8,7 @@ import { UserService } from '../../services/user.service';
 import { Decks } from './decks';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
-const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
+const falseKnight = CARD_BY_KEY.get(cardKeyOf('FC', 17))!;
 
 describe('the Decks page', () => {
   let fixture: ComponentFixture<Decks>;
@@ -246,8 +246,8 @@ describe('the Decks page', () => {
 
   // ─── Removing ───────────────────────────────────────────────────────────
 
-  const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
-  const gruzzer = CARD_BY_KEY.get(cardKeyOf('FC', 8))!;
+  const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 3))!;
+  const gruzzer = CARD_BY_KEY.get(cardKeyOf('FC', 5))!;
 
   function fill(): void {
     for (const card of [crawlid, vengefly, gruzzer]) page.onAddToDeck(indexOf(page, card));
@@ -267,7 +267,7 @@ describe('the Decks page', () => {
   it('removes that copy, focusing the Remove now at its position', async () => {
     fill();
     await press(removes()[1]);
-    expect(page.selectedDeckCards()).toEqual([cardKeyOf('FC', 1), cardKeyOf('FC', 8)]);
+    expect(page.selectedDeckCards()).toEqual([cardKeyOf('FC', 1), cardKeyOf('FC', 5)]);
     expect(reader()).toBeNull();
     expect(document.activeElement).toBe(removes()[1]);
     expect(removes()[1].getAttribute('aria-label')).toBe('Remove Gruzzer from Deck 1');
@@ -338,7 +338,7 @@ describe('the Decks page', () => {
   });
 
   it('sections the collection only when ordered by rarity', () => {
-    users.grantCards([goam]);
+    users.grantCards([falseKnight]);
     fixture.detectChanges();
 
     expect(page.sections().map((s) => s.stars)).toEqual([4, 1]);
@@ -352,7 +352,7 @@ describe('the Decks page', () => {
 
   it('resets to a new player, the first deck, and the default order', () => {
     users.creditGeo(200);
-    users.grantCards([goam]);
+    users.grantCards([falseKnight]);
     page.onCreateDeck();
     page.onSort('name');
     page.onRead('collection', 0);
@@ -372,7 +372,7 @@ describe('the Decks page', () => {
 
   it('empties the cart on a reset', () => {
     const cart = TestBed.inject(CartService);
-    cart.setQuantity(goam, 'buy', 2);
+    cart.setQuantity(falseKnight, 'buy', 2);
     cart.setQuantity(crawlid, 'sell', 1);
     expect(cart.count()).toBe(3);
 

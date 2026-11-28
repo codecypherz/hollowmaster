@@ -205,15 +205,19 @@ describe('renormalization', () => {
     'Level 3': { 1: 13.9, 2: 20.8, 3: 30.6, 4: 34.7 },
   };
 
+  /** The real catalogue without its five- and six-star cards: four rarities to share the weight. */
+  const upToFourStars = CARD_DB.filter((c) => c.stars <= 4);
+
   it('never draws a rarity the catalogue cannot supply, and keeps the rest in proportion', () => {
-    expect(CARD_DB.some((c) => c.stars >= 5)).toBe(false);
+    expect(upToFourStars.some((c) => c.stars >= 5)).toBe(false);
+    expect(new Set(upToFourStars.map((c) => c.stars))).toEqual(new Set([1, 2, 3, 4]));
 
     for (const p of PACKS) {
       const rng = lcg(20260912);
       const counts = new Map<number, number>();
       const packs = 20_000;
       for (let i = 0; i < packs; i++) {
-        for (const card of drawPack(p, CARD_DB, rng)) {
+        for (const card of drawPack(p, upToFourStars, rng)) {
           expect(card.stars).toBeLessThanOrEqual(4);
           counts.set(card.stars, (counts.get(card.stars) ?? 0) + 1);
         }

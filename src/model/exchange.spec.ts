@@ -18,8 +18,8 @@ import {
 import { UserState, distinctCards, quantityOf, seedUser, withMilestones } from './user';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // one star
-const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
-const gruzzer = CARD_BY_KEY.get(cardKeyOf('FC', 8))!;
+const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 3))!;
+const gruzzer = CARD_BY_KEY.get(cardKeyOf('FC', 5))!;
 const fourStar = CARD_DB.find((card) => card.stars === 4)!;
 const twoStar = CARD_DB.find((card) => card.stars === 2)!;
 

@@ -7,9 +7,9 @@ import { UserService } from '../../services/user.service';
 import { CartDialog } from './cart-dialog';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // one star
-const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 2))!; // three stars
-const aspidMother = CARD_BY_KEY.get(cardKeyOf('FC', 5))!; // two stars
-const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!; // one star
+const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 6))!; // three stars
+const aspidMother = CARD_BY_KEY.get(cardKeyOf('FC', 8))!; // two stars
+const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 3))!; // one star
 
 const held = (number: number, quantity: number) => ({ set: 'FC', number, quantity });
 const ref = (number: number) => ({ set: 'FC', number });
@@ -83,17 +83,17 @@ describe('CartDialog', () => {
   // ─── Rows ─────────────────────────────────────────────────────────────────
 
   it('lists a sale and a purchase in the order they were added, as text', async () => {
-    await open({ collection: [held(5, 4)] }, () => {
+    await open({ collection: [held(8, 4)] }, () => {
       cart.setQuantity(aspidMother, 'sell', 3);
       cart.setQuantity(crawlid, 'buy', 2);
     });
-    expect(lines().map((row) => row.dataset['line'])).toEqual(['FC-5', 'FC-1']);
+    expect(lines().map((row) => row.dataset['line'])).toEqual(['FC-8', 'FC-1']);
 
-    const sale = line('FC-5');
+    const sale = line('FC-8');
     expect(text(sale.querySelector('.line-action'))).toBe('Sell');
     expect(sale.querySelector('.line-name')!.textContent!.trim()).toBe('Aspid Mother');
     expect(sale.querySelector<HTMLInputElement>('.value')!.value).toBe('3');
-    expect(effect('FC-5')).toBe('+9');
+    expect(effect('FC-8')).toBe('+9');
     expect(sale.querySelector('.line-effect img.rosary-mark')).not.toBeNull();
     expect(sale.querySelector('.line-effect .sr-only')!.textContent).toBe('gains 9 Rosaries');
 
@@ -189,7 +189,7 @@ describe('CartDialog', () => {
   });
 
   it('bounds a typed quantity on leaving the field', async () => {
-    await open({ collection: [held(7, 3)] }, () => {
+    await open({ collection: [held(3, 3)] }, () => {
       cart.setQuantity(crawlid, 'buy', 1);
       cart.setQuantity(vengefly, 'sell', 3);
     });
@@ -198,10 +198,10 @@ describe('CartDialog', () => {
     fixture.detectChanges();
     expect(field('FC-1').value).toBe('99');
 
-    type('FC-7', '50');
-    field('FC-7').blur();
+    type('FC-3', '50');
+    field('FC-3').blur();
     fixture.detectChanges();
-    expect(field('FC-7').value).toBe('3');
+    expect(field('FC-3').value).toBe('3');
     // Clamped back to what it was, which is not a change.
     expect(announced()).toBe('99 Crawlid pending for purchase.');
   });
@@ -243,13 +243,13 @@ describe('CartDialog', () => {
   });
 
   it('accents a purchase and a sale apart', async () => {
-    await open({ collection: [held(7, 1)] }, () => {
+    await open({ collection: [held(3, 1)] }, () => {
       cart.setQuantity(crawlid, 'buy', 1);
       cart.setQuantity(vengefly, 'sell', 1);
     });
     const bar = (slug: string) => line(slug).querySelector('.hk-seg')!;
     expect(bar('FC-1').classList).toContain('soul');
-    expect(bar('FC-7').classList).not.toContain('soul');
+    expect(bar('FC-3').classList).not.toContain('soul');
   });
 
   it('words an amount of one in the singular', async () => {
@@ -279,16 +279,16 @@ describe('CartDialog', () => {
 
     press(removal('FC-1'));
     await fixture.whenStable();
-    expect(lines().map((row) => row.dataset['line'])).toEqual(['FC-2', 'FC-7']);
+    expect(lines().map((row) => row.dataset['line'])).toEqual(['FC-6', 'FC-3']);
     expect(total('net')).toBe('−35');
     expect(announced()).toBe('0 Crawlid pending for sale.');
-    expect(document.activeElement).toBe(removal('FC-2'));
+    expect(document.activeElement).toBe(removal('FC-6'));
 
-    press(removal('FC-7'));
+    press(removal('FC-3'));
     await fixture.whenStable();
-    expect(document.activeElement).toBe(removal('FC-2'));
+    expect(document.activeElement).toBe(removal('FC-6'));
 
-    press(removal('FC-2'));
+    press(removal('FC-6'));
     await fixture.whenStable();
     expect(q('.cart-empty')).not.toBeNull();
     expect(document.activeElement).toBe(q('.cart-close'));
@@ -311,7 +311,7 @@ describe('CartDialog', () => {
   // ─── Totals and confirm ───────────────────────────────────────────────────
 
   it('states a gain', async () => {
-    await open({ rosaries: 50, collection: [held(5, 3)] }, () =>
+    await open({ rosaries: 50, collection: [held(8, 3)] }, () =>
       cart.setQuantity(aspidMother, 'sell', 3),
     );
     expect([total('balance'), total('net'), total('after')]).toEqual(['50', '+9', '59']);
@@ -325,7 +325,7 @@ describe('CartDialog', () => {
   });
 
   it('states a spend that sales pay part of', async () => {
-    await open({ rosaries: 50, collection: [held(5, 3)] }, () => {
+    await open({ rosaries: 50, collection: [held(8, 3)] }, () => {
       cart.setQuantity(aspidMother, 'sell', 3);
       cart.setQuantity(crawlid, 'buy', 5);
     });

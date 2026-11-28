@@ -10,10 +10,13 @@ import { cardKeyOf } from '../model/card';
 export const READY_TEST_DECK: Deck = Object.freeze({ cards: [...STARTER_CARD_KEYS] });
 
 /**
- * A Ready deck heavier in stars than any deck the opponent can be dealt from
- * the real database — two four-star Goams and seven three-star Gruz Mothers —
- * so a match begun with it always opens on the player's turn.
+ * The heaviest Ready deck the real database allows — two six-star cards
+ * (Glowing Womb Aspid and Mace Bug), the most the rarity limit lets in, and
+ * seven three-star Gruz Mothers — so a match begun with it opens on the
+ * player's turn. No opponent deal can be heavier; one can only tie it by
+ * drawing two six-star cards and seven three-star cards, which leaves the
+ * opening to the coin.
  */
 export const HEAVY_TEST_DECK: Deck = Object.freeze({
-  cards: [cardKeyOf('FC', 6), cardKeyOf('FC', 6), ...Array(7).fill(cardKeyOf('FC', 2))],
+  cards: [cardKeyOf('FC', 41), cardKeyOf('FC', 42), ...Array(7).fill(cardKeyOf('FC', 6))],
 });

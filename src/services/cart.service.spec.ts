@@ -7,9 +7,9 @@ import { USER_STORE, UserStore } from './user-store';
 import { UserService } from './user.service';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // one star
-const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!; // one star
-const aspidMother = CARD_BY_KEY.get(cardKeyOf('FC', 5))!; // two stars
-const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 2))!; // three stars
+const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 3))!; // one star
+const aspidMother = CARD_BY_KEY.get(cardKeyOf('FC', 8))!; // two stars
+const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 6))!; // three stars
 
 class RecordingStore implements UserStore {
   saved: PersistedUser[] = [];
@@ -57,7 +57,7 @@ describe('CartService', () => {
   });
 
   it('counts copies across lines and signs each effect', async () => {
-    await start({ rosaries: 0, collection: [held(5, 3)] });
+    await start({ rosaries: 0, collection: [held(8, 3)] });
     cart.setQuantity(aspidMother, 'sell', 3);
     cart.setQuantity(crawlid, 'buy', 3);
     expect(cart.count()).toBe(6);
@@ -132,18 +132,18 @@ describe('CartService', () => {
   });
 
   it('reduces a sale when the copies held fall, and drops it at none', async () => {
-    await start({ collection: [held(1, 3), held(7, 1)] });
+    await start({ collection: [held(1, 3), held(3, 1)] });
     cart.setQuantity(crawlid, 'sell', 3);
     cart.setQuantity(vengefly, 'sell', 1);
     cart.setQuantity(gruzMother, 'buy', 1);
     users.reset(); // one of each starter, so one Crawlid and one Vengefly
     expect(cart.lines().map((line) => [line.key, line.quantity])).toEqual([
       ['FC#1', 1],
-      ['FC#7', 1],
-      ['FC#2', 1],
+      ['FC#3', 1],
+      ['FC#6', 1],
     ]);
-    users.settle([{ key: 'FC#7', action: 'sell', quantity: 1 }]);
-    expect(cart.lines().map((line) => line.key)).toEqual(['FC#1', 'FC#2']);
+    users.settle([{ key: 'FC#3', action: 'sell', quantity: 1 }]);
+    expect(cart.lines().map((line) => line.key)).toEqual(['FC#1', 'FC#6']);
     expect(cart.count()).toBe(2);
   });
 
@@ -152,7 +152,7 @@ describe('CartService', () => {
     cart.setQuantity(crawlid, 'sell', 1);
     cart.setQuantity(vengefly, 'buy', 1);
     cart.remove(crawlid);
-    expect(cart.lines().map((line) => line.key)).toEqual(['FC#7']);
+    expect(cart.lines().map((line) => line.key)).toEqual(['FC#3']);
     cart.clear();
     expect(cart.isEmpty()).toBe(true);
   });
@@ -160,8 +160,8 @@ describe('CartService', () => {
   it('confirms the whole cart in one write, empties it, and says what it did', async () => {
     await start({
       rosaries: 50,
-      collection: [held(1, 6), held(5, 1)],
-      decks: [[], [ref(5)], [ref(1), ref(1)]],
+      collection: [held(1, 6), held(8, 1)],
+      decks: [[], [ref(8)], [ref(1), ref(1)]],
     });
     store.saved = [];
     cart.setQuantity(crawlid, 'sell', 6);

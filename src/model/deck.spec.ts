@@ -35,11 +35,11 @@ import { CARD_DB } from './card';
 import { addSixStarCard } from '../testing/six-star';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!;
-const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!;
-const gruzzer = CARD_BY_KEY.get(cardKeyOf('FC', 8))!;
-const tiktik = CARD_BY_KEY.get(cardKeyOf('FC', 9))!;
+const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 3))!;
+const gruzzer = CARD_BY_KEY.get(cardKeyOf('FC', 5))!;
+const tiktik = CARD_BY_KEY.get(cardKeyOf('FC', 2))!;
 /** Not a starter card, so a seeded user holds none of it. */
-const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
+const falseKnight = CARD_BY_KEY.get(cardKeyOf('FC', 17))!;
 
 function withDecks(decks: readonly Deck[]): UserState {
   return { ...seedUser(), decks };
@@ -233,9 +233,9 @@ describe('adding a card to a deck', () => {
 
   it('refuses a card the collection does not hold and changes nothing', () => {
     const state = withDecks([emptyDeck()]);
-    expect(quantityOf(state.collection, goam)).toBe(0);
+    expect(quantityOf(state.collection, falseKnight)).toBe(0);
 
-    expect(addCardToDeck(state, 0, goam)).toBeNull();
+    expect(addCardToDeck(state, 0, falseKnight)).toBeNull();
     expect(state.decks[0].cards).toEqual([]);
   });
 });
@@ -281,7 +281,7 @@ describe('the reason an addition is refused', () => {
     const fresh = withDecks([emptyDeck()]);
     expect(addRefusal(fresh, 0, crawlid)).toBeNull();
     expect(addRefusal(fresh, 3, crawlid)).toBe('no-deck');
-    expect(addRefusal(fresh, 0, goam)).toBe('unowned');
+    expect(addRefusal(fresh, 0, falseKnight)).toBe('unowned');
     expect(addRefusal(withDecks([deckOf(...lowKeys(DECK_SIZE))]), 0, crawlid)).toBe('full');
     expect(addRefusal(withDecks([deckOf(cardKey(crawlid))]), 0, crawlid)).toBe('exhausted');
   });
@@ -290,7 +290,7 @@ describe('the reason an addition is refused', () => {
     const cases: [UserState, number, Card][] = [
       [withDecks([emptyDeck()]), 0, crawlid],
       [withDecks([emptyDeck()]), 3, crawlid],
-      [withDecks([emptyDeck()]), 0, goam],
+      [withDecks([emptyDeck()]), 0, falseKnight],
       [withDecks([deckOf(...lowKeys(DECK_SIZE))]), 0, crawlid],
       [withDecks([deckOf(cardKey(crawlid))]), 0, crawlid],
     ];
@@ -395,13 +395,13 @@ function lows(count: number): CardKey[] {
 describe('the rarity limit', () => {
   it('allows two cards of four stars or more', () => {
     expect(RARITY_LIMIT).toEqual({ minStars: 4, allowed: 2 });
-    expect(goam.stars).toBe(4);
+    expect(falseKnight.stars).toBe(4);
   });
 });
 
 describe("a deck's standing", () => {
   it('is Ready for a full deck within the limit', () => {
-    const deck = deckOf(cardKey(goam), ...lows(8));
+    const deck = deckOf(cardKey(falseKnight), ...lows(8));
     expect(deckStanding(deck).problems).toEqual([]);
   });
 
@@ -415,25 +415,30 @@ describe("a deck's standing", () => {
 
   it('is Ready with two different four-star cards', () => {
     const otherFour = rated(4, 1);
-    const deck = deckOf(cardKey(goam), cardKey(otherFour), ...lows(7));
+    const deck = deckOf(cardKey(falseKnight), cardKey(otherFour), ...lows(7));
     expect(deckStanding(deck, lookupWith(otherFour)).problems).toEqual([]);
   });
 
   it('is Ready with two copies of one four-star card', () => {
-    const deck = deckOf(cardKey(goam), cardKey(goam), ...lows(7));
+    const deck = deckOf(cardKey(falseKnight), cardKey(falseKnight), ...lows(7));
     expect(deckStanding(deck).problems).toEqual([]);
   });
 
   it('is Invalid with three different four-star cards', () => {
     const others = [rated(4, 1), rated(4, 2)];
-    const deck = deckOf(cardKey(goam), ...others.map(cardKey), ...lows(6));
+    const deck = deckOf(cardKey(falseKnight), ...others.map(cardKey), ...lows(6));
     expect(deckStanding(deck, lookupWith(...others)).problems).toEqual([
       { kind: 'invalid', rule: 'rarity', held: 3, allowed: 2, minStars: 4 },
     ]);
   });
 
   it('is Invalid with three copies of one four-star card', () => {
-    const deck = deckOf(cardKey(goam), cardKey(goam), cardKey(goam), ...lows(6));
+    const deck = deckOf(
+      cardKey(falseKnight),
+      cardKey(falseKnight),
+      cardKey(falseKnight),
+      ...lows(6),
+    );
     expect(deckStanding(deck).problems).toEqual([
       { kind: 'invalid', rule: 'rarity', held: 3, allowed: 2, minStars: 4 },
     ]);
@@ -442,7 +447,7 @@ describe("a deck's standing", () => {
   it('counts ratings above four toward the limit', () => {
     for (const stars of [5, 6]) {
       const high = rated(stars, stars);
-      const deck = deckOf(cardKey(goam), cardKey(goam), cardKey(high), ...lows(6));
+      const deck = deckOf(cardKey(falseKnight), cardKey(falseKnight), cardKey(high), ...lows(6));
       expect(deckStanding(deck, lookupWith(high)).problems).toEqual([
         { kind: 'invalid', rule: 'rarity', held: 3, allowed: 2, minStars: 4 },
       ]);
@@ -456,7 +461,12 @@ describe("a deck's standing", () => {
   });
 
   it('reports both problems, Invalid first', () => {
-    const deck = deckOf(cardKey(goam), cardKey(goam), cardKey(goam), ...lows(3));
+    const deck = deckOf(
+      cardKey(falseKnight),
+      cardKey(falseKnight),
+      cardKey(falseKnight),
+      ...lows(3),
+    );
     expect(deckStanding(deck).problems).toEqual([
       { kind: 'invalid', rule: 'rarity', held: 3, allowed: 2, minStars: 4 },
       { kind: 'incomplete', needed: 3 },
@@ -469,22 +479,33 @@ describe("a deck's standing", () => {
   });
 
   it('is the same every time the same contents are evaluated', () => {
-    const deck = deckOf(cardKey(goam), cardKey(goam), cardKey(goam), ...lows(1));
+    const deck = deckOf(
+      cardKey(falseKnight),
+      cardKey(falseKnight),
+      cardKey(falseKnight),
+      ...lows(1),
+    );
     expect(deckStanding(deck)).toEqual(deckStanding(deck));
   });
 });
 
 describe('battle eligibility', () => {
   it('admits only a Ready deck', () => {
-    expect(isBattleReady(deckOf(cardKey(goam), ...lows(8)))).toBe(true);
-    expect(isBattleReady(deckOf(cardKey(goam), cardKey(goam), ...lows(7)))).toBe(true);
-    expect(isBattleReady(deckOf(cardKey(goam), cardKey(goam), cardKey(goam), ...lows(6)))).toBe(
-      false,
+    expect(isBattleReady(deckOf(cardKey(falseKnight), ...lows(8)))).toBe(true);
+    expect(isBattleReady(deckOf(cardKey(falseKnight), cardKey(falseKnight), ...lows(7)))).toBe(
+      true,
     );
+    expect(
+      isBattleReady(
+        deckOf(cardKey(falseKnight), cardKey(falseKnight), cardKey(falseKnight), ...lows(6)),
+      ),
+    ).toBe(false);
     expect(isBattleReady(deckOf(...lows(8)))).toBe(false);
-    expect(isBattleReady(deckOf(cardKey(goam), cardKey(goam), cardKey(goam), ...lows(1)))).toBe(
-      false,
-    );
+    expect(
+      isBattleReady(
+        deckOf(cardKey(falseKnight), cardKey(falseKnight), cardKey(falseKnight), ...lows(1)),
+      ),
+    ).toBe(false);
   });
 
   it('admits no deck for a freshly seeded user', () => {
@@ -496,18 +517,18 @@ describe('battle eligibility', () => {
 });
 
 describe('building past the rarity limit', () => {
-  /** Four-star cards distinct from Goam; the catalogue holds only one. */
+  /** Four-star cards other than False Knight, made up so the test owns its rarities. */
   const other4 = rated(4, 99);
   const another4 = rated(4, 98);
 
-  /** A seeded user who also holds `goams` Goam and one of each test four-star card. */
-  function holdingGoam(goams = 1): UserState {
+  /** A seeded user who also holds `copies` of False Knight and one of each test four-star card. */
+  function holdingFalseKnight(copies = 1): UserState {
     const user = seedUser();
     return {
       ...user,
       collection: new Map([
         ...user.collection,
-        [cardKey(goam), goams],
+        [cardKey(falseKnight), copies],
         [cardKey(other4), 1],
         [cardKey(another4), 1],
       ]),
@@ -515,39 +536,47 @@ describe('building past the rarity limit', () => {
   }
 
   it('accepts a second, different four-star card and the deck is not Invalid', () => {
-    let state = holdingGoam();
-    state = addCardToDeck(state, 0, goam)!;
+    let state = holdingFalseKnight();
+    state = addCardToDeck(state, 0, falseKnight)!;
     state = addCardToDeck(state, 0, other4)!;
 
     expect(state).not.toBeNull();
-    expect(state.decks[0].cards).toEqual([cardKey(goam), cardKey(other4)]);
+    expect(state.decks[0].cards).toEqual([cardKey(falseKnight), cardKey(other4)]);
     const standing = deckStanding(state.decks[0], lookupWith(other4));
     expect(standing.problems.map((p) => p.kind)).toEqual(['incomplete']);
   });
 
   it('accepts a third, different four-star card and the deck becomes Invalid', () => {
-    let state = holdingGoam();
-    state = addCardToDeck(state, 0, goam)!;
+    let state = holdingFalseKnight();
+    state = addCardToDeck(state, 0, falseKnight)!;
     state = addCardToDeck(state, 0, other4)!;
     state = addCardToDeck(state, 0, another4)!;
 
     expect(state).not.toBeNull();
-    expect(state.decks[0].cards).toEqual([cardKey(goam), cardKey(other4), cardKey(another4)]);
+    expect(state.decks[0].cards).toEqual([
+      cardKey(falseKnight),
+      cardKey(other4),
+      cardKey(another4),
+    ]);
     const standing = deckStanding(state.decks[0], lookupWith(other4, another4));
     expect(standing.problems[0].kind).toBe('invalid');
   });
 
   it('accepts a third copy of a four-star card held three times', () => {
-    let state = holdingGoam(3);
-    for (let i = 0; i < 3; i++) state = addCardToDeck(state, 0, goam)!;
+    let state = holdingFalseKnight(3);
+    for (let i = 0; i < 3; i++) state = addCardToDeck(state, 0, falseKnight)!;
 
-    expect(state.decks[0].cards).toEqual([cardKey(goam), cardKey(goam), cardKey(goam)]);
+    expect(state.decks[0].cards).toEqual([
+      cardKey(falseKnight),
+      cardKey(falseKnight),
+      cardKey(falseKnight),
+    ]);
     expect(deckStanding(state.decks[0]).problems[0].kind).toBe('invalid');
   });
 
   it('becomes valid again when one is removed', () => {
-    let state = holdingGoam(3);
-    for (let i = 0; i < 3; i++) state = addCardToDeck(state, 0, goam)!;
+    let state = holdingFalseKnight(3);
+    for (let i = 0; i < 3; i++) state = addCardToDeck(state, 0, falseKnight)!;
     state = removeCardFromDeck(state, 0, 1)!;
 
     expect(deckStanding(state.decks[0]).problems.map((p) => p.kind)).toEqual(['incomplete']);
@@ -612,7 +641,8 @@ describe('the remembered battle deck', () => {
   const ready = (): Deck => deckOf(...lowKeys(9));
   const incomplete = (): Deck => deckOf(...lowKeys(8));
   /** Over the rarity limit, and full — Invalid alone. */
-  const invalid = (): Deck => deckOf(cardKey(goam), cardKey(goam), cardKey(goam), ...lowKeys(6));
+  const invalid = (): Deck =>
+    deckOf(cardKey(falseKnight), cardKey(falseKnight), cardKey(falseKnight), ...lowKeys(6));
 
   function remembering(decks: readonly Deck[], battleDeck: number | null): UserState {
     return { ...withDecks(decks), battleDeck };

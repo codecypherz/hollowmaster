@@ -13,8 +13,8 @@ import {
 } from './collection';
 
 const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // 1 star
-const goam = CARD_BY_KEY.get(cardKeyOf('FC', 6))!;
-const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 7))!; // 1 star
+const falseKnight = CARD_BY_KEY.get(cardKeyOf('FC', 17))!;
+const vengefly = CARD_BY_KEY.get(cardKeyOf('FC', 3))!; // 1 star
 
 const keys = (owned: readonly OwnedCard[]): CardKey[] => owned.map((o) => cardKey(o.card));
 
@@ -23,21 +23,21 @@ describe('the owned-card projection', () => {
     const owned = ownedCards(
       new Map([
         [cardKey(crawlid), 3],
-        [cardKey(goam), 1],
+        [cardKey(falseKnight), 1],
       ]),
     );
 
     expect(owned).toHaveLength(2);
     expect(owned.map((o) => o.quantity).sort()).toEqual([1, 3]);
     expect(owned.find((o) => o.card === crawlid)!.quantity).toBe(3);
-    expect(owned.find((o) => o.card === goam)!.quantity).toBe(1);
+    expect(owned.find((o) => o.card === falseKnight)!.quantity).toBe(1);
   });
 
   it('omits a card held zero times', () => {
     const owned = ownedCards(
       new Map([
         [cardKey(crawlid), 1],
-        [cardKey(goam), 0],
+        [cardKey(falseKnight), 0],
       ]),
     );
     expect(keys(owned)).toEqual([cardKey(crawlid)]);
@@ -50,12 +50,12 @@ describe('the owned-card projection', () => {
   it('reads the same however the collection was built up', () => {
     const forwards = new Map<CardKey, number>();
     forwards.set(cardKey(crawlid), 1);
-    forwards.set(cardKey(goam), 2);
+    forwards.set(cardKey(falseKnight), 2);
     forwards.set(cardKey(vengefly), 1);
 
     const backwards = new Map<CardKey, number>();
     backwards.set(cardKey(vengefly), 1);
-    backwards.set(cardKey(goam), 2);
+    backwards.set(cardKey(falseKnight), 2);
     backwards.set(cardKey(crawlid), 1);
 
     expect(keys(ownedCards(forwards))).toEqual(keys(ownedCards(backwards)));
@@ -114,10 +114,10 @@ describe('sorting the collection', () => {
     const owned = ownedCards(
       new Map([
         [cardKey(crawlid), 1],
-        [cardKey(goam), 3],
+        [cardKey(falseKnight), 3],
       ]),
     );
-    expect(precedes(owned, 'quantity', cardKey(goam), cardKey(crawlid))).toBe(true);
+    expect(precedes(owned, 'quantity', cardKey(falseKnight), cardKey(crawlid))).toBe(true);
   });
 
   it('reads names A to Z', () => {
@@ -185,7 +185,7 @@ describe('sortOwned', () => {
     const owned = ownedCards(
       new Map([
         [cardKey(crawlid), 1],
-        [cardKey(goam), 2],
+        [cardKey(falseKnight), 2],
       ]),
     );
     const before = keys(owned);
@@ -299,7 +299,7 @@ describe('grouping by rarity', () => {
     const owned = ownedCards(
       new Map([
         [cardKey(crawlid), 1],
-        [cardKey(goam), 1],
+        [cardKey(falseKnight), 1],
       ]),
     );
     const sections = groupByRarity(sortOwned(owned, 'rarity'));

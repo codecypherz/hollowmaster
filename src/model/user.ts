@@ -55,17 +55,18 @@ export interface UserState {
  *
  * Nine is `HAND_SIZE`: a new player owns exactly enough cards to field a hand,
  * and every one of them is the weakest rarity, so the Shop has somewhere to
- * go. These happen to be exactly the one-star cards today, and that is why
- * they were chosen — but the set is *stated* rather than derived, because
- * "every one-star card" would silently change both the starter set and how
- * many cards a new player gets the next time a one-star card is catalogued.
+ * go. They were chosen when they were exactly the one-star cards; the
+ * catalogue has since gained others, and the set did not follow them. That is
+ * why it is *stated* rather than derived: "every one-star card" would silently
+ * change both the starter set and how many cards a new player gets each time a
+ * one-star card is catalogued.
  */
 export const STARTER_CARD_KEYS: readonly CardKey[] = Object.freeze([
   cardKeyOf('FC', 1), // Crawlid
-  cardKeyOf('FC', 7), // Vengefly
-  cardKeyOf('FC', 8), // Gruzzer
-  cardKeyOf('FC', 9), // Tiktik
-  cardKeyOf('FC', 10), // Aspid Hatchling
+  cardKeyOf('FC', 3), // Vengefly
+  cardKeyOf('FC', 5), // Gruzzer
+  cardKeyOf('FC', 2), // Tiktik
+  cardKeyOf('FC', 9), // Aspid Hatchling
   cardKeyOf('FC', 11), // Wandering Husk
   cardKeyOf('FC', 12), // Husk Hornhead
   cardKeyOf('FC', 13), // Leaping Husk
@@ -174,14 +175,16 @@ export function distinctCards(collection: ReadonlyMap<CardKey, number>): number 
  *
  * Version 1 held a collection and a balance; version 2 adds the decks; version
  * 3 adds the Rosary balance; version 4 adds the milestones; version 5 adds
- * the remembered battle deck. A read
+ * the remembered battle deck; version 6 changes no field but renumbers the
+ * cards, so every earlier record names its cards by the first catalogue's
+ * numbers and is translated through `FIRST_CATALOGUE_RENUMBERING`. A read
  * dispatches on the version rather than demanding equality: a version this
  * application knows an *earlier* shape for is upgraded, because an earlier
  * record is a complete user of its own time and a player must not lose their
  * collection or their Geo because the shape around it grew. A version it knows
  * nothing about is still unreadable rather than hopefully-current.
  */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /** The first shape written: a collection and a balance, and no decks. */
 const VERSION_WITHOUT_DECKS = 1;
@@ -194,6 +197,93 @@ const VERSION_WITHOUT_MILESTONES = 3;
 
 /** The fourth shape: milestones beside the rest, but no remembered battle deck. */
 const VERSION_WITHOUT_BATTLE_DECK = 4;
+
+/** The fifth shape: the current fields, but cards numbered by the first catalogue. */
+const VERSION_BEFORE_RENUMBERING = 5;
+
+/** One first-catalogue card: the number it was stored under, its name, and its number now. */
+export interface Renumbering {
+  readonly from: number;
+  readonly name: string;
+  readonly to: number;
+}
+
+/**
+ * Where each of the first catalogue's fifteen `FC` cards went when the
+ * catalogue was renumbered. The old catalogue no longer exists, so this table
+ * is the only record of what a number in an old save meant; `name` is what
+ * lets `assertRenumbering` prove at module load that every row still lands on
+ * the card it names. A first-catalogue number absent here named no card.
+ */
+export const FIRST_CATALOGUE_RENUMBERING: readonly Renumbering[] = Object.freeze([
+  { from: 1, name: 'Crawlid', to: 1 },
+  { from: 2, name: 'Gruz Mother', to: 6 },
+  { from: 3, name: 'Vengefly King', to: 4 },
+  { from: 4, name: 'Aspid Hunter', to: 7 },
+  { from: 5, name: 'Aspid Mother', to: 8 },
+  { from: 6, name: 'Goam', to: 10 },
+  { from: 7, name: 'Vengefly', to: 3 },
+  { from: 8, name: 'Gruzzer', to: 5 },
+  { from: 9, name: 'Tiktik', to: 2 },
+  { from: 10, name: 'Aspid Hatchling', to: 9 },
+  { from: 11, name: 'Wandering Husk', to: 11 },
+  { from: 12, name: 'Husk Hornhead', to: 12 },
+  { from: 13, name: 'Leaping Husk', to: 13 },
+  { from: 14, name: 'Husk Bully', to: 14 },
+  { from: 15, name: 'Husk Warrior', to: 15 },
+] as const);
+
+/** The set the first catalogue's cards belonged to — the only set it had. */
+const FIRST_CATALOGUE_SET = 'FC';
+
+/**
+ * Every row must land on a distinct catalogued card bearing its name. Runs at
+ * module load, so a later edit that moves one of these cards again — without a
+ * new schema version — fails at app start instead of silently changing what
+ * players' saves hold.
+ */
+export function assertRenumbering(
+  rows: readonly Renumbering[],
+  byKey: ReadonlyMap<CardKey, Card> = CARD_BY_KEY,
+): void {
+  const from = new Set<number>();
+  const to = new Set<number>();
+  for (const row of rows) {
+    const card = byKey.get(cardKeyOf(FIRST_CATALOGUE_SET, row.to));
+    if (card?.name !== row.name) {
+      throw new Error(
+        `Renumbering row FC#${row.from} names ${row.name}, but FC#${row.to} is ${card?.name ?? 'no card'}`,
+      );
+    }
+    if (from.has(row.from)) throw new Error(`Renumbering repeats FC#${row.from}`);
+    if (to.has(row.to)) throw new Error(`Renumbering sends two cards to FC#${row.to}`);
+    from.add(row.from);
+    to.add(row.to);
+  }
+}
+
+assertRenumbering(FIRST_CATALOGUE_RENUMBERING);
+
+const RENUMBERED = new Map(FIRST_CATALOGUE_RENUMBERING.map((row) => [row.from, row.to]));
+
+/**
+ * A first-catalogue card reference in today's numbering, or `null` for a
+ * number that named no card. A ref outside the first catalogue's set is left
+ * alone: it named nothing then, and `fromPersisted` drops what is unknown now.
+ */
+/** How a read card reference reaches today's numbering, or `null` for none. */
+type Translate = <T extends PersistedCardRef>(ref: T) => T | null;
+
+/** A current record's reference, which already speaks today's numbering. */
+function asWritten<T extends PersistedCardRef>(ref: T): T {
+  return ref;
+}
+
+function renumber<T extends PersistedCardRef>(ref: T): T | null {
+  if (ref.set !== FIRST_CATALOGUE_SET) return ref;
+  const to = RENUMBERED.get(ref.number);
+  return to === undefined ? null : { ...ref, number: to };
+}
 
 /** One card's holding, as it is stored: identity and quantity, nothing else. */
 export interface PersistedEntry {
@@ -289,6 +379,7 @@ export function parsePersistedUser(raw: unknown): PersistedUser | null {
   const version = record['version'];
   if (
     version !== SCHEMA_VERSION &&
+    version !== VERSION_BEFORE_RENUMBERING &&
     version !== VERSION_WITHOUT_BATTLE_DECK &&
     version !== VERSION_WITHOUT_MILESTONES &&
     version !== VERSION_WITHOUT_ROSARIES &&
@@ -306,27 +397,40 @@ export function parsePersistedUser(raw: unknown): PersistedUser | null {
 
   if (!Array.isArray(record['collection'])) return null;
 
+  // Every record before the renumbering names its cards by the first
+  // catalogue's numbers. They are translated here, as each is read, so that
+  // `PersistedUser` always speaks today's numbering and `fromPersisted`'s
+  // rules judge the translated cards. A number with no translation is dropped
+  // like any other entry naming no card.
+  const translate: Translate = version === SCHEMA_VERSION ? asWritten : renumber;
+
   const collection: PersistedEntry[] = [];
   for (const entry of record['collection'] as unknown[]) {
     const parsed = parseEntry(entry);
-    if (parsed) collection.push(parsed);
+    const translated = parsed && translate(parsed);
+    if (translated) collection.push(translated);
   }
 
   // A version 1 record predates decks entirely, so it upgrades to a user with
   // none rather than being discarded. A version 2 record whose `decks` is not
   // an array at all has lost only its decks — the same "one bad entry costs
   // one entry" rule the collection follows, applied to the whole field.
-  const decks = version === VERSION_WITHOUT_DECKS ? [] : parseDecks(record['decks']);
+  const decks = version === VERSION_WITHOUT_DECKS ? [] : parseDecks(record['decks'], translate);
 
   // Before milestones a record states none, so it proves its own.
   const milestones =
-    version === SCHEMA_VERSION || version === VERSION_WITHOUT_BATTLE_DECK
+    version === SCHEMA_VERSION ||
+    version === VERSION_BEFORE_RENUMBERING ||
+    version === VERSION_WITHOUT_BATTLE_DECK
       ? parseMilestones(record['milestones'])
       : NO_MILESTONES;
 
   // Before the battle deck was remembered a record remembers none. A later
   // value that is not a possible position costs only itself.
-  const storedDeck = version === SCHEMA_VERSION ? record['battleDeck'] : null;
+  const storedDeck =
+    version === SCHEMA_VERSION || version === VERSION_BEFORE_RENUMBERING
+      ? record['battleDeck']
+      : null;
   const battleDeck = isCount(storedDeck) ? storedDeck : null;
 
   return { version, geo: record['geo'], rosaries, collection, decks, battleDeck, milestones };
@@ -386,7 +490,7 @@ function parseMilestones(raw: unknown): Milestones {
   };
 }
 
-function parseDecks(raw: unknown): PersistedDeck[] {
+function parseDecks(raw: unknown, translate: Translate): PersistedDeck[] {
   if (!Array.isArray(raw)) return [];
 
   const decks: PersistedDeck[] = [];
@@ -397,7 +501,8 @@ function parseDecks(raw: unknown): PersistedDeck[] {
     const cards: PersistedCardRef[] = [];
     for (const ref of (deck as unknown[]).slice(0, DECK_SIZE)) {
       const parsed = parseCardRef(ref);
-      if (parsed) cards.push(parsed);
+      const translated = parsed && translate(parsed);
+      if (translated) cards.push(translated);
     }
     decks.push(cards);
   }

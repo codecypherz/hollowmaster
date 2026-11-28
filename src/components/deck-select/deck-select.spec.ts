@@ -11,15 +11,17 @@ import { DeckSelect } from './deck-select';
 
 const reversed: Deck = { cards: [...STARTER_CARD_KEYS].reverse() };
 const incomplete: Deck = { cards: STARTER_CARD_KEYS.slice(0, 8) };
-const goam = cardKeyOf('FC', 6);
-const invalid: Deck = { cards: [goam, goam, goam, ...STARTER_CARD_KEYS.slice(0, 6)] };
+const falseKnight = cardKeyOf('FC', 17);
+const invalid: Deck = {
+  cards: [falseKnight, falseKnight, falseKnight, ...STARTER_CARD_KEYS.slice(0, 6)],
+};
 
 /**
- * A store holding a user with the starter cards and three Goams — enough for
+ * A store holding a user with the starter cards and three False Knights — enough for
  * every deck above to load as built — and the stated decks and remembered deck.
  */
 function storeWith(decks: readonly Deck[], battleDeck: number | null): UserStore {
-  const collection = new Map(seedUser().collection).set(goam, 3);
+  const collection = new Map(seedUser().collection).set(falseKnight, 3);
   const record = toPersisted({ ...seedUser(), collection, decks, battleDeck });
   return { load: async () => record, save: async () => {} };
 }
@@ -106,7 +108,9 @@ describe('the deck selection page', () => {
   });
 
   it('names both problems, Invalid first', async () => {
-    const both: Deck = { cards: [goam, goam, goam, ...STARTER_CARD_KEYS.slice(0, 3)] };
+    const both: Deck = {
+      cards: [falseKnight, falseKnight, falseKnight, ...STARTER_CARD_KEYS.slice(0, 3)],
+    };
     await render([READY_TEST_DECK, both]);
     expect(deckButtons()[1].dataset['tip']).toBe('Invalid · Incomplete');
   });

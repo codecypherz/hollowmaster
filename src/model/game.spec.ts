@@ -4,7 +4,7 @@ import { decideFirstTurn, starTotal } from './game';
 describe('star totals', () => {
   it('sums the rarity stars of the cards held, ignoring empty slots', () => {
     const crawlid = CARD_BY_KEY.get(cardKeyOf('FC', 1))!; // one star
-    const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 2))!; // three stars
+    const gruzMother = CARD_BY_KEY.get(cardKeyOf('FC', 6))!; // three stars
     expect(starTotal([crawlid, gruzMother, null, crawlid])).toBe(5);
     expect(starTotal([])).toBe(0);
   });
